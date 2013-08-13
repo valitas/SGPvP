@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <title>The Scorpion Guard's Better PvP Script User's Manual</title>
+  <style type="text/css">
+body {
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  font-size: 90%;
+  margin: 0.5in;
+}
+h1 {
+  /* color: #666; */
+  font-size: 160%;
+  margin: 4ex 0 2ex 0;
+}
+h2 {
+  color: #666;
+  font-size: 130%;
+  margin: 4ex 0 2ex 0;
+}
+li {
+  margin: 1ex 0
+}
+div#content {
+  margin-left: auto;
+  margin-right: auto;
+  width: 50em;
+}
+div.index-bar {
+  font-size: 90%;
+  text-align: center;
+}
+  </style>
+ </head>
+ <body>
+  <div id="content">
+
+    <h1>The Scorpion Guard's Better PvP Script V24 User's Manual</h1>
+
+    <div class="index-bar">
+     <a href="#quickstart">Quick start</a> ·
+     <a href="#configuration">Configuration</a> ·
+     <a href="#keymap">Keymap</a>
+    </div>
+
+    <h2><a name="quickstart">Quick start</a></h2>
+
+    <p>This script adds a number of keyboard commands to help in PvP
+    combat. In general, it's used as follows:</p>
+
+    <ol>
+     <li>
+      <p><strong>Configure the script.</strong></p>
+
+      <p>Press the info key, I, to bring up the configuration dialogue
+      and specify which pilots are to be targeted.</p>
+     </li>
+
+     <li>
+      <p><strong>Set a retreat tile.</strong></p>
+
+      <p>Move to your retreat tile and press the key Z to have the
+      script "remember" it. The retreat tile can be a planet,
+      wormhole, whatever, but it has to be in sight and reachable from
+      the tile where PvP will occur.</p>
+     </li>
+
+     <li>
+      <p><strong>Engage.</strong></p>
+
+      <p>Move to the tile where PvP will occur and press the engage
+      key, X, repeatedly. As soon as a target appears, you will be
+      taken to the combat screen. Pressing the engage key X again will
+      shoot 20 rounds against the target, with missiles if
+      available.</p>
+     </li>
+
+     <li>
+      <p><strong>Disengage.</strong></p>
+
+      <p>When you have to retreat, press the disengage key, C,
+      repeatedly if needed, until you are back at your retreat
+      tile.</p>
+     </li>
+    </ol>
+
+    <p>A number of other keys are defined for convenience; see below.</p>
+
+    <h2><a name="configuration">Configuration</a></h2>
+
+    <p>The script requires that you specify which ships on your tile
+    are to be attacked, and which are to be excluded from attack.</p>
+
+    <p>The way this is done is by pasting a quick list into the
+    configuration dialogue. The script parses the same QL format used
+    for ambushes, and learns from it which factions, alliances, and
+    individuals are to be included and excluded. Note, however, that
+    friend/foe, bounty, and ship class/size criteria in the QL are
+    ignored.</p>
+
+    <p>On top of the QL, the script provides for include and exclude
+    override lists. You can specify only pilot names in these lists,
+    not alliances or factions. Pilots excluded this way won't be
+    engaged no matter what. Pilots included in this way will not only
+    be engaged, but will also be prioritised: of all the ships on your
+    tile, the one listed first in your include override list will be
+    targeted.</p>
+
+    <p>When no priority targets are present on the tile, then, if
+    possible, the "strongest" opponent is targeted, based on ship type
+    (e.g., the War Nova will be engaged rather than the Hawk). If the
+    option "prioritise traders" is enabled, then this logic will
+    change to target traders and less dangerous fighters first.</p>
+
+    <p>The final criteria for picking a target is the target pilot's
+    ID. All else being the same, the pilot with the lowest ID will be
+    engaged.</p>
+
+    <p>Finally, you have to specify your ship's maximum armour points
+    and installed armour strength (1 through 6).  This is required for
+    computing the amount of robots to use when repairing your ship.
+    Note that the script will repair you to full armour even if it has
+    to partially waste one robot.</p>
+
+    <p>If you'd rather the script doesn't waste bots, manually
+    configure your ship armour points to the result of:</p>
+
+    <pre><em>max_ship_armour</em> - (180/<em>armour_strength</em>) + 1</pre>
+
+    <p>(e.g. 445 for a Hawk with level V armour)</p>
+
+    <h2><a name="keymap">Keymap</a></h2>
+
+    <pre>Z - Set retreat tile.
+X - Engage.
+C - Disengage.
+V - Nav.
+B - Use as many bots as needed to repair you to full armour.
+
+M - Engage MO or building.
+
+A - Use up to two bots.
+S - Use up to five bots.
+D - Use up to eight bots.
+F - Refill your fuel tank.
+K - Cloak.
+L - Uncloak.
+
+I - Configure.
+T - Test configuration (highlight targets without engaging)
+N - Test bots (shows how many would be used to repair your ship)
+
+Additionally, the traditional 12345 keys are bound, for ease of transition:
+
+1 - Target.
+2 - Attack.
+3 - Nav.
+4 - Jump to retreat tile.
+5 - Use five bots.</pre>
+
+  </div>
+ </body>
+</html>

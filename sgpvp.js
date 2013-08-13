@@ -2,7 +2,7 @@
 // Google Chrome - no Greasemonkey calls and no chrome.extension stuff
 // here.  localStorage should not be accessed from here either.
 
-// V21
+// V24
 
 function SGPvP() {
     this.url = window.location.href;
@@ -14,11 +14,16 @@ function SGPvP() {
     this.universe = m[1];
     this.page = m[2];
 
-    if(this.page == 'ship2ship_combat') {
+    if(this.page == 'main') {
+        this.setupNavPage();
+    }
+    else if(this.page == 'ship2ship_combat') {
+        this.setupCombatPage();
         selectHighestRounds();
         selectMissiles();
     }
     else if(this.page == 'building') {
+        this.setupCombatPage();
         selectMissiles();
     }
 
@@ -38,9 +43,6 @@ function SGPvP() {
 
 // CONFIGURABLE BITS, IF YOU KNOW WHAT YOU'RE DOING:
 
-// XXX this will be smarter soon, bots needs an overhaul anyway
-SGPvP.prototype.DEFAULT_BOTS = 5;
-
 // the number is the keyCode, usually ASCII
 SGPvP.prototype.ACTIONS = {
     /* Z */ 90: 'storeRP',
@@ -48,12 +50,14 @@ SGPvP.prototype.ACTIONS = {
     /* C */ 67: 'disengage',
     /* V */ 86: 'nav',
     /* B */ 66: 'bots',
+    /* N */ 78: 'testBots',
     /* M */ 77: 'damageBuilding',
     /* A */ 65: 'bots2',
     /* S */ 83: 'bots5',
     /* D */ 68: 'bots8',
     /* F */ 70: 'fillUp',
     /* K */ 75: 'cloak',
+    /* L */ 76: 'uncloak',
     /* T */ 84: 'highlightTargets',
     /* I */ 73: 'ui',
     /* ESC */ 27: 'closeUi',
@@ -174,50 +178,50 @@ SGPvP.prototype.ui = function() {
     var create_element = this.createElement;
 
     var table, tr, td, e1, e2;
-    var ql_ta, inc_ta, exc_ta, rid_field, close_but;
+    var ql_ta, inc_ta, exc_ta, rid_field, arm_field, lvl_field, close_but;
 
-    table = create_element('table',
-                           { position: 'fixed', zIndex: '10', borderCollapse: 'collapse',
-                             top: '3em', left: '50%', width: '50em', height: 'auto', marginLeft: '-25em',
-                             border: 'ridge 2px #556', backgroundColor: 'rgb(0,0,28)' },
-                           null, null, null);
+    table = create_element('table', { position: 'fixed', zIndex: '10', borderCollapse: 'collapse', top: '3em', left: '50%', width: '50em', height: 'auto', marginLeft: '-25em', border: 'ridge 2px #556', backgroundColor: 'rgb(0,0,28)' }, null, null, null);
 
     tr = create_element('tr', null, null, null, table);
-    td = create_element('td', { padding: '1em' }, { colSpan: 2 }, null, tr);
+    td = create_element('td', { padding: '1em' }, { colSpan: 4 }, null, tr);
     create_element('h3', { margin: 0, textAlign: 'center' }, null, "Scorpion Guard's Better PvP Script", td);
 
     tr = create_element('tr', null, null, null, table);
-    td = create_element('td', { padding: '0 1em' }, { colSpan: 2 }, null, tr);
+    td = create_element('td', { padding: '0 1em' }, { colSpan: 4 }, null, tr);
     create_element('label', null, { htmlFor: 'sgpvp-ql' }, "Inclusions and exclusions (quick list format):", td);
     tr = create_element('tr', null, null, null, table);
-    td = create_element('td', { padding: '0 1em' }, { colSpan: 2 }, null, tr);
+    td = create_element('td', { padding: '0 1em' }, { colSpan: 4 }, null, tr);
     ql_ta = create_element('textarea', { width: '100%' }, { id: 'sgpvp-ql', rows: 5 }, null, td);
 
     tr = create_element('tr', null, null, null, table);
-    create_element('td', { padding: '1em 1em 0 1em' }, { colSpan: 2 },
-                   "Overrides (names or IDs, one per line, includes are prioritised)", tr);
+    create_element('td', { padding: '1em 1em 0 1em' }, { colSpan: 4 }, "Overrides (names or IDs, one per line, includes are prioritised)", tr);
 
     tr = create_element('tr', { verticalAlign: 'top' }, null, null, table);
-    td = create_element('td', { padding: '0 0.5em 0 1em', width: '50%' }, null, null, tr);
+    td = create_element('td', { padding: '0 0.5em 0 1em', width: '50%' }, { colSpan: 2 }, null, tr);
     e1 = create_element('div', null, null, null, td);
     create_element('label', null, { htmlFor: 'sgpvp-inc' }, "include:", e1);
     e1 = create_element('div', null, null, null, td);
     inc_ta = create_element('textarea', { width: '100%' }, { id: 'sgpvp-inc', rows: 6 }, null, e1);
-    td = create_element('td', { padding: '0 1em 0 0.5em', width: '50%' }, null, null, tr);
+    td = create_element('td', { padding: '0 1em 0 0.5em', width: '50%' }, { colSpan: 2 }, null, tr);
     e1 = create_element('div', null, null, null, td);
     create_element('label', null, { htmlFor: 'sgpvp-exc' }, "exclude:", e1);
     e1 = create_element('div', null, null, null, td);
     exc_ta = create_element('textarea', { width: '100%' }, { id: 'sgpvp-exc', rows: 6 }, null, e1);
 
     tr = create_element('tr', null, null, null, table);
-    td = create_element('td', { padding: '1em 1em 0 1em' }, { colSpan: 2 }, null, tr);
+    td = create_element('td', { padding: '1em 1em 0 1em', width: '25%' }, null, null, tr);
     create_element('label', null, { htmlFor: 'sgpvp-rid' }, "Retreat tile ID: ", td);
     rid_field = create_element('input', { textAlign: 'right' }, { id: 'sgpvp-rid', type: 'text', size: 5 }, null, td);
-
+    td = create_element('td', { padding: '1em 1em 0 1em', width: '50%', textAlign: 'center' }, { colSpan: 2 }, null, tr);
+    create_element('label', null, { htmlFor: 'sgpvp-arm' }, "Ship armour points: ", td);
+    arm_field = create_element('input', { textAlign: 'right' }, { id: 'sgpvp-arm', type: 'text', size: 3 }, null, td);
+    create_element('label', null, { htmlFor: 'sgpvp-lvl' }, " level: ", td);
+    lvl_field = create_element('input', { textAlign: 'right' }, { id: 'sgpvp-lvl', type: 'text', size: 1 }, null, td);
+    td = create_element('td', { padding: '1em 1em 0 1em', width: '25%', textAlign: 'right' }, null, null, tr);
+    create_element('a', null, { href: 'https://dl.dropboxusercontent.com/u/28969566/sgpvp/help.html', target: '_blank' }, "Help", td);
     tr = create_element('tr', null, null, null, table);
-    td = create_element('td', { padding: '2em 1em 1em 1em', textAlign: 'center' }, { colSpan: 2 }, null, tr);
+    td = create_element('td', { padding: '2em 1em 1em 1em', textAlign: 'center' }, { colSpan: 4 }, null, tr);
     close_but = create_element('input', null, { type: 'button', value: 'Close' }, null, td);
-
     document.body.appendChild(table);
 
     // handlers
@@ -239,7 +243,8 @@ SGPvP.prototype.ui = function() {
     var timer;
     var save_handler = function() {
         if(self.saveTargetingData(ql_ta.value, inc_ta.value, exc_ta.value,
-                                  rid_field.value))
+                                  rid_field.value, arm_field.value,
+                                  lvl_field.value))
             enable_button(true);
         timer = null;
     };
@@ -252,18 +257,23 @@ SGPvP.prototype.ui = function() {
     var close_handler = function() { self.closeUi(); };
 
     // load settings and install handlers
-    this.loadSettings(['textQL', 'targetingData', 'retreatTile'],
+    this.loadSettings(['textQL', 'targetingData', 'retreatTile', 'armourData'],
                       function(results) {
                           ql_ta.value = results[0];
                           var targetingData = results[1];
                           inc_ta.value = self.stringifyOverrideList(targetingData.include);
                           exc_ta.value = self.stringifyOverrideList(targetingData.exclude);
                           rid_field.value = results[2];
+                          var armourData = results[3];
+                          arm_field.value = armourData.points;
+                          lvl_field.value = armourData.level;
 
                           ql_ta.addEventListener('keyup', change_handler, false);
                           inc_ta.addEventListener('keyup', change_handler, false);
                           exc_ta.addEventListener('keyup', change_handler, false);
                           rid_field.addEventListener('keyup', change_handler, false);
+                          arm_field.addEventListener('keyup', change_handler, false);
+                          lvl_field.addEventListener('keyup', change_handler, false);
                           close_but.addEventListener('click', close_handler, false);
                       });
     
@@ -272,18 +282,25 @@ SGPvP.prototype.ui = function() {
 
 SGPvP.prototype.saveTargetingData = function(ql,
                                              include_overrides, exclude_overrides,
-                                             retreat_tile) {
+                                             retreat_tile, armour_points, armour_level) {
     var ok;
-    var qo = this.parseQL(ql);
-    if(qo) {
-        var o = {
-            ql: qo.parsed,
-            include: this.parseOverrideList(include_overrides),
-            exclude: this.parseOverrideList(exclude_overrides)
-        };
 
-        this.storeSettings({ targetingData: {ql: qo.ql, data: o}, retreatTile: retreat_tile });
-        ok = true;
+    armour_points = parseInt(armour_points);
+    armour_level = parseInt(armour_level);
+    if(armour_points > 0 && armour_level > 0 && armour_level <= 6) {
+        var qo = this.parseQL(ql);
+        if(qo) {
+            var o = {
+                ql: qo.parsed,
+                include: this.parseOverrideList(include_overrides),
+                exclude: this.parseOverrideList(exclude_overrides)
+            };
+
+            this.storeSettings({ targetingData: {ql: qo.ql, data: o},
+                                 retreatTile: retreat_tile,
+                                 armourData: {points: armour_points, level: armour_level} });
+            ok = true;
+        }
     }
 
     return ok;
@@ -586,19 +603,19 @@ SGPvP.prototype.jumpToRetreatTile = function() {
     }
 };
 
-SGPvP.prototype.bots = function() { this.useBots(this.DEFAULT_BOTS); }; // XXX compute amount needed
+SGPvP.prototype.bots = function() { this.useBots(null); };
 SGPvP.prototype.bots2 = function() { this.useBots(2); };
 SGPvP.prototype.bots5 = function() { this.useBots(5); };
 SGPvP.prototype.bots8 = function() { this.useBots(8); };
 SGPvP.prototype.fillUp = function() { document.location = 'main.php?fillup=1'; };
 //SGPvP.prototype.enterBuilding = function() { document.location = 'building.php'; };
 
-SGPvP.prototype.useBots = function(amount) {
-    document.location = 'main.php?amount=' + amount + '&resid=8&useres=Use';
-};
-
 SGPvP.prototype.cloak = function() {
     this.clickButton('cloak');
+};
+
+SGPvP.prototype.uncloak = function() {
+    this.clickButton('uncloak');
 };
 
 SGPvP.prototype.parseFactionSpec = function(spec) {
@@ -662,6 +679,253 @@ SGPvP.prototype.clickButton = function(label) {
         input.click();
     else
         this.nav();
+};
+
+// This if called every time the nav page is loaded.  It should run
+// fast and report no errors.
+SGPvP.prototype.setupNavPage = function() {
+    var self = this;
+
+    // We want this code to run now, and each time the cargo box
+    // mutates, to keep track of our armour and how many bots we have.
+    var updateLastKnown = function() {
+        // we'll set these if found below
+        self.useBotsAmountField = null;
+        self.useBotsButton = null;
+
+        var settings = new Object();
+
+        // Get the current ship armour. It's in a properly ID'd span.
+        var n = NaN;
+        var elt = document.getElementById('spanShipArmor');
+        if(elt)
+            n = parseInt(elt.textContent);
+        if(!isNaN(n))
+            settings.lastKnownArmourPoints = n;
+
+        // Get amount of bots in the cargo hold, from the Nav
+        // screen. This information is always available, except when
+        // the user clicked on the "[Use]" link for a resource other
+        // than bots. In that case, the script will use the last known
+        // value stored in the settings.
+        n = NaN;
+        elt = document.getElementById('tdCargoRes8');
+        if(elt) {
+            var m = elt.textContent.match(/(\d+)/);
+            if(m)
+                n = parseInt(m[1]);
+        }
+        else {
+            elt = document.getElementById('useform');
+            if(elt) {
+                var resid = elt.elements.namedItem('resid');
+                if(resid && resid.value == 8) {
+                    // The useres form is open for bots. Remember this...
+                    self.useResourceForm = elt;
+                    self.useBotsAmountField = elt.elements.namedItem('amount');
+                    self.useBotsButton = elt.elements.namedItem('useres');
+                    // ... and get the amount of bots available:
+                    var m = elt.textContent.match(/On board:[\s:]*(\d+)/);
+                    if(m)
+                        n = parseInt(m[1]);
+                }
+            }
+            else {
+                // the useres form is closed. we *know* we have no bots.
+                n = 0;
+            }
+        }
+        if(!isNaN(n))
+            settings.lastKnownBotsAvailable = n;
+
+        self.storeSettings(settings);
+    };
+
+    updateLastKnown();
+
+    var cargo = document.getElementById("cargo_content");
+    if(cargo) {
+        var observer = new MutationObserver(updateLastKnown);
+        observer.observe(cargo.parentNode, {childList:true});
+    }
+};
+
+// This if called every time the ship2ship and building page is
+// loaded. It should run fast and report no errors.
+SGPvP.prototype.setupCombatPage = function() {
+    var settings = new Object();
+    var elt;
+
+    elt = document.evaluate("//td/input[@name = 'resid' and @value = '8']",
+                            document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                            null).singleNodeValue;
+    if(elt) {
+        // Found the resid hidden element for bots. It is contained in a
+        // td. The previous td contains the amount available; the next
+        // input in the current td should be the amount to use field, and
+        // the next input, the submit button.
+        var available = parseInt(elt.parentNode.previousElementSibling.textContent);
+        if(!isNaN(available))
+            settings.lastKnownBotsAvailable = available;
+
+        var amountField = elt.nextElementSibling;
+        if(amountField && amountField.name == 'amount') {
+            var submit = amountField.nextElementSibling;
+            if(submit.value == 'Use') {
+                this.useBotsAmountField = amountField;
+                this.useBotsButton = submit;
+            }
+        }
+    }
+    else
+        // No bots available. We know this, really.
+        settings.lastKnownBotsAvailable = 0;
+
+    elt = document.evaluate("//font[starts-with(text(), 'Armor points:')]",
+                            document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                            null).singleNodeValue;
+    if(elt) {
+        var armour = parseInt(elt.textContent.substring(13));
+        if(!isNaN(armour))
+            settings.lastKnownArmourPoints = armour;
+    }
+
+    this.storeSettings(settings);
+};
+
+SGPvP.prototype.useBots = function(max) {
+    var self = this;
+    self.loadSettings(['armourData',
+                       'lastKnownArmourPoints',
+                       'lastKnownBotsAvailable'],
+                      function(results) {
+                          self.useBots2(max, results);
+                      });
+};
+
+SGPvP.prototype.testBots = function() {
+    var self = this;
+    self.loadSettings(['armourData',
+                       'lastKnownArmourPoints',
+                       'lastKnownBotsAvailable'],
+                      function(results) {
+                          self.showBotsNeeded(results);
+                      });
+};
+
+SGPvP.prototype.useBots2 = function(max, storedParams) {
+    var armourData = storedParams[0];
+    var lastKnownArmourPoints = storedParams[1];
+    var lastKnownBotsAvailable = storedParams[2];
+    var bots = this.computeBotsNeeded(armourData, lastKnownArmourPoints, lastKnownBotsAvailable);
+    if(!bots)
+        return;
+
+    if(max && bots.available > max)
+        bots.available = max;
+
+    // Compute how much armour the bots will repair, and how many
+    // we'll have left, and update last known values.
+    var newSettings = {
+        lastKnownArmourPoints: lastKnownArmourPoints + bots.available * bots.botRepair,
+        lastKnownBotsAvailable: lastKnownBotsAvailable - bots.available
+    };
+
+    var amount, submit;
+
+    if(this.useBotsAmountField) {
+        amount = this.useBotsAmountField;
+        submit = this.useBotsButton;
+    }
+    else if(this.page == 'main') {
+        // This really should only happen in the nav screen...
+        var form = this.getMadeUpBotsForm();
+        amount = form.elements['amount'];
+        submit = form.elements['useres'];
+    }
+    else {
+        this.showNotification("SGPvP error 5003: bots form not found", 1500);
+        return;
+    }
+
+    this.storeSettings(newSettings);
+    amount.value = bots.available;
+    submit.click();
+};
+
+SGPvP.prototype.getMadeUpBotsForm = function() {
+    var form = document.getElementById('sgpvp-useform');
+    if(form)
+        return form;
+
+    form = this.createElement('form',
+                              { display: 'none' },
+                              { id: 'sgpvp-useform', action: 'main.php',
+                                method: 'get', name: 'sgpvp-useform' },
+                              null, null);
+    this.createElement('input', null,
+                       { type: 'text', name: 'resid', value: 8 },
+                       null, form);
+    this.createElement('input', null,
+                       { type: 'text', name: 'amount' },
+                       null, form);
+    this.createElement('input', null,
+                       { type: 'submit', name: 'useres', value: 'Use',
+                         onclick: 'useRes(document.getElementById("sgpvp-useform").elements["resid"].value, document.getElementById("sgpvp-useform").elements["amount"].value);return false;' },
+                       null, form);
+    document.body.appendChild(form);
+    return form;
+};
+
+SGPvP.prototype.showBotsNeeded = function(storedParams) {
+    var armourData = storedParams[0];
+    var lastKnownArmourPoints = storedParams[1];
+    var lastKnownBotsAvailable = storedParams[2];
+    var bots = this.computeBotsNeeded(armourData, lastKnownArmourPoints, lastKnownBotsAvailable);
+    if(!bots)
+        return;
+
+    if(this.useBotsAmountField)
+        this.useBotsAmountField.value = bots.available;
+
+    if(bots.needed == 1)
+        this.showNotification('Need ' + bots.needed + ' robot, would use ' + bots.available, 1000);
+    else
+        this.showNotification('Need ' + bots.needed + ' robots, would use ' + bots.available, 1000);
+};
+
+// This function shows notifications. If it returns null, bots are not
+// needed or can't be used, and the user already knows.
+SGPvP.prototype.computeBotsNeeded = function(armourData, lastKnownArmourPoints, lastKnownBotsAvailable) {
+    if(!(armourData.points > 0 && armourData.level > 0)) {
+        this.showNotification('Ship armour not configured', 1500);
+        return null;
+    }
+
+    if(lastKnownArmourPoints == null || lastKnownArmourPoints < 0) {
+        // In the nav screen, we should always see the ship's armour
+        this.showNotification("SGPvP error 5001: ship armour not found", 1500);
+        return null;
+    }
+
+    if(!lastKnownBotsAvailable) {
+        this.showNotification("No bots available!", 500);
+        return null;
+    }
+
+    if(lastKnownArmourPoints >= armourData.points) {
+        this.showNotification('Bots not needed', 500);
+        return null;
+    }
+
+    var botRepair = Math.floor(180 / armourData.level);
+    var needed = Math.floor((armourData.points - lastKnownArmourPoints + botRepair - 1) / botRepair);
+
+    return {
+        botRepair: botRepair,
+        needed: needed,
+        available: needed > lastKnownBotsAvailable ? lastKnownBotsAvailable : needed
+    };
 };
 
 // Code adapted from Sweetener:

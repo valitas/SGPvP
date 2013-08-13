@@ -8,7 +8,7 @@
 // @include     http://*.pardus.at/building.php*
 // @require     sgpvp.js
 // @author      Val
-// @version     21
+// @version     24
 // @updateURL   https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.meta.js
 // @downloadURL https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.user.js
 // @grant       GM_getValue
@@ -54,7 +54,33 @@ SGPvP.prototype.LOADERS = {
         if(n > 0)
             return n;
         return null;
+    },
+
+    armourData: function(universe) {
+        var s = GM_getValue(universe + '-armour');
+        if(s)
+            return JSON.parse(s);
+
+        return {
+            points: null,
+            level: 5
+        };
+    },
+
+    lastKnownArmourPoints: function(universe) {
+        var n = GM_getValue(universe + '-lkap');
+        if(n)
+            return parseInt(n);
+        return null;
+    },
+
+    lastKnownBotsAvailable: function(universe) {
+        var n = GM_getValue(universe + '-lkba');
+        if(n)
+            return parseInt(n);
+        return null;
     }
+
 };
 
 SGPvP.prototype.SAVERS = {
@@ -69,6 +95,26 @@ SGPvP.prototype.SAVERS = {
             GM_setValue(universe + '-rtid', id);
         else
             GM_deleteValue(universe + '-rtid');
+    },
+
+    armourData: function(universe, adata) {
+        GM_setValue(universe + '-armour', JSON.stringify(adata));
+    },
+
+    lastKnownArmourPoints: function(universe, value) {
+        value = parseInt(value);
+        if(isNaN(value))
+            GM_deleteValue(universe + '-lkap');
+        else
+            GM_setValue(universe + '-lkap', value);
+    },
+
+    lastKnownBotsAvailable: function(universe, value) {
+        value = parseInt(value);
+        if(isNaN(value))
+            GM_deleteValue(universe + '-lkba');
+        else
+            GM_setValue(universe + '-lkba', value);
     }
 };
 
