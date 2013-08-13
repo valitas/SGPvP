@@ -2,7 +2,7 @@
 // Google Chrome - no Greasemonkey calls and no chrome.extension stuff
 // here.  localStorage should not be accessed from here either.
 
-// V24
+// V25
 
 function SGPvP() {
     this.url = window.location.href;
@@ -312,7 +312,7 @@ SGPvP.prototype.parseQL = function(ql) {
     ql = ql.replace(/\s+/g, '');
     if(ql.length > 0) {
         var a = ql.split(';');
-        if(a.length == 22) {
+        if(a.length == 22 || a.length == 23) {
             var inf = this.parseFactionSpec(a[5]);
             if(inf) {
                 var ef = this.parseFactionSpec(a[16]);
