@@ -6,882 +6,98 @@
 // @include     http://*.pardus.at/ship2ship_combat.php*
 // @include     http://*.pardus.at/ship2opponent_combat.php*
 // @include     http://*.pardus.at/building.php*
+// @require     sgpvp.js
 // @author      Val
-// @version     14
+// @version     21
+// @updateURL   https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.meta.js
+// @downloadURL https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.user.js
+// @grant       GM_getValue
+// @grant       GM_setValue
+// @grant       GM_deleteValue
 // ==/UserScript==
 
-function SGPvP() {
-    this.url = window.location.href;
+// Firefox implementation of non-portable bits
 
-    var m = /^https?:\/\/([^.]+)\.pardus\.at/.exec(this.url);
-    if(!m)
-        return;
+// Configuration loading... this seems ridiculously complicated, and
+// it is, but Chrome forces a rather weird callback model, which we
+// emulate in FF to keep the main logic portable.
 
-    this.universe = m[1];
+SGPvP.prototype.LOADERS = {
+    targetingData: function(universe) {
+        var s = GM_getValue(universe + '-targeting');
+        if(s)
+            return JSON.parse(s);
 
-    if(this.url.indexOf('ship2ship_combat.php') != -1) {
-        selectHighestRounds();
-        selectMissiles();
-    }
-    else if(this.url.indexOf('building.php') != -1) {
-        selectMissiles();
-    }
-    // XXX remove
-    if(this.url.indexOf('ship2opponent_combat.php') != -1) {
-        selectHighestRounds();
-        selectMissiles();
-    }
-
-    // We wanted addEventListener, but need to use document.onkeydown,
-    // because that's what pardus uses and we need to trap the cursor
-    // keys while the info dialogue is open.
-
-    var self = this;
-
-    this.game_kbd_handler = document.onkeydown;
-    document.onkeydown = function(event) { self.keyPressHandler(event); };
-
-    //window.addEventListener('keypress',
-    //                        function(event) { self.keyPressHandler(event); },
-    //                        false);
-}
-
-// CONFIGURABLE BITS, SORT OF:
-
-// XXX this will be smarter soon, bots needs an overhaul anyway
-SGPvP.prototype.DEFAULT_BOTS = 5;
-
-// the number is the keyCode, usually ASCII
-SGPvP.prototype.ACTIONS = {
-    /* Z */ 90: 'storeRP',
-    /* X */ 88: 'engage',
-    /* C */ 67: 'disengage',
-    /* V */ 86: 'nav',
-    /* B */ 66: 'bots',
-    /* M */ 77: 'damageBuilding',
-    /* A */ 65: 'bots2',
-    /* S */ 83: 'bots5',
-    /* D */ 68: 'bots8',
-    /* F */ 70: 'fillUp',
-    /* T */ 84: 'highlightTargets',
-    /* I */ 73: 'ui',
-    /* ESC */ 27: 'closeUi',
-
-    /* 1 */ 49: 'target',
-    /* 2 */ 50: 'engage',
-    /* 3 */ 51: 'nav',
-    /* 4 */ 52: 'jumpToRetreatTile',
-    /* 5 */ 53: 'bots'
-};
-// END CONFIGURABLE BITS, no user serviceable parts below
-
-SGPvP.prototype.SHIPS = [
-    'leviathan', 'boa_ultimate_carrier', 'behemoth', 'extender',
-    'celeus', 'lanner', 'mantis', 'elpadre', 'constrictor',
-    'hercules', 'babel_transporter', 'junkeriv', 'lanner_mini',
-    'slider', 'harrier', 'thunderbird', 'adder', 'rustfire',
-    'rustclaw', 'spectre', 'tyrant', 'wasp', 'sabre',
-    'ficon', 'interceptor', 'marauder', 'trident', 'piranha',
-    'venom', 'mercury', 'blood_lanner', 'viper_defence_craft',
-    'shadow_stealth_craft', 'rover', 'vulcan', 'gargantua',
-    'chitin', 'hawk', 'horpor', 'pantagruel', 'reaper',
-    'nano', 'nighthawk', 'dominator', 'nighthawk_deluxe',
-    'phantom_advanced_stealth_craft', 'liberator', 'liberator_eps',
-    'sudden_death', 'gauntlet', 'scorpion', 'doomstar',
-    'mooncrusher', 'war_nova' ];
-
-SGPvP.prototype.keyPressHandler = function(event) {
-    if(window.name == '' || event.ctrlKey || event.altKey || event.metaKey) {
-        if(this.game_kbd_handler)
-            this.game_kbd_handler(event);
-        return;
-    }
-
-    if(event.target &&
-       (event.target.nodeName == 'INPUT' || event.target.nodeName == 'TEXTAREA')) {
-        // nop, and don't call the game's handler cause it may move the ship
-        return;
-    }
-
-    var method_name = this.ACTIONS[event.keyCode];
-    if(method_name) {
-        var method = this[method_name];
-        if(method) {
-            event.preventDefault();
-            event.stopPropagation();
-            method.call(this);
-        }
-    }
-    else if(this.game_kbd_handler) {
-        this.game_kbd_handler(event);
-    }
-};
-
-SGPvP.prototype.showNotification = function(text, delay) {
-    if(this.notification_timer)
-        clearTimeout(this.notification_timer);
-    this.hideNotification();
-    this.notification = this.createElement('div',
-                                       { position: 'fixed', zIndex: '15', padding: '0.5em', textAlign: 'center',
-                                         fontSize: '18px', verticalAlign: 'middle',
-                                         top: '50%', left: '50%', width: '8em', height: 'auto',
-                                         marginLeft: '-4em', marginTop: '-2.2em',
-                                         border: 'ridge 2px #556', backgroundColor: 'rgb(0,0,28)' },
-                                       null, text, null);
-    document.body.appendChild(this.notification);
-
-    var self = this;
-    this.notification_timer = setTimeout(function() {
-                                             self.notification_timer = null;
-                                             self.hideNotification();
-                                         }, delay);
-};
-
-SGPvP.prototype.hideNotification = function() {
-    if(this.notification)
-        document.body.removeChild(this.notification);
-    this.notification = null;
-};
-
-SGPvP.prototype.createElement = function(tag, style, attributes, text_content, parent) {
-    var e = document.createElement(tag);
-    if(attributes)
-        for(property in attributes)
-            e[property] = attributes[property];
-    if(style)
-        for(property in style)
-            e.style[property] = style[property];
-    if(text_content)
-        e.appendChild(document.createTextNode(text_content));
-    if(parent)
-        parent.appendChild(e);
-    return e;
-};
-
-SGPvP.prototype.closeUi = function() {
-    if(this.ui_element) {
-        this.ui_element.parentNode.removeChild(this.ui_element);
-        this.ui_element = null;
-    }
-};
-
-SGPvP.prototype.ui = function() {
-    if(this.ui_element)
-        return;
-
-    var create_element = this.createElement;
-
-    var table, tr, td, e1, e2;
-    var ql_ta, inc_ta, exc_ta, pt_cbox, rid_field, close_but;
-
-    table = create_element('table',
-                           { position: 'fixed', zIndex: '10', borderCollapse: 'collapse',
-                             top: '3em', left: '50%', width: '50em', height: 'auto', marginLeft: '-25em',
-                             border: 'ridge 2px #556', backgroundColor: 'rgb(0,0,28)' },
-                           null, null, null);
-
-    tr = create_element('tr', null, null, null, table);
-    td = create_element('td', { padding: '1em' }, { colSpan: 2 }, null, tr);
-    create_element('h3', { margin: 0, textAlign: 'center' }, null, "Scorpion Guard's Better PvP Script", td);
-
-    tr = create_element('tr', null, null, null, table);
-    td = create_element('td', { padding: '0 1em' }, { colSpan: 2 }, null, tr);
-    create_element('label', null, { htmlFor: 'sgpvp-ql' }, "Inclusions and exclusions (quick list format):", td);
-    tr = create_element('tr', null, null, null, table);
-    td = create_element('td', { padding: '0 1em' }, { colSpan: 2 }, null, tr);
-    ql_ta = create_element('textarea', { width: '100%' }, { id: 'sgpvp-ql', rows: 5 }, null, td);
-
-    tr = create_element('tr', null, null, null, table);
-    create_element('td', { padding: '1em 1em 0 1em' }, { colSpan: 2 },
-                   "Overrides (names or IDs, one per line, includes are prioritised)", tr);
-
-    tr = create_element('tr', { verticalAlign: 'top' }, null, null, table);
-    td = create_element('td', { padding: '0 0.5em 0 1em', width: '50%' }, null, null, tr);
-    e1 = create_element('div', null, null, null, td);
-    create_element('label', null, { htmlFor: 'sgpvp-inc' }, "include:", e1);
-    e1 = create_element('div', null, null, null, td);
-    inc_ta = create_element('textarea', { width: '100%' }, { id: 'sgpvp-inc', rows: 6 }, null, e1);
-    td = create_element('td', { padding: '0 1em 0 0.5em', width: '50%' }, null, null, tr);
-    e1 = create_element('div', null, null, null, td);
-    create_element('label', null, { htmlFor: 'sgpvp-exc' }, "exclude:", e1);
-    e1 = create_element('div', null, null, null, td);
-    exc_ta = create_element('textarea', { width: '100%' }, { id: 'sgpvp-exc', rows: 6 }, null, e1);
-
-    tr = create_element('tr', null, null, null, table);
-    td = create_element('td', { padding: '1em 1em 0 1em' }, { colSpan: 2 }, null, tr);
-    pt_cbox = create_element('input', null, { id: 'sgpvp-ptr', type: 'checkbox' }, null, td);
-    create_element('label', null, { htmlFor: 'sgpvp-ptr' },
-                   " Prioritise traders when no targets from include override list above are present", td);
-
-    tr = create_element('tr', null, null, null, table);
-    td = create_element('td', { padding: '1em 1em 0 1em' }, { colSpan: 2 }, null, tr);
-    create_element('label', null, { htmlFor: 'sgpvp-rid' }, "Retreat tile ID: ", td);
-    rid_field = create_element('input', { textAlign: 'right' }, { id: 'sgpvp-rid', type: 'text', size: 5 }, null, td);
-
-    tr = create_element('tr', null, null, null, table);
-    td = create_element('td', { padding: '2em 1em 1em 1em', textAlign: 'center' }, { colSpan: 2 }, null, tr);
-    close_but = create_element('input', null, { type: 'button', value: 'Close' }, null, td);
-
-    document.body.appendChild(table);
-
-    // load data
-    {
-        ql_ta.value = this.loadTextQL();
-        var data = this.loadTargetingData();
-        inc_ta.value = this.stringifyOverrideList(data.include);
-        exc_ta.value = this.stringifyOverrideList(data.exclude);
-        if(data.prioritiseTraders)
-            pt_cbox.checked = true;
-        rid_field.value = this.loadRetreatTile();
-    }
-
-    // add handlers
-    var self = this;
-
-    var enable_button = function(enabled) {
-        if(enabled) {
-            close_but.disabled = false;
-            close_but.style.borderColor = 'inherit';
-            close_but.style.color = 'inherit';
-        }
-        else {
-            close_but.disabled = true;
-            close_but.style.borderColor = 'rgb(0,0,28)';
-            close_but.style.color = 'rgb(56,56,84)';
-        }
-    };
-
-    var timer;
-    var save_handler = function() {
-        if(self.saveTargetingData(ql_ta.value, inc_ta.value, exc_ta.value,
-                             pt_cbox.checked))
-            self.saveRetreatTile(rid_field.value);
-            enable_button(true);
-        timer = null;
-    };
-    var change_handler = function() {
-        enable_button(false);
-        if(timer)
-            clearTimeout(timer);
-        timer = setTimeout(save_handler, 500);
-    };
-    var close_handler = function() { self.closeUi(); };
-
-    ql_ta.addEventListener('keypress', change_handler, false);
-    inc_ta.addEventListener('keypress', change_handler, false);
-    exc_ta.addEventListener('keypress', change_handler, false);
-    pt_cbox.addEventListener('change', change_handler, false);
-    rid_field.addEventListener('keypress', change_handler, false);
-    close_but.addEventListener('click', close_handler, false);
-    
-    this.ui_element = table;
-};
-
-SGPvP.prototype.loadTargetingData = function() {
-    var s = GM_getValue(this.universe + '-targeting',
-                        '{"ql":{"includeFactions":{},"excludeFactions":{},"includeAlliances":{},"excludeAlliances":{},"includeCharacters":{},"excludeCharacters":{}},"include":{"ids":{},"names":{}},"exclude":{"ids":{},"names":{}},"prioritiseTraders":false,"retreatTile":null}');
-    return JSON.parse(s);
-};
-
-SGPvP.prototype.loadTextQL = function() {
-    return GM_getValue(this.universe + '-ql', '');
-};
-
-SGPvP.prototype.saveTargetingData = function(ql,
-                                             include_overrides, exclude_overrides,
-                                             prioritise_traders) {
-    var ok;
-    var qo = this.parseQL(ql);
-    if(qo) {
-        var o = {
-            ql: qo.parsed,
-            include: this.parseOverrideList(include_overrides),
-            exclude: this.parseOverrideList(exclude_overrides),
-            prioritiseTraders: prioritise_traders ? true : false
+        return {
+            ql:{includeFactions:{},
+                excludeFactions:{},
+                includeAlliances:{},
+                excludeAlliances:{},
+                includeCharacters:{},
+                excludeCharacters:{}},
+            include:{ids:{},names:{}},
+            exclude:{ids:{},names:{}},
+            prioritiseTraders:false,
+            retreatTile:null
         };
+    },
 
-        GM_setValue(this.universe + '-ql', qo.ql);
-        GM_setValue(this.universe + '-targeting', JSON.stringify(o));
-        ok = true;
-    }
+    textQL: function(universe) {
+        var s = GM_getValue(universe + '-ql');
+        if(s)
+            return s;
+        return '';
+    },
 
-    return ok;
-};
-
-SGPvP.prototype.loadRetreatTile = function() {
-    var n = parseInt(GM_getValue(this.universe + '-rtid', ''));
-    if(n > 0)
-        return n;
-    return null;
-};
-
-SGPvP.prototype.saveRetreatTile = function(id) {
-    id = parseInt(id);
-    if(id > 0)
-        GM_setValue(this.universe + '-rtid', id);
-    else
-        GM_deleteValue(this.universe + '-rtid', id);
-};
-
-SGPvP.prototype.parseQL = function(ql) {
-    var o;
-
-    ql = ql.replace(/\s+/g, '');
-    if(ql.length > 0) {
-        var a = ql.split(';');
-        if(a.length == 22) {
-            var inf = this.parseFactionSpec(a[5]);
-            if(inf) {
-                var ef = this.parseFactionSpec(a[16]);
-                if(ef) {
-                    o = {
-                        ql: ql,
-                        parsed: {
-                            includeFactions: inf,
-                            excludeFactions: ef,
-                            includeAlliances: this.parseIDList(a[13]),
-                            excludeAlliances: this.parseIDList(a[19]),
-                            includeCharacters: this.parseIDList(a[14]),
-                            excludeCharacters: this.parseIDList(a[20])
-                        }
-                    };
-                }
-            }
-        }
-    }
-    else {
-        var no = new Object();
-        o = {
-            ql: '',
-            parsed: {
-                includeFactions: no,
-                excludeFactions: no,
-                includeAlliances: no,
-                excludeAlliances: no,
-                includeCharacters: no,
-                excludeCharacters: no
-            }
-        };
-    }
-
-    return o;
-};
-
-SGPvP.prototype.parseOverrideList = function(list) {
-    var a = list.split('\n');
-    var ids = new Object();
-    var names = new Object();
-    for(var i = 0, end = a.length; i < end; i++) {
-        var s = a[i].replace(/^\s+|\s+$/g, '');
-        if(s.length > 0) {
-            if(/^[0-9]+$/.test(s))
-                ids[parseInt(s)] = i+1;
-            else
-                names[s.toLowerCase()] = i+1;
-        }
-    }
-
-    return { ids: ids, names: names };
-};
-
-SGPvP.prototype.stringifyOverrideList = function(list_object) {
-    var a = new Array();
-    for(var id in list_object.ids)
-        a[list_object.ids[id] - 1] = id;
-    for(var name in list_object.names)
-        a[list_object.names[name] - 1] = name;
-    return a.join('\n');
-};
-
-SGPvP.prototype.target = function() {
-    var url = this.url;
-    var page;
-    var ships;
-
-    if(url.indexOf('building.php') != -1) {
-        page = 'b';
-        ships = getShipsBuilding();
-    }
-    else if(url.indexOf('ship2ship_combat.php') != -1) {
-        page = 'c';
-        ships = getShipsCombat();
-    }
-    else {
-        page = 'n';
-        ships = getShipsNav();
-    }
-
-    if(ships) {
-        var targeting_data = this.loadTargetingData();
-        var targets = this.scanForTargets(targeting_data, ships);
-
-        if(targets.included.length > 0) {
-            var ship_pri = (page == 'n') ?
-                this.getShipModelPriorities(!targeting_data.prioritiseTraders) : null;
-            var best = this.chooseTarget(targets.included, ship_pri);
-            document.location = 'ship2ship_combat.php?playerid=' + best.id;
-            return;
-        }
-    }
-
-    this.nav();
-};
-
-SGPvP.prototype.highlightTargets = function() {
-    var url = this.url;
-    var page;
-    var ships;
-
-    if(url.indexOf('building.php') != -1) {
-        page = 'b';
-        ships = getShipsBuilding();
-    }
-    else if(url.indexOf('ship2ship_combat.php') != -1) {
-        page = 'c';
-        ships = getShipsCombat();
-    }
-    else {
-        page = 'n';
-        ships = getShipsNav();
-    }
-
-    var highlight_target = function(td, colour) {
-        td.style.backgroundColor = colour;
-        td.previousSibling.style.backgroundColor = colour;
-    };
-
-    if(ships) {
-        for(var i = 0, end = ships.length; i < end; i++)
-            highlight_target(ships[i].td, 'inherit');
-
-        var targeting_data = this.loadTargetingData();
-        var targets = this.scanForTargets(targeting_data, ships);
-
-        // turn the excluded ships green
-        for(var i = 0, end = targets.excluded.length; i < end; i++)
-            highlight_target(targets.excluded[i].td, '#050');
-
-        if(targets.included.length > 0) {
-            // turn the included ships red
-            for(var i = 0, end = targets.included.length; i < end; i++)
-                highlight_target(targets.included[i].td, '#500');
-
-            // highlight the chosen target
-            var ship_pri = (page == 'n') ?
-                this.getShipModelPriorities(!targeting_data.prioritiseTraders) : null;
-            var best = this.chooseTarget(targets.included, ship_pri);
-            highlight_target(best.td, '#900');
-        }
-    }
-};
-
-SGPvP.prototype.scanForTargets = function(targeting_data, ships) {
-    var exc = new Array();
-    var inc = new Array();
-    var ql = targeting_data.ql;
-    var include = targeting_data.include;
-    var exclude = targeting_data.exclude;
-
-    for(var i = 0, end = ships.length; i < end; i++) {
-        var ship = ships[i];
-        var name = ship.name.toLowerCase();
-        var n;
-
-        if(exclude.ids[ship.id] || exclude.names[name]) {
-            exc.push(ship);
-        }
-        else if((n = include.ids[ship.id]) || (n = include.names[name])) {
-            ship.includePriority = n;
-            inc.push(ship);
-        }
-        else if(ql.excludeFactions[ship.faction] ||
-           ql.excludeAlliances[ship.ally_id] ||
-           ql.excludeCharacters[ship.id])
-            exc.push(ship);
-        else if(ql.includeFactions[ship.faction] ||
-                ql.includeAlliances[ship.ally_id] ||
-                ql.includeCharacters[ship.id])
-            inc.push(ship);
-    }
-
-    return {
-        excluded: exc,
-        included: inc
-    };
-};
-
-SGPvP.prototype.chooseTarget = function(ships, ship_pri) {
-    var best;
-
-    for(var i = 0, end = ships.length; i < end; i++) {
-        var ship = ships[i];
-        if(!best)
-            best = ship;
-        else {
-            if(best.includePriority) {
-                if(ship.includePriority &&
-                   (ship.includePriority < best.includePriority))
-                    best = ship;
-            }
-            else {
-                if(ship.includePriority)
-                    best = ship;
-                else {
-                    if(ship_pri) {
-                        var sm = ship_pri[ship.shipModel];
-                        var bm = ship_pri[best.shipModel];
-
-                        if(sm < bm)
-                            best = ship;
-                        else if(sm == bm) {
-                            if(ship.id < best.id)
-                                best = ship;
-                        }
-                    }
-                    else {
-                        if(ship.id < best.id)
-                            best = ship;
-                    }
-                }
-            }
-        }
-    }
-
-    return best;
-};
-
-SGPvP.prototype.getShipModelPriorities = function(tough_first) {
-    var a = this.SHIPS;
-    var o = new Object();
-
-    if(tough_first) {
-        for(var i = 0, end = a.length; i < end; i++)
-            o[a[i]] = end - i;
-    }
-    else {
-        for(var i = 0, end = a.length; i < end; i++)
-            o[a[i]] = i + 1;
-    }
-
-    return o;
-};
-
-SGPvP.prototype.storeRP = function() {
-    var userloc = unsafeWindow.userloc;
-    this.saveRetreatTile(userloc);
-    this.showNotification('Retreat tile set: ' + userloc, 500);
-};
-
-SGPvP.prototype.engage = function() {
-    if(this.url.indexOf('ship2ship_combat.php') != -1)
-        this.clickButton('Attack');
-    else
-        this.target();
-};
-
-SGPvP.prototype.disengage = function() {
-    if(this.url.indexOf('ship2ship_combat.php') != -1)
-        this.nav();
-    else
-        this.jumpToRetreatTile();
-};
-
-SGPvP.prototype.nav = function() { document.location = 'main.php'; };
-
-SGPvP.prototype.damageBuilding = function() {
-    if(this.url.indexOf('building.php') != -1)
-        this.clickButton('destroy');
-    else
-        document.location = 'building.php';
-};
-
-SGPvP.prototype.jumpToRetreatTile = function() {
-    if(this.url.indexOf('building.php') != -1)
-        this.clickButton('Retreat');
-    else {
-        var tile_id = this.loadRetreatTile();
-        if(tile_id) {
-            document.getElementById('navForm').elements[0].value = tile_id;
-            document.getElementById('navForm').submit();
-        }
-        else {
-            // XXX
-            this.showNotification('NO RETREAT TILE SET', 500);
-            this.nav();
-        }
-    }
-};
-
-SGPvP.prototype.bots = function() { this.useBots(this.DEFAULT_BOTS); }; // XXX compute amount needed
-SGPvP.prototype.bots2 = function() { this.useBots(2); };
-SGPvP.prototype.bots5 = function() { this.useBots(5); };
-SGPvP.prototype.bots8 = function() { this.useBots(8); };
-SGPvP.prototype.fillUp = function() { document.location = 'main.php?fillup=1'; };
-//SGPvP.prototype.enterBuilding = function() { document.location = 'building.php'; };
-
-SGPvP.prototype.useBots = function(amount) {
-    document.location = 'main.php?amount=' + amount + '&resid=8&useres=Use';
-};
-
-SGPvP.prototype.loadObject = function(key) {
-    var s = GM_getValue(this.universe + '-' + key);
-    if(s)
-        return JSON.parse(s);
-    return new Object();
-};
-
-SGPvP.prototype.parseFactionSpec = function(spec) {
-    var r;
-    var m = /^\s*(f?)(e?)(u?)(n?)\s*$/.exec(spec);
-    if(m) {
-        r = new Object();
-        r['fed'] = m[1] ? true : false;
-        r['emp'] = m[2] ? true : false;
-        r['uni'] = m[3] ? true : false;
-        r['neu'] = m[4] ? true : false;
-    }
-
-    return r;
-};
-
-SGPvP.prototype.parseIDList = function(idlist) {
-    var r = new Object(), a = idlist.split(','), n;
-    for(var i = 0, end = a.length; i < end; i++) {
-        n = parseInt(a[i]);
+    retreatTile: function(universe) {
+        var n = parseInt(GM_getValue(universe + '-rtid'));
         if(n > 0)
-            r[n] = i+1;
-    }
-    return r;
-};
-
-SGPvP.prototype.getPriorityTargets = function() {
-    var ids = this.loadObject('prids');
-    var names = this.loadObject('prnames');
-    var a = new Array();
-    for(var id in ids)
-        a[ids[id]] = id;
-    for(var name in names)
-        a[names[name]] = name;
-    return a.join('\n');
-};
-
-SGPvP.prototype.setPriorityTargets = function(target_list) {
-    var a = target_list.split('\n');
-    var empty = true;
-    var pr_ids = new Object();
-    var pr_names = new Object();
-    for(var i = 0, end = a.length; i < end; i++) {
-        var s = a[i].replace(/^\s+|\s+$/g, '');
-        if(s.length > 0) {
-            empty = false;
-            if(/^[0-9]+$/.test(s))
-                pr_ids[parseInt(s)] = i;
-            else
-                pr_names[s] = i;
-        }
-    }
-
-    if(empty) {
-        GM_deleteValue(this.universe + '-prids');
-        GM_deleteValue(this.universe + '-prnames');
-    }
-    else {
-        GM_setValue(this.universe + '-prids', JSON.stringify(pr_ids));
-        GM_setValue(this.universe + '-prnames', JSON.stringify(pr_names));
+            return n;
+        return null;
     }
 };
 
-// Adapted from 12345:
+SGPvP.prototype.SAVERS = {
+    targetingData: function(universe, tdata) {
+        GM_setValue(universe + '-ql', tdata.ql);
+        GM_setValue(universe + '-targeting', JSON.stringify(tdata.data));
+    },
 
-SGPvP.prototype.clickButton = function(label) {
-    var input = document.getElementById(label);
-
-    if(!input)
-        // Try by name
-        input = document.getElementsByName(label)[0];
-
-    if(!input) {
-        // Try by value
-        var inputs = document.getElementsByTagName('input');
-        for(var i = 0, end = inputs.length; i < end; i++) {
-            var element = inputs[i];
-            if(element.value == label && element.type == 'submit') {
-                input = element;
-                break;
-            }
-        }
-    }
-
-    if(!input) {
-        // Try button tags
-        var inputs = document.getElementsByTagName('button');
-        for(var i = 0, end = inputs.length; i < end; i++) {
-            var element = inputs[i];
-            if(element.innerHTML == label) {
-                input = element;
-                break;
-            }
-        }
-    }
-
-    if(input && input.click)
-        input.click();
-    else
-        this.nav();
-};
-
-// Code adapted from Sweetener:
-
-function getShipsNav() {
-    var ships;
-    var sbox = document.getElementById('otherships_content');
-    if(sbox) {
-        var rx = /^javascript:scanId\((\d+),(\s|%20)*['"]player['"]\)$/;
-        ships = getShips(sbox,
-                         "table/tbody/tr/td[position() = 2]/a",
-                         function(url) {
-                             var r;
-                             var m = rx.exec(url);
-                             if(m)
-                                 r = { id: parseInt(m[1]) };
-                             return r;
-                         });
-    }
-    return ships;
-}
-
-function getShipsBuilding() {
-    var ships;
-    var rx = /building\.php\?detail_type=player&detail_id=(\d+)$/;
-    ships = getShips(document,
-                     "//table/tbody[tr/th = 'Other Ships']/tr/td/a",
-                     function(url) {
-                         var r;
-                         var m = rx.exec(url);
-                         if(m)
-                             r = { id: parseInt(m[1]) };
-                         return r;
-                     });
-
-    return ships;
-}
-
-/// W should add to the list the ship we are engaging, but we can't
-function getShipsCombat() {
-    var ships;
-             
-    var rx = /ship2ship_combat\.php\?playerid=(\d+)/;
-    ships = getShips(document,
-                     "//table/tbody[tr/th = 'Other Ships']/tr/td/a",
-                     function(url) {
-                         var r;
-                         var m = rx.exec(url);
-                         if(m)
-                             r = { id: parseInt(m[1]) };
-                         return r;
-                     });
-
-    return ships;
-}
-
-// This one extracts a list of ships/opponents from a container
-// element. xpath is evaluated from container, and is expected to find
-// the links that matchId will match.
-function getShips(container, xpath, matchId) {
-    var doc = container.ownerDocument;
-    if(!doc)
-        doc = container;
-    var ships = [];
-    var xpr = doc.evaluate(xpath, container, null,
-                           XPathResult.ORDERED_NODE_ITERATOR_TYPE, null);
-    var a, entry;
-    while((a = xpr.iterateNext())) {
-        var href = a.href;
-        var m = matchId(href);
-        if(m) {
-            var td = a.parentNode;
-            entry = m;
-            entry.name = a.textContent;
-            entry.td = td;
-            ships.push(entry);
-
-            // see if we find an alliance link
-            var xpr2 = doc.evaluate("font/b/a", td, null, XPathResult.ORDERED_NODE_ITERATOR_TYPE,
-                                    null);
-            var aa;
-            while((aa = xpr2.iterateNext())) {
-                if(aa.pathname == '/alliance.php' && (m = /^\?id=(\d+)$/.exec(aa.search))) {
-                    entry.ally_id = parseInt(m[1]);
-                    entry.ally_name = aa.textContent;
-                    break;
-                }
-            }
-
-            // find the ship type
-            var itd = td.previousSibling;
-            if((m = /([^/]+)\.png/.exec(itd.style.backgroundImage)))
-                entry.shipModel = m[1];
-
-            // see if we find a faction
-            xpr2 = doc.evaluate("img", itd, null, XPathResult.ORDERED_NODE_ITERATOR_TYPE,
-                                null);
-            while((aa = xpr2.iterateNext())) {
-                if((m = /factions\/sign_(fed|emp|uni)/.exec(aa.src))) {
-                    entry.faction = m[1];
-                    break;
-                }
-            }
-
-            if(!entry.faction)
-                entry.faction = 'neu';
-        }
-    }
-
-    return ships;
-}
-
-function selectMissiles() {
-    var inputs = document.getElementsByTagName('input');
-    for(var i = 0, end = inputs.length; i < end; i++) {
-        var input = inputs[i];
-        if(input.type == 'checkbox' && /^\d+_missile$/.test(input.id))
-            input.checked = true;
-    }
-}
-
-function selectHighestRounds() {
-    var elts = document.getElementsByName('rounds');
-
-    var selectHighestRoundsInSelectElement = function(elt) {
-        var highest = 0, highestElt = null;
-        var opts = elt.getElementsByTagName('option');
-        for(var j = 0; j < opts.length; j++) {
-            var opt = opts[j];
-            var n = parseInt(opt.value);
-            if(n > highest) {
-                highest = n;
-                highestElt = opt;
-            }
-        }
-        if(highestElt)
-            highestElt.selected = true;
-    };
-
-    for(var i = 0; i < elts.length; i++) {
-        var elt = elts[i];
-        if(elt.style.display == 'none') {
-            // for some reason, Pardus now hides the rounds select,
-            // and instead adds a second, visible select element, with
-            // a gibberish name.
-            elt = elt.nextElementSibling;
-            if(elt && elt.tagName == 'SELECT')
-                selectHighestRoundsInSelectElement(elt);
-        }
+    retreatTile: function(universe, id) {
+        id = parseInt(id);
+        if(id > 0)
+            GM_setValue(universe + '-rtid', id);
         else
-            selectHighestRoundsInSelectElement(elt);
+            GM_deleteValue(universe + '-rtid');
     }
-}
+};
 
-// Start the ball...
+SGPvP.prototype.loadSettings = function(keys, callback) {
+    var r = new Array();
+
+    for(var i = 0, end = keys.length; i < end; i++) {
+        var loader = this.LOADERS[keys[i]];
+        if(loader)
+            r.push(loader(this.universe));
+    }
+
+    callback(r);
+};
+
+SGPvP.prototype.storeSettings = function(settings) {
+    for(var key in settings) {
+        var saver = this.SAVERS[key];
+        if(saver)
+            saver(this.universe, settings[key]);
+    }
+};
+
+// We can't use unsafeWindow in Chrome, but we can here
+
+SGPvP.prototype.getLocation = function() {
+    return unsafeWindow.userloc;
+};
+
+// Just start the ball...
 
 var controller = new SGPvP();
