@@ -2,7 +2,7 @@
 // Google Chrome - no Greasemonkey calls and no chrome.extension stuff
 // here.  localStorage should not be accessed from here either.
 
-// V26
+// V27
 
 function SGPvP() {
     this.url = window.location.href;
@@ -25,6 +25,9 @@ function SGPvP() {
     else if(this.page == 'building') {
         this.setupCombatPage();
         selectMissiles();
+    }
+    else if(this.page == 'ship2opponent_combat') {
+        this.setupCombatPage();
     }
 
     // We wanted addEventListener, but need to use document.onkeydown,
@@ -184,7 +187,7 @@ SGPvP.prototype.ui = function() {
 
     tr = create_element('tr', null, null, null, table);
     td = create_element('td', { padding: '1em' }, { colSpan: 4 }, null, tr);
-    create_element('h3', { margin: 0, textAlign: 'center' }, null, "Scorpion Guard's Better PvP Script V26", td);
+    create_element('h3', { margin: 0, textAlign: 'center' }, null, "Scorpion Guard's Better PvP Script V27", td);
 
     tr = create_element('tr', null, null, null, table);
     td = create_element('td', { padding: '0 1em' }, { colSpan: 4 }, null, tr);
@@ -1035,10 +1038,6 @@ function getShips(container, xpath, matchId) {
 }
 
 function selectMissiles() {
-    // don't default enable missiles against monsters
-    if(this.page == 'ship2opponent_combat')
-        return;
-
     var inputs = document.getElementsByTagName('input');
     for(var i = 0, end = inputs.length; i < end; i++) {
         var input = inputs[i];

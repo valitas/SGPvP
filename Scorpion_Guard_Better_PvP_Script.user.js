@@ -8,7 +8,7 @@
 // @include     http://*.pardus.at/building.php*
 // @require     sgpvp.js
 // @author      Val
-// @version     26
+// @version     27
 // @updateURL   https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.meta.js
 // @downloadURL https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.user.js
 // @grant       GM_getValue
