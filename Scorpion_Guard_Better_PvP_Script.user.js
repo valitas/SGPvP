@@ -8,7 +8,7 @@
 // @include     http://*.pardus.at/building.php*
 // @require     sgpvp.js
 // @author      Val
-// @version     28
+// @version     29
 // @updateURL   https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.meta.js
 // @downloadURL https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.user.js
 // @grant       GM_getValue
@@ -142,6 +142,112 @@ SGPvP.prototype.storeSettings = function(settings) {
 
 SGPvP.prototype.getLocation = function() {
     return unsafeWindow.userloc;
+};
+
+// The following are here because they deal with oddities introduced
+// by the Firefox extension "Mr Xyzzy's Pardus Helper".  We can
+// simplify these in Chrome.
+
+SGPvP.prototype.BUILDING_PLAYER_DETAIL_RX = /^building\.php\?detail_type=player&detail_id=(\d+)/;
+SGPvP.prototype.getShipsBuilding = function() {
+    var xpr = document.evaluate("//table[@class='messagestyle']/tbody/tr/th",
+                                document, null,
+                                XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
+    var th;
+    while((th = xpr.iterateNext())) {
+        var heading = th.textContent;
+        if(heading == 'Other Ships')
+            return this.parseOtherShipsTable(th.parentNode.parentNode,
+                                             this.BUILDING_PLAYER_DETAIL_RX);
+        else if(heading == ' ATTACK Other Ships ATTACK ')
+            return this.parseOtherShipsTable_MrX(th.parentNode.parentNode);
+    }
+
+    // Still here?
+    return [];
+};
+
+// XXX - untested!!
+SGPvP.prototype.SHIP2SHIP_RX = /^ship2ship_combat\.php\?playerid=(\d+)/;
+SGPvP.prototype.getShipsCombat = function() {
+    var xpr = document.evaluate("//table[@class='messagestyle']/tbody/tr/th",
+                                document, null,
+                                XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
+    var th;
+    while((th = xpr.iterateNext())) {
+        var heading = th.textContent;
+        if(heading == 'Other Ships')
+            return this.parseOtherShipsTable(th.parentNode.parentNode,
+                                             SHIP2SHIP_RX);
+        else if(heading == ' ATTACK Other Ships ATTACK ')
+            return this.parseOtherShipsTable_MrX(th.parentNode.parentNode);
+    }
+
+    // Still here?
+    return [];
+};
+
+// Mr. X makes a right muck of the otherships table...
+SGPvP.prototype.MRX_MUCK_RX = />([^<>&]+)&nbsp;(?:.*alliance\.php\?id=(\d+))?/;
+SGPvP.prototype.parseOtherShipsTable_MrX = function(tbody) {
+    var ships = [];
+    var xpr = document.evaluate("tr/td/a[@title = 'Attack']",
+                              tbody, null,
+                               XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
+    var a;
+    while((a = xpr.iterateNext())) {
+        // Just get it dirty
+        var m = this.SHIP2SHIP_RX.exec(a.getAttribute('href'));
+        if(m) {
+            var id = parseInt(m[1]);
+            m = this.MRX_MUCK_RX.exec(a.innerHTML);
+            if(m) {
+                var entry = {
+                    td: a.parentNode,
+                    id: id,
+                    name: m[1],
+                    ally_id: parseInt(m[2])
+                };
+                this.getShipEntryExtras(entry);
+                ships.push(entry);
+            }
+        }
+    }
+
+    return ships;
+};
+
+// This gets the faction and ship type from a ship entry. It's a
+// separate method to reuse it - we do it the same in all pages.
+SGPvP.prototype.SHIPBGIMAGE_RX = /^url\("[^"]+\/ships\/([^/.]+)(?:_paint\d+|xmas)?\.png"\)$/;
+SGPvP.prototype.SHIPIMSRC_RX = /ships\/([^/.]+)(?:_paint\d+|xmas)?\.png$/;
+SGPvP.prototype.FACTIONSIGN_RX = /factions\/sign_(fed|emp|uni)/;
+SGPvP.prototype.getShipEntryExtras = function(entry) {
+    // find the ship type
+    var itd = entry.td.previousElementSibling;
+    if(itd) {
+        var shipModel;
+        var m = this.SHIPBGIMAGE_RX.exec(itd.style.backgroundImage);
+        if(m)
+            shipModel = entry.shipModel = m[1];
+
+        // see if we find a faction
+        var xpr = document.evaluate("img", itd, null,
+                                    XPathResult.UNORDERED_NODE_ITERATOR_TYPE,
+                                    null);
+        var img;
+        while((img = xpr.iterateNext())) {
+            var src = img.src;
+            if((m = this.FACTIONSIGN_RX.exec(src)))
+                entry.faction = m[1];
+            else if(!shipModel && (m = this.SHIPIMSRC_RX.exec(src)))
+                // More Mr X breakage
+                entry.shipModel = m[1];
+        }
+    }
+
+    if(!entry.faction)
+        entry.faction = 'neu';
 };
 
 // Just start the ball...

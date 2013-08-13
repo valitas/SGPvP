@@ -2,7 +2,7 @@
 // Google Chrome - no Greasemonkey calls and no chrome.extension stuff
 // here.  localStorage should not be accessed from here either.
 
-// V28
+// V29
 
 function SGPvP() {
     this.url = window.location.href;
@@ -191,7 +191,7 @@ SGPvP.prototype.ui = function() {
 
     tr = create_element('tr', null, null, null, table);
     td = create_element('td', { padding: '1em' }, { colSpan: 4 }, null, tr);
-    create_element('h3', { margin: 0, textAlign: 'center' }, null, "Scorpion Guard's Better PvP Script V28", td);
+    create_element('h3', { margin: 0, textAlign: 'center' }, null, "Scorpion Guard's Better PvP Script V29", td);
 
     tr = create_element('tr', null, null, null, table);
     td = create_element('td', { padding: '0 1em' }, { colSpan: 4 }, null, tr);
@@ -655,9 +655,10 @@ SGPvP.prototype.uncloak = function() {
         this.nav();
 };
 
+SGPvP.prototype.FACTIONSPEC_RX = /^\s*(f?)(e?)(u?)(n?)\s*$/;
 SGPvP.prototype.parseFactionSpec = function(spec) {
     var r;
-    var m = /^\s*(f?)(e?)(u?)(n?)\s*$/.exec(spec);
+    var m = this.FACTIONSPEC_RX.exec(spec);
     if(m) {
         r = new Object();
         r['fed'] = m[1] ? true : false;
@@ -926,121 +927,71 @@ SGPvP.prototype.computeBotsNeeded = function(armourData, lastKnownArmourPoints, 
     };
 };
 
-// Code adapted from Sweetener:
-
-SGPvP.prototype.GETSHIPSNAV_RX =
+SGPvP.prototype.SCANID_RX =
     /^javascript:scanId\((\d+), "player"\)|^main\.php\?scan_details=(\d+)&scan_type=player/;
+SGPvP.prototype.ALLYID_RX = /^alliance\.php\?id=(\d+)/;
 SGPvP.prototype.getShipsNav = function() {
-    var ships;
+    var ships = [];
     var sbox = document.getElementById('otherships_content');
     if(sbox) {
-        var rx = this.GETSHIPSNAV_RX;
-        ships = this.getShips(sbox,
-                              "table/tbody/tr/td[position() = 2]/a",
-                              function(url) {
-                                  var r;
-                                  var m = rx.exec(url);
-                                  if(m) {
-                                      if(!(r = m[1]))
-                                          r = m[2];
-                                      r = { id: parseInt(r) };
-                                  }
-                                  return r;
-                              });
+        var xpr = document.evaluate('table/tbody/tr/td[position() = 2]/a', sbox, null,
+                                    XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
+        var a;
+        while((a = xpr.iterateNext())) {
+            var m = this.SCANID_RX.exec(a.getAttribute('href'));
+            if(m) {
+                var td = a.parentNode;
+                var r;
+                if(!(r = m[1]))
+                    r = m[2];
+                var entry = {
+                    td: td,
+                    id: parseInt(r),
+                    name: a.textContent
+                };
+                var xpr2 = document.evaluate("font/b/a", td, null,
+                                             XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
+                var a2;
+                while((a2 = xpr2.iterateNext())) {
+                    m = this.ALLYID_RX.exec(a2.getAttribute('href'));
+                    if(m)
+                        entry.ally_id = parseInt(m[1]);
+                }
+
+                this.getShipEntryExtras(entry);
+                ships.push(entry);
+            }
+        }
     }
-    return ships;
-};
-
-SGPvP.prototype.GETSHIPSBUILDING_RX = /^building\.php\?detail_type=player&detail_id=(\d+)$/;
-SGPvP.prototype.getShipsBuilding = function() {
-    var ships;
-    var rx = this.GETSHIPSBUILDING_RX;
-    ships = this.getShips(document,
-                          "//table/tbody[tr/th = 'Other Ships']/tr/td/a",
-                          function(url) {
-                              var r;
-                              var m = rx.exec(url);
-                              if(m)
-                                  r = { id: parseInt(m[1]) };
-                              return r;
-                          });
 
     return ships;
 };
 
-SGPvP.prototype.GETSHIPSCOMBAT_RX = /^ship2ship_combat\.php\?playerid=(\d+)/;
-SGPvP.prototype.getShipsCombat = function() {
-    var ships;
-    var rx = this.GETSHIPSCOMBAT_RX;
-    ships = this.getShips(document,
-                          "//table/tbody[tr/th = 'Other Ships']/tr/td/a",
-                          function(url) {
-                              var r;
-                              var m = rx.exec(url);
-                              if(m)
-                                  r = { id: parseInt(m[1]) };
-                              return r;
-                          });
-
-    return ships;
-};
-
-// This one extracts a list of ships/opponents from a container
-// element. xpath is evaluated from container, and is expected to find
-// the links that matchId will match.
-SGPvP.prototype.getShips = function(container, xpath, matchId) {
-    var doc = container.ownerDocument;
-    if(!doc)
-        doc = container;
+SGPvP.prototype.parseOtherShipsTable = function(tbody, link_rx) {
     var ships = [];
-    var xpr = doc.evaluate(xpath, container, null,
-                           XPathResult.ORDERED_NODE_ITERATOR_TYPE, null);
-    var a, entry;
+    var xpr = document.evaluate("tr/td/a", tbody, null,
+                               XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
+    var a;
     while((a = xpr.iterateNext())) {
-        // don't use a.href, because that gives us a parsed absolute
-        // URL, and doesn't seem consistent across borwsers. we want
-        // exactly what's on the page.
-        //var href = a.href;
-        var href = a.getAttribute('href');
-        var m = matchId(href);
+        var m = link_rx.exec(a.getAttribute('href'));
         if(m) {
             var td = a.parentNode;
-            entry = m;
-            entry.name = a.textContent;
-            entry.td = td;
-            ships.push(entry);
-
-            // see if we find an alliance link
-            var xpr2 = doc.evaluate("font/b/a", td, null, XPathResult.ORDERED_NODE_ITERATOR_TYPE,
-                                    null);
-            var aa;
-            while((aa = xpr2.iterateNext())) {
-                if(aa.pathname == '/alliance.php' && (m = /^\?id=(\d+)$/.exec(aa.search))) {
+            var entry = {
+                td: td,
+                id: parseInt(m[1]),
+                name: a.textContent
+            };
+            var xpr2 = document.evaluate("font/b/a", td, null,
+                                         XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
+            var a2;
+            while((a2 = xpr2.iterateNext())) {
+                m = this.ALLYID_RX.exec(a2.getAttribute('href'));
+                if(m)
                     entry.ally_id = parseInt(m[1]);
-                    entry.ally_name = aa.textContent;
-                    break;
-                }
             }
 
-            // find the ship type
-            var itd = td.previousElementSibling;
-            if(itd) {
-                if((m = /([^/]+)\.png/.exec(itd.style.backgroundImage)))
-                    entry.shipModel = m[1];
-
-                // see if we find a faction
-                xpr2 = doc.evaluate("img", itd, null, XPathResult.ORDERED_NODE_ITERATOR_TYPE,
-                                    null);
-                while((aa = xpr2.iterateNext())) {
-                    if((m = /factions\/sign_(fed|emp|uni)/.exec(aa.src))) {
-                        entry.faction = m[1];
-                        break;
-                    }
-                }
-            }
-
-            if(!entry.faction)
-                entry.faction = 'neu';
+            this.getShipEntryExtras(entry);
+            ships.push(entry);
         }
     }
 
