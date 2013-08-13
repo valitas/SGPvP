@@ -2,12 +2,12 @@
 // Google Chrome - no Greasemonkey calls and no chrome.extension stuff
 // here.  localStorage should not be accessed from here either.
 
-// V27
+// V28
 
 function SGPvP() {
     this.url = window.location.href;
 
-    var m = /^https?:\/\/([^.]+)\.pardus\.at\/([^.]+)\.php/.exec(this.url);
+    var m = this.LOCATION_RX.exec(this.url);
     if(!m)
         return;
 
@@ -19,12 +19,12 @@ function SGPvP() {
     }
     else if(this.page == 'ship2ship_combat') {
         this.setupCombatPage();
-        selectHighestRounds();
-        selectMissiles();
+        this.selectHighestRounds();
+        this.selectMissiles();
     }
     else if(this.page == 'building') {
         this.setupCombatPage();
-        selectMissiles();
+        this.selectMissiles();
     }
     else if(this.page == 'ship2opponent_combat') {
         this.setupCombatPage();
@@ -43,6 +43,8 @@ function SGPvP() {
     //                        function(event) { self.keyPressHandler(event); },
     //                        false);
 }
+
+SGPvP.prototype.LOCATION_RX = /^https?:\/\/([^.]+)\.pardus\.at\/([^.]+)\.php/;
 
 // CONFIGURABLE BITS, IF YOU KNOW WHAT YOU'RE DOING:
 
@@ -130,20 +132,22 @@ SGPvP.prototype.showNotification = function(text, delay) {
     if(this.notification_timer)
         clearTimeout(this.notification_timer);
     this.hideNotification();
-    this.notification = this.createElement('div',
-                                       { position: 'fixed', zIndex: '15', padding: '0.5em', textAlign: 'center',
-                                         fontSize: '18px', verticalAlign: 'middle',
-                                         top: '50%', left: '50%', width: '8em', height: 'auto',
-                                         marginLeft: '-4em', marginTop: '-2.2em',
-                                         border: 'ridge 2px #556', backgroundColor: 'rgb(0,0,28)' },
-                                       null, text, null);
+    this.notification =
+        this.createElement('div',
+                           { position: 'fixed', zIndex: '15', padding: '0.5em', textAlign: 'center',
+                             fontSize: '18px', verticalAlign: 'middle',
+                             top: '50%', left: '50%', width: '8em', height: 'auto',
+                             marginLeft: '-4em', marginTop: '-2.2em',
+                             border: 'ridge 2px #556', backgroundColor: 'rgb(0,0,28)' },
+                           null, text, null);
     document.body.appendChild(this.notification);
 
     var self = this;
-    this.notification_timer = setTimeout(function() {
-                                             self.notification_timer = null;
-                                             self.hideNotification();
-                                         }, delay);
+    this.notification_timer =
+        window.setTimeout(function() {
+                              self.notification_timer = null;
+                              self.hideNotification();
+                          }, delay);
 };
 
 SGPvP.prototype.hideNotification = function() {
@@ -187,7 +191,7 @@ SGPvP.prototype.ui = function() {
 
     tr = create_element('tr', null, null, null, table);
     td = create_element('td', { padding: '1em' }, { colSpan: 4 }, null, tr);
-    create_element('h3', { margin: 0, textAlign: 'center' }, null, "Scorpion Guard's Better PvP Script V27", td);
+    create_element('h3', { margin: 0, textAlign: 'center' }, null, "Scorpion Guard's Better PvP Script V28", td);
 
     tr = create_element('tr', null, null, null, table);
     td = create_element('td', { padding: '0 1em' }, { colSpan: 4 }, null, tr);
@@ -255,7 +259,7 @@ SGPvP.prototype.ui = function() {
         enable_button(false);
         if(timer)
             clearTimeout(timer);
-        timer = setTimeout(save_handler, 500);
+        timer = window.setTimeout(save_handler, 500);
     };
     var close_handler = function() { self.closeUi(); };
 
@@ -386,15 +390,15 @@ SGPvP.prototype.target = function() {
 
     if(this.page == 'building') {
         page = 'b';
-        ships = getShipsBuilding();
+        ships = this.getShipsBuilding();
     }
     else if(this.page == 'ship2ship_combat') {
         page = 'c';
-        ships = getShipsCombat();
+        ships = this.getShipsCombat();
     }
     else {
         page = 'n';
-        ships = getShipsNav();
+        ships = this.getShipsNav();
     }
 
     if(ships) {
@@ -423,20 +427,20 @@ SGPvP.prototype.highlightTargets = function() {
 
     if(this.page == 'building') {
         page = 'b';
-        ships = getShipsBuilding();
+        ships = this.getShipsBuilding();
     }
     else if(this.page == 'ship2ship_combat') {
         page = 'c';
-        ships = getShipsCombat();
+        ships = this.getShipsCombat();
     }
     else {
         page = 'n';
-        ships = getShipsNav();
+        ships = this.getShipsNav();
     }
 
     var highlight_target = function(td, colour) {
         td.style.backgroundColor = colour;
-        td.previousSibling.style.backgroundColor = colour;
+        td.previousElementSibling.style.backgroundColor = colour;
     };
 
     if(ships) {
@@ -455,8 +459,8 @@ SGPvP.prototype.highlightTargets = function() {
 
                               if(targets.included.length > 0) {
                                   // turn the included ships red
-                                  for(var i = 0, end = targets.included.length; i < end; i++)
-                                      highlight_target(targets.included[i].td, '#500');
+                                  for(var i2 = 0, end2 = targets.included.length; i2 < end2; i2++)
+                                      highlight_target(targets.included[i2].td, '#500');
 
                                   // highlight the chosen target
                                   var ship_pri = (page == 'n') ? self.getShipModelPriorities() : null;
@@ -924,67 +928,67 @@ SGPvP.prototype.computeBotsNeeded = function(armourData, lastKnownArmourPoints, 
 
 // Code adapted from Sweetener:
 
-function getShipsNav() {
+SGPvP.prototype.GETSHIPSNAV_RX =
+    /^javascript:scanId\((\d+), "player"\)|^main\.php\?scan_details=(\d+)&scan_type=player/;
+SGPvP.prototype.getShipsNav = function() {
     var ships;
     var sbox = document.getElementById('otherships_content');
     if(sbox) {
-        // console.log(sbox);
-        var rx =
-            /^javascript:scanId\((\d+),(?:\s|%20)*['"]player['"]\)|main\.php\?scan_details=(\d+)&scan_type=player$/;
-        ships = getShips(sbox,
-                         "table/tbody/tr/td[position() = 2]/a",
-                         function(url) {
-                             var r;
-                             var m = rx.exec(url);
-                             if(m) {
-                                 if(!(r = m[1]))
-                                     r = m[2];
-                                 r = { id: parseInt(r) };
-                             }
-                             return r;
-                         });
+        var rx = this.GETSHIPSNAV_RX;
+        ships = this.getShips(sbox,
+                              "table/tbody/tr/td[position() = 2]/a",
+                              function(url) {
+                                  var r;
+                                  var m = rx.exec(url);
+                                  if(m) {
+                                      if(!(r = m[1]))
+                                          r = m[2];
+                                      r = { id: parseInt(r) };
+                                  }
+                                  return r;
+                              });
     }
     return ships;
-}
+};
 
-function getShipsBuilding() {
+SGPvP.prototype.GETSHIPSBUILDING_RX = /^building\.php\?detail_type=player&detail_id=(\d+)$/;
+SGPvP.prototype.getShipsBuilding = function() {
     var ships;
-    var rx = /building\.php\?detail_type=player&detail_id=(\d+)$/;
-    ships = getShips(document,
-                     "//table/tbody[tr/th = 'Other Ships']/tr/td/a",
-                     function(url) {
-                         var r;
-                         var m = rx.exec(url);
-                         if(m)
-                             r = { id: parseInt(m[1]) };
-                         return r;
-                     });
+    var rx = this.GETSHIPSBUILDING_RX;
+    ships = this.getShips(document,
+                          "//table/tbody[tr/th = 'Other Ships']/tr/td/a",
+                          function(url) {
+                              var r;
+                              var m = rx.exec(url);
+                              if(m)
+                                  r = { id: parseInt(m[1]) };
+                              return r;
+                          });
 
     return ships;
-}
+};
 
-/// W should add to the list the ship we are engaging, but we can't
-function getShipsCombat() {
+SGPvP.prototype.GETSHIPSCOMBAT_RX = /^ship2ship_combat\.php\?playerid=(\d+)/;
+SGPvP.prototype.getShipsCombat = function() {
     var ships;
-             
-    var rx = /ship2ship_combat\.php\?playerid=(\d+)/;
-    ships = getShips(document,
-                     "//table/tbody[tr/th = 'Other Ships']/tr/td/a",
-                     function(url) {
-                         var r;
-                         var m = rx.exec(url);
-                         if(m)
-                             r = { id: parseInt(m[1]) };
-                         return r;
-                     });
+    var rx = this.GETSHIPSCOMBAT_RX;
+    ships = this.getShips(document,
+                          "//table/tbody[tr/th = 'Other Ships']/tr/td/a",
+                          function(url) {
+                              var r;
+                              var m = rx.exec(url);
+                              if(m)
+                                  r = { id: parseInt(m[1]) };
+                              return r;
+                          });
 
     return ships;
-}
+};
 
 // This one extracts a list of ships/opponents from a container
 // element. xpath is evaluated from container, and is expected to find
 // the links that matchId will match.
-function getShips(container, xpath, matchId) {
+SGPvP.prototype.getShips = function(container, xpath, matchId) {
     var doc = container.ownerDocument;
     if(!doc)
         doc = container;
@@ -993,7 +997,11 @@ function getShips(container, xpath, matchId) {
                            XPathResult.ORDERED_NODE_ITERATOR_TYPE, null);
     var a, entry;
     while((a = xpr.iterateNext())) {
-        var href = a.href;
+        // don't use a.href, because that gives us a parsed absolute
+        // URL, and doesn't seem consistent across borwsers. we want
+        // exactly what's on the page.
+        //var href = a.href;
+        var href = a.getAttribute('href');
         var m = matchId(href);
         if(m) {
             var td = a.parentNode;
@@ -1015,17 +1023,19 @@ function getShips(container, xpath, matchId) {
             }
 
             // find the ship type
-            var itd = td.previousSibling;
-            if((m = /([^/]+)\.png/.exec(itd.style.backgroundImage)))
-                entry.shipModel = m[1];
+            var itd = td.previousElementSibling;
+            if(itd) {
+                if((m = /([^/]+)\.png/.exec(itd.style.backgroundImage)))
+                    entry.shipModel = m[1];
 
-            // see if we find a faction
-            xpr2 = doc.evaluate("img", itd, null, XPathResult.ORDERED_NODE_ITERATOR_TYPE,
-                                null);
-            while((aa = xpr2.iterateNext())) {
-                if((m = /factions\/sign_(fed|emp|uni)/.exec(aa.src))) {
-                    entry.faction = m[1];
-                    break;
+                // see if we find a faction
+                xpr2 = doc.evaluate("img", itd, null, XPathResult.ORDERED_NODE_ITERATOR_TYPE,
+                                    null);
+                while((aa = xpr2.iterateNext())) {
+                    if((m = /factions\/sign_(fed|emp|uni)/.exec(aa.src))) {
+                        entry.faction = m[1];
+                        break;
+                    }
                 }
             }
 
@@ -1035,18 +1045,18 @@ function getShips(container, xpath, matchId) {
     }
 
     return ships;
-}
+};
 
-function selectMissiles() {
+SGPvP.prototype.selectMissiles = function() {
     var inputs = document.getElementsByTagName('input');
     for(var i = 0, end = inputs.length; i < end; i++) {
         var input = inputs[i];
         if(input.type == 'checkbox' && /^\d+_missile$/.test(input.id))
             input.checked = true;
     }
-}
+};
 
-function selectHighestRounds() {
+SGPvP.prototype.selectHighestRounds = function() {
     var elts = document.getElementsByName('rounds');
 
     var selectHighestRoundsInSelectElement = function(elt) {
@@ -1077,4 +1087,4 @@ function selectHighestRounds() {
         else
             selectHighestRoundsInSelectElement(elt);
     }
-}
+};
