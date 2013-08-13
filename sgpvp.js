@@ -2,7 +2,7 @@
 // Google Chrome - no Greasemonkey calls and no chrome.extension stuff
 // here.  localStorage should not be accessed from here either.
 
-// V25
+// V26
 
 function SGPvP() {
     this.url = window.location.href;
@@ -65,7 +65,7 @@ SGPvP.prototype.ACTIONS = {
     /* 1 */ 49: 'target',
     /* 2 */ 50: 'engage',
     /* 3 */ 51: 'nav',
-    /* 4 */ 52: 'jumpToRetreatTile',
+    /* 4 */ 52: 'disengage',
     /* 5 */ 53: 'bots'
 };
 
@@ -184,7 +184,7 @@ SGPvP.prototype.ui = function() {
 
     tr = create_element('tr', null, null, null, table);
     td = create_element('td', { padding: '1em' }, { colSpan: 4 }, null, tr);
-    create_element('h3', { margin: 0, textAlign: 'center' }, null, "Scorpion Guard's Better PvP Script", td);
+    create_element('h3', { margin: 0, textAlign: 'center' }, null, "Scorpion Guard's Better PvP Script V26", td);
 
     tr = create_element('tr', null, null, null, table);
     td = create_element('td', { padding: '0 1em' }, { colSpan: 4 }, null, tr);
@@ -560,47 +560,69 @@ SGPvP.prototype.storeRP = function() {
 };
 
 SGPvP.prototype.engage = function() {
-    if(this.page == 'ship2ship_combat')
-        this.clickButton('Attack');
-    else
-        this.target();
-};
+    var elt = document.evaluate('//input[@name="ok" and @type="submit" and @value="Attack"]',
+                                document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                                null).singleNodeValue;
+    if(elt && elt.click) {
+        elt.click();
+        return;
+    }
 
-SGPvP.prototype.disengage = function() {
-    if(this.page == 'ship2ship_combat')
-        this.nav();
-    else
-        this.jumpToRetreatTile();
+    // no attack button?
+    this.target();
 };
 
 SGPvP.prototype.nav = function() { document.location = 'main.php'; };
 
 SGPvP.prototype.damageBuilding = function() {
-    if(this.page == 'building')
-        this.clickButton('destroy');
-    else
-        document.location = 'building.php';
+    var elt = document.evaluate('//input[@name="destroy" and @type="submit"]',
+                                document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                                null).singleNodeValue;
+    if(elt && elt.click) {
+        elt.click();
+        return;
+    }
+
+    // no destroy button?
+    document.location = 'building.php';
 };
 
-SGPvP.prototype.jumpToRetreatTile = function() {
-    if(this.page == 'building')
-        this.clickButton('Retreat');
-    else {
-        var self = this;
-        this.loadSettings(['retreatTile'],
-                          function(results) {
-                              var tile_id = results[0];
-                              if(tile_id) {
-                                  document.getElementById('navForm').elements[0].value = tile_id;
-                                  document.getElementById('navForm').submit();
-                              }
-                              else {
-                                  // XXX
-                                  self.showNotification('NO RETREAT TILE SET', 500);
-                                  self.nav();
-                              }
-                          });
+SGPvP.prototype.disengage = function() {
+    var elt = document.evaluate('//input[@name="retreat" and @type="submit"]',
+                                document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                                null).singleNodeValue;
+    if(elt && elt.click) {
+        elt.click();
+        return;
     }
+
+    // no retreat button?
+    if(this.page != 'main') {
+        // XXX - we probably could skip this nav, by inserting an invisible form and submitting it...
+        this.nav();
+        return;
+    }
+
+    var self = this;
+    this.loadSettings(['retreatTile'],
+                      function(results) {
+                          var tile_id = results[0];
+                          if(tile_id) {
+                              var form = document.getElementById('navForm');
+                              if(form) {
+                                  var destination = form.elements.destination;
+                                  if(destination) {
+                                      destination.value = tile_id;
+                                      form.submit();
+                                      return;
+                                  }
+                              }
+                          }
+                          else
+                              self.showNotification('NO RETREAT TILE SET', 500);
+
+                          self.nav();
+                      });
 };
 
 SGPvP.prototype.bots = function() { this.useBots(null); };
@@ -611,11 +633,19 @@ SGPvP.prototype.fillUp = function() { document.location = 'main.php?fillup=1'; }
 //SGPvP.prototype.enterBuilding = function() { document.location = 'building.php'; };
 
 SGPvP.prototype.cloak = function() {
-    this.clickButton('cloak');
+    var elt = document.getElementById('inputShipCloak');
+    if(elt && elt.click)
+        elt.click();
+    else
+        this.nav();
 };
 
 SGPvP.prototype.uncloak = function() {
-    this.clickButton('uncloak');
+    var elt = document.getElementById('inputShipUncloak');
+    if(elt && elt.click)
+        elt.click();
+    else
+        this.nav();
 };
 
 SGPvP.prototype.parseFactionSpec = function(spec) {
@@ -640,45 +670,6 @@ SGPvP.prototype.parseIDList = function(idlist) {
             r[n] = i+1;
     }
     return r;
-};
-
-// Adapted from 12345:
-
-SGPvP.prototype.clickButton = function(label) {
-    var input = document.getElementById(label);
-
-    if(!input)
-        // Try by name
-        input = document.getElementsByName(label)[0];
-
-    if(!input) {
-        // Try by value
-        var inputs = document.getElementsByTagName('input');
-        for(var i = 0, end = inputs.length; i < end; i++) {
-            var element = inputs[i];
-            if(element.value == label && element.type == 'submit') {
-                input = element;
-                break;
-            }
-        }
-    }
-
-    if(!input) {
-        // Try button tags
-        var inputs = document.getElementsByTagName('button');
-        for(var i = 0, end = inputs.length; i < end; i++) {
-            var element = inputs[i];
-            if(element.innerHTML == label) {
-                input = element;
-                break;
-            }
-        }
-    }
-
-    if(input && input.click)
-        input.click();
-    else
-        this.nav();
 };
 
 // This if called every time the nav page is loaded.  It should run
@@ -1044,6 +1035,10 @@ function getShips(container, xpath, matchId) {
 }
 
 function selectMissiles() {
+    // don't default enable missiles against monsters
+    if(this.page == 'ship2opponent_combat')
+        return;
+
     var inputs = document.getElementsByTagName('input');
     for(var i = 0, end = inputs.length; i < end; i++) {
         var input = inputs[i];
