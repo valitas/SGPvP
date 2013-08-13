@@ -10,7 +10,7 @@
    } ],
    "description": "Keyboard commands for Pardus PvP - beta release",
    "key": "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCnUG1bRyKxo6bpQ1NNRE91fojHUxqX3CmTdtr5lywscuALtJffk+SvgI/19AjXTPexMQFQCfssz+mqjDA23+nsiKR4ug86YLuaXHTk7XVUSYR6FhsekXVvoXx/o879ThHRIYa9h4LIUQ8b84AfXFqRaGV/uHHSYoWdJTMocCegJQIDAQAB",
-   "manifest_version": 29,
+   "manifest_version": 2,
    "name": "Scorpion Guard's Better PvP Pardus Extension",
-   "version": "1.1"
+   "version": "29"
 }
