@@ -776,9 +776,14 @@ SGPvP.prototype.setupCombatPage = function() {
             }
         }
     }
-    else
-        // No bots available. We know this, really.
-        settings.lastKnownBotsAvailable = 0;
+    else {
+        // No bots available. If this is a combat screen, we know we
+        // have no bots now. The building screen doesn't always show
+        // how many bots we have (e.g. if the building isn't blocking)
+        // so in that case we let the script use the last known value.
+        if(this.page != 'building')
+            settings.lastKnownBotsAvailable = 0;
+    }
 
     elt = document.evaluate("//font[starts-with(text(), 'Armor points:')]",
                             document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
@@ -836,15 +841,12 @@ SGPvP.prototype.useBots2 = function(max, storedParams) {
         amount = this.useBotsAmountField;
         submit = this.useBotsButton;
     }
-    else if(this.page == 'main') {
-        // This really should only happen in the nav screen...
+    else {
+        // This really should only happen in the nav and building
+        // screens, but it should work on any page...
         var form = this.getMadeUpBotsForm();
         amount = form.elements['amount'];
         submit = form.elements['useres'];
-    }
-    else {
-        this.showNotification("SGPvP error 5003: bots form not found", 1500);
-        return;
     }
 
     this.storeSettings(newSettings);
@@ -856,11 +858,20 @@ SGPvP.prototype.getMadeUpBotsForm = function() {
     var form = document.getElementById('sgpvp-useform');
     if(form)
         return form;
+    var action, method;
+    if(this.page == 'main') {
+        action = 'main.php';
+        method = 'get'; // for some reason main doesn't respond to posts..
+    }
+    else {
+        action = this.page + '.php';
+        method = 'post';
+    }
 
     form = this.createElement('form',
                               { display: 'none' },
-                              { id: 'sgpvp-useform', action: 'main.php',
-                                method: 'get', name: 'sgpvp-useform' },
+                              { id: 'sgpvp-useform', action: action,
+                                method: method },
                               null, null);
     this.createElement('input', null,
                        { type: 'text', name: 'resid', value: 8 },
