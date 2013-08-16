@@ -57,8 +57,8 @@ SGPvP.prototype.ACTIONS = {
     /* B */ 66: 'bots',
     /* N */ 78: 'testBots',
     /* M */ 77: 'damageBuilding',
-    /* A */ 65: 'bots2',
-    /* S */ 83: 'bots5',
+    /* A */ 65: 'bots1',
+    /* S */ 83: 'bots4',
     /* D */ 68: 'bots8',
     /* F */ 70: 'fillUp',
     /* K */ 75: 'cloak',
@@ -633,8 +633,8 @@ SGPvP.prototype.disengage = function() {
 };
 
 SGPvP.prototype.bots = function() { this.useBots(null); };
-SGPvP.prototype.bots2 = function() { this.useBots(2); };
-SGPvP.prototype.bots5 = function() { this.useBots(5); };
+SGPvP.prototype.bots1 = function() { this.useBots(1); };
+SGPvP.prototype.bots4 = function() { this.useBots(4); };
 SGPvP.prototype.bots8 = function() { this.useBots(8); };
 SGPvP.prototype.fillUp = function() { document.location = 'main.php?fillup=1'; };
 //SGPvP.prototype.enterBuilding = function() { document.location = 'building.php'; };
@@ -797,13 +797,13 @@ SGPvP.prototype.setupCombatPage = function() {
     this.storeSettings(settings);
 };
 
-SGPvP.prototype.useBots = function(max) {
+SGPvP.prototype.useBots = function(thisMany) {
     var self = this;
     self.loadSettings(['armourData',
                        'lastKnownArmourPoints',
                        'lastKnownBotsAvailable'],
                       function(results) {
-                          self.useBots2(max, results);
+                          self.useBots2(results, thisMany);
                       });
 };
 
@@ -817,22 +817,34 @@ SGPvP.prototype.testBots = function() {
                       });
 };
 
-SGPvP.prototype.useBots2 = function(max, storedParams) {
+// If thisMany is not supplied, compute the amount needed to the best
+// of our knowledge.
+SGPvP.prototype.useBots2 = function(storedParams, thisMany) {
     var armourData = storedParams[0];
     var lastKnownArmourPoints = storedParams[1];
     var lastKnownBotsAvailable = storedParams[2];
-    var bots = this.computeBotsNeeded(armourData, lastKnownArmourPoints, lastKnownBotsAvailable);
-    if(!bots)
-        return;
+    var botRepair;
 
-    if(max && bots.available > max)
-        bots.available = max;
+    if(thisMany)
+        // dont bother trying to compute armour, use what we're told exactly
+        botRepair = Math.floor(180 / armourData.level);
+    else {
+        var bots = this.computeBotsNeeded(armourData, lastKnownArmourPoints,
+                                          lastKnownBotsAvailable);
+        if(!bots)
+            return;
+
+        botRepair = bots.botRepair;
+        thisMany = bots.available;
+    }
 
     // Compute how much armour the bots will repair, and how many
     // we'll have left, and update last known values.
     var newSettings = {
-        lastKnownArmourPoints: lastKnownArmourPoints + bots.available * bots.botRepair,
-        lastKnownBotsAvailable: lastKnownBotsAvailable - bots.available
+        lastKnownArmourPoints: (lastKnownArmourPoints == null) ?
+            null : lastKnownArmourPoints + thisMany * botRepair,
+        lastKnownBotsAvailable: (lastKnownBotsAvailable > thisMany) ?
+            lastKnownBotsAvailable - thisMany : 0
     };
 
     var amount, submit;
@@ -850,7 +862,7 @@ SGPvP.prototype.useBots2 = function(max, storedParams) {
     }
 
     this.storeSettings(newSettings);
-    amount.value = bots.available;
+    amount.value = thisMany;
     submit.click();
 };
 
@@ -858,6 +870,7 @@ SGPvP.prototype.getMadeUpBotsForm = function() {
     var form = document.getElementById('sgpvp-useform');
     if(form)
         return form;
+
     var action, method;
     if(this.page == 'main') {
         action = 'main.php';
