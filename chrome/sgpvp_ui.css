@@ -1,0 +1,56 @@
+#sgpvp-ui {
+    background-color: rgb(0, 0, 28);
+    border: 2px ridge rgb(85, 85, 102);
+    height: auto;
+    left: 50%;
+    margin-left: -25em;
+    padding: 1em;
+    position: fixed;
+    top: 3em;
+    width: 50em;
+    z-index: 10;
+}
+
+#sgpvp-ui h3 {
+    text-align: center;
+}
+
+#sgpvp-switch {
+    text-align: center;
+    font-size: 11px;
+    margin: 1em 0;
+}
+
+#sgpvp-switch span {
+    color: rgb(208, 209, 217);
+    cursor: pointer;
+}
+
+#sgpvp-switch span.active {
+    color: inherit;
+}
+
+#sgpvp-targeting {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+#sgpvp-targeting textarea {
+    width: 100%;
+}
+
+#sgpvp-targeting label {
+    cursor: pointer;
+}
+
+#sgpvp-keys th {
+    cursor: pointer;
+}
+
+#sgpvp-keys th:hover {
+    background-color: rgb(208, 209, 217);
+}
+
+#sgpvp-keys td {
+    padding: 0 1em;
+}

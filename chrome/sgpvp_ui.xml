@@ -1,0 +1,105 @@
+<div id="sgpvp-ui">
+ <h3>Scorpion Guard's Better PvP Script V<span id="sgpvp-version"></span></h3>
+ <div id="sgpvp-switch">
+  <span id="sgpvp-switch-targeting" class="active">Targeting</span> |
+  <span id="sgpvp-switch-keys">Key bindings</span>
+ </div>
+ 
+ <table id="sgpvp-targeting">
+  <tr>
+   <td colspan="4">
+    <label for="sgpvp-ql">Inclusions and exclusions (quick list format):</label>
+   </td>
+  </tr>
+  <tr>
+   <td colspan="4">
+    <textarea rows="5" id="sgpvp-ql"></textarea>
+   </td>
+  </tr>
+  <tr>
+   <td style="padding-top: 1em" colspan="4">
+    Overrides (names or IDs, one per line, includes are prioritised)
+     </td>
+  </tr>
+  <tr style="vertical-align: top;">
+   <td style="padding-right: 0.5em; width: 50%;" colspan="2">
+    <div><label for="sgpvp-inc">include:</label></div>
+    <div><textarea rows="6" id="sgpvp-inc"></textarea></div>
+   </td>
+   <td style="padding-left: 0.5em; width: 50%;" colspan="2">
+    <div><label for="sgpvp-exc">exclude:</label></div>
+    <div><textarea rows="6" id="sgpvp-exc"></textarea></div>
+   </td>
+  </tr>
+  <tr>
+   <td style="padding-top: 1em; width: 25%;">
+    <label for="sgpvp-rid">Retreat tile ID: </label><input style="text-align: right;" size="5" id="sgpvp-rid" type="text" />
+   </td>
+   <td style="padding-top: 1em; width: 50%; text-align: center;" colspan="2">
+    <label for="sgpvp-arm">Ship armour points: </label><input style="text-align: right;" size="3" id="sgpvp-arm" type="text" /><label for="sgpvp-lvl"> level: </label><input style="text-align: right;" size="1" id="sgpvp-lvl" type="text" />
+   </td>
+   <td style="padding-top: 1em; width: 25%; text-align: right;">
+    <a target="_blank" href="https://dl.dropboxusercontent.com/u/28969566/sgpvp/help.html">Help</a>
+   </td>
+  </tr>
+  <tr>
+   <td style="padding: 2em 1em 1em; text-align: center;" colspan="4">
+    <input id="sgpvp-close" value="Close" type="button" />
+   </td>
+  </tr>
+ </table>
+
+ <table id="sgpvp-keys" style="display:none">
+  <tr data-fn="storeRP">
+   <th>Set retreat point</th>
+   <td>Z</td>
+   <td rowspan="12">
+    <p id="sgpvp-setkey-prompt">Click on a procedure.</p>
+   </td>
+  </tr>
+  <tr data-fn="engage">
+   <th>Engage</th>
+   <td>X</td>
+  </tr>
+  <tr data-fn="disengage">
+   <th>Disengage</th>
+   <td>C</td>
+  </tr>
+  <tr data-fn="nav">
+   <th>Nav</th>
+   <td>V</td>
+  </tr>
+  <tr data-fn="bots">
+   <th>Use robots</th>
+   <td>B</td>
+  </tr>
+  <tr data-fn="testBots">
+   <th>Test robots</th>
+   <td>N</td>
+  </tr>
+  <tr data-fn="damageBuilding">
+   <th>Damage building</th>
+   <td>M</td>
+  </tr>
+  <tr data-fn="fillUp">
+   <th>Fill tank</th>
+   <td>F</td>
+  </tr>
+  <tr data-fn="cloak">
+   <th>Cloak</th>
+   <td>K</td>
+  </tr>
+  <tr data-fn="uncloak">
+   <th>Uncloak</th>
+   <td>L</td>
+  </tr>
+  <tr data-fn="highlightTargets">
+   <th>Test targeting</th>
+   <td>T</td>
+  </tr>
+  <tr data-fn="ui">
+   <th>Open configuration</th>
+   <td>I</td>
+  </tr>
+ </table>
+</div>
