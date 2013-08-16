@@ -178,9 +178,147 @@ SGPvP.prototype.closeUi = function() {
     }
 };
 
+SGPvP.prototype.injectStyle = function() {
+    if(document.getElementById('sgpvp-style'))
+        return;
+
+    var head = document.evaluate('/html/head', document, null,
+                                 XPathResult.ANY_UNORDERED_NODE_TYPE,
+                                 null).singleNodeValue;
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.type = 'text/css';
+    link.href = this.sgpvp.getResourceURL('stylesheet');
+    head.appendChild(link);
+};
+
 SGPvP.prototype.ui = function() {
     if(this.ui_element)
         return;
+
+    var dummy = document.createElement('div');
+    dummy.innerHTML = this.getUIHtml();
+    var div = dummy.removeChild(dummy.firstChild);
+    document.body.appendChild(div);
+
+    //var version = GM_info.script.version;
+    //document.getElementById('sgpvp-version').appendChild(document.createTextNode(version));
+    var swt = document.getElementById('sgpvp-switch-targeting');
+    var swk = document.getElementById('sgpvp-switch-keys');
+    var pant = document.getElementById('sgpvp-targeting');
+    var pank = document.getElementById('sgpvp-keys');
+    var ql_ta = document.getElementById('sgpvp-ql');
+    var inc_ta = document.getElementById('sgpvp-inc');
+    var exc_ta = document.getElementById('sgpvp-exc');
+    var rid_field = document.getElementById('sgpvp-rid');
+    var arm_field = document.getElementById('sgpvp-arm');
+    var lvl_field = document.getElementById('sgpvp-lvl');
+    var setkey_prompt = document.getElementById('sgpvp-setkey-prompt');
+    var setkey_prompt_default = setkey_prompt.textContent;
+    var close_but = document.getElementById('sgpvp-close');
+
+    // handlers
+    var self = this;
+    var switch_targeting = function() {
+        swt.className = 'active';
+        swk.className = '';
+        pant.style.display = 'table';
+        pank.style.display = 'none';
+    };
+    var switch_keys = function() {
+        swt.className = '';
+        swk.className = 'active';
+        pant.style.display = 'none';
+        pank.style.display = 'table';
+    };
+    var enable_button = function(enabled) {
+        if(enabled) {
+            close_but.disabled = false;
+            close_but.style.borderColor = 'inherit';
+            close_but.style.color = 'inherit';
+        }
+        else {
+            close_but.disabled = true;
+            close_but.style.borderColor = 'rgb(0,0,28)';
+            close_but.style.color = 'rgb(56,56,84)';
+        }
+    };
+    var timer;
+    var save_handler = function() {
+        if(self.saveTargetingData(ql_ta.value, inc_ta.value, exc_ta.value,
+                                  rid_field.value, arm_field.value,
+                                  lvl_field.value))
+            enable_button(true);
+        timer = null;
+    };
+    var change_handler = function() {
+        enable_button(false);
+        if(timer)
+            clearTimeout(timer);
+        timer = window.setTimeout(save_handler, 500);
+    };
+    var setkey_td;
+    var setkey_handler = function(k) {
+        var keyname;
+
+        if((k >= 48 && k <= 57) || (k >= 65 && k <= 90))
+            keyname = String.fromCharCode(k);
+        else
+            keyname = '<key ' + k + '>';
+
+        setkey_prompt.textContent = setkey_prompt_default;
+        setkey_td.textContent = keyname;
+        self.sgpvp.setkey_handler = null;
+    };
+    var setkey_start = function(e) {
+        var th = e.target;
+        setkey_prompt.textContent = 'Type the key for ' +
+            th.textContent.toLowerCase() + ' or press ESC to cancel.';
+        self.sgpvp.setkey_handler = setkey_handler;
+        setkey_td = th.nextElementSibling;
+    };
+
+    var close_handler = function() { self.close(); };
+
+    // load settings and install handlers
+    this.loadSettings(['textQL', 'targetingData', 'retreatTile', 'armourData'],
+                      function(results) {
+                          ql_ta.value = results[0];
+                          var targetingData = results[1];
+                          inc_ta.value = self.stringifyOverrideList(targetingData.include);
+                          exc_ta.value = self.stringifyOverrideList(targetingData.exclude);
+                          rid_field.value = results[2];
+                          var armourData = results[3];
+                          arm_field.value = armourData.points;
+                          lvl_field.value = armourData.level;
+                          
+                          swt.addEventListener('click', switch_targeting, false);
+                          swk.addEventListener('click', switch_keys, false);
+                          ql_ta.addEventListener('keyup', change_handler, false);
+                          inc_ta.addEventListener('keyup', change_handler, false);
+                          exc_ta.addEventListener('keyup', change_handler, false);
+                          rid_field.addEventListener('keyup', change_handler, false);
+                          arm_field.addEventListener('keyup', change_handler, false);
+                          lvl_field.addEventListener('keyup', change_handler, false);
+                          close_but.addEventListener('click', close_handler, false);
+
+                          var ths = pank.getElementsByTagName('th');
+                          for(var i = 0, end = ths.length; i < end; i++) {
+                              ths[i].addEventListener('click', setkey_start, false);
+                          }
+                      });
+    
+    this.ui_element = div;
+};
+
+/*
+SGPvP.prototype.ui = function() {
+    if(this.ui_element)
+        return;
+
+    var dummy = document.createElement('div');
+    dummy.innerHTML = this.getUIHtml();
+    var div = dummy.removeChild(dummy.firstElementChild);
 
     var create_element = this.createElement;
 
@@ -286,6 +424,7 @@ SGPvP.prototype.ui = function() {
     
     this.ui_element = table;
 };
+*/
 
 SGPvP.prototype.saveTargetingData = function(ql,
                                              include_overrides, exclude_overrides,

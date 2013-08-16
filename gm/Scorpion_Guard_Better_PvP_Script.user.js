@@ -7,8 +7,9 @@
 // @include     http://*.pardus.at/ship2opponent_combat.php*
 // @include     http://*.pardus.at/building.php*
 // @require     sgpvp.js
+// @resource    ui_html sgpvp_ui.xml
 // @author      Val
-// @version     29
+// @version     30
 // @updateURL   https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.meta.js
 // @downloadURL https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.user.js
 // @grant       GM_getValue
@@ -248,6 +249,10 @@ SGPvP.prototype.getShipEntryExtras = function(entry) {
 
     if(!entry.faction)
         entry.faction = 'neu';
+};
+
+SGPvP.prototype.getUIHtml = function() {
+    return GM_getResourceText('sgpvp_ui');
 };
 
 // Just start the ball...

@@ -94,3 +94,17 @@ SGPvP.prototype.getShipEntryExtras = function(entry) {
     if(!entry.faction)
         entry.faction = 'neu';
 };
+
+SGPvP.prototype.getUIHtml = function() {
+    return this.getResourceText('sgpvp_ui.xml');
+};
+
+// Our version of GM_getResourceText(). We use this in Chrome to fetch
+// resources included in the extension.
+SGPvP.prototype.getResourceText = function(filename) {
+    var url = chrome.extension.getURL(filename);
+    var rq = new XMLHttpRequest();
+    rq.open('GET', url, false);
+    rq.send();
+    return rq.responseText;
+};
