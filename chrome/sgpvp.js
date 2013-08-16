@@ -2,7 +2,7 @@
 // Google Chrome - no Greasemonkey calls and no chrome.extension stuff
 // here.  localStorage should not be accessed from here either.
 
-// V29
+// V30
 
 function SGPvP() {
     this.url = window.location.href;
@@ -57,8 +57,8 @@ SGPvP.prototype.ACTIONS = {
     /* B */ 66: 'bots',
     /* N */ 78: 'testBots',
     /* M */ 77: 'damageBuilding',
-    /* A */ 65: 'bots2',
-    /* S */ 83: 'bots5',
+    /* A */ 65: 'bots1',
+    /* S */ 83: 'bots4',
     /* D */ 68: 'bots8',
     /* F */ 70: 'fillUp',
     /* K */ 75: 'cloak',
@@ -329,7 +329,7 @@ SGPvP.prototype.ui = function() {
 
     tr = create_element('tr', null, null, null, table);
     td = create_element('td', { padding: '1em' }, { colSpan: 4 }, null, tr);
-    create_element('h3', { margin: 0, textAlign: 'center' }, null, "Scorpion Guard's Better PvP Script V29", td);
+    create_element('h3', { margin: 0, textAlign: 'center' }, null, "Scorpion Guard's Better PvP Script V30", td);
 
     tr = create_element('tr', null, null, null, table);
     td = create_element('td', { padding: '0 1em' }, { colSpan: 4 }, null, tr);
@@ -772,8 +772,8 @@ SGPvP.prototype.disengage = function() {
 };
 
 SGPvP.prototype.bots = function() { this.useBots(null); };
-SGPvP.prototype.bots2 = function() { this.useBots(2); };
-SGPvP.prototype.bots5 = function() { this.useBots(5); };
+SGPvP.prototype.bots1 = function() { this.useBots(1); };
+SGPvP.prototype.bots4 = function() { this.useBots(4); };
 SGPvP.prototype.bots8 = function() { this.useBots(8); };
 SGPvP.prototype.fillUp = function() { document.location = 'main.php?fillup=1'; };
 //SGPvP.prototype.enterBuilding = function() { document.location = 'building.php'; };
@@ -915,9 +915,14 @@ SGPvP.prototype.setupCombatPage = function() {
             }
         }
     }
-    else
-        // No bots available. We know this, really.
-        settings.lastKnownBotsAvailable = 0;
+    else {
+        // No bots available. If this is a combat screen, we know we
+        // have no bots now. The building screen doesn't always show
+        // how many bots we have (e.g. if the building isn't blocking)
+        // so in that case we let the script use the last known value.
+        if(this.page != 'building')
+            settings.lastKnownBotsAvailable = 0;
+    }
 
     elt = document.evaluate("//font[starts-with(text(), 'Armor points:')]",
                             document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
@@ -931,13 +936,13 @@ SGPvP.prototype.setupCombatPage = function() {
     this.storeSettings(settings);
 };
 
-SGPvP.prototype.useBots = function(max) {
+SGPvP.prototype.useBots = function(thisMany) {
     var self = this;
     self.loadSettings(['armourData',
                        'lastKnownArmourPoints',
                        'lastKnownBotsAvailable'],
                       function(results) {
-                          self.useBots2(max, results);
+                          self.useBots2(results, thisMany);
                       });
 };
 
@@ -951,22 +956,34 @@ SGPvP.prototype.testBots = function() {
                       });
 };
 
-SGPvP.prototype.useBots2 = function(max, storedParams) {
+// If thisMany is not supplied, compute the amount needed to the best
+// of our knowledge.
+SGPvP.prototype.useBots2 = function(storedParams, thisMany) {
     var armourData = storedParams[0];
     var lastKnownArmourPoints = storedParams[1];
     var lastKnownBotsAvailable = storedParams[2];
-    var bots = this.computeBotsNeeded(armourData, lastKnownArmourPoints, lastKnownBotsAvailable);
-    if(!bots)
-        return;
+    var botRepair;
 
-    if(max && bots.available > max)
-        bots.available = max;
+    if(thisMany)
+        // dont bother trying to compute armour, use what we're told exactly
+        botRepair = Math.floor(180 / armourData.level);
+    else {
+        var bots = this.computeBotsNeeded(armourData, lastKnownArmourPoints,
+                                          lastKnownBotsAvailable);
+        if(!bots)
+            return;
+
+        botRepair = bots.botRepair;
+        thisMany = bots.available;
+    }
 
     // Compute how much armour the bots will repair, and how many
     // we'll have left, and update last known values.
     var newSettings = {
-        lastKnownArmourPoints: lastKnownArmourPoints + bots.available * bots.botRepair,
-        lastKnownBotsAvailable: lastKnownBotsAvailable - bots.available
+        lastKnownArmourPoints: (lastKnownArmourPoints == null) ?
+            null : lastKnownArmourPoints + thisMany * botRepair,
+        lastKnownBotsAvailable: (lastKnownBotsAvailable > thisMany) ?
+            lastKnownBotsAvailable - thisMany : 0
     };
 
     var amount, submit;
@@ -975,19 +992,16 @@ SGPvP.prototype.useBots2 = function(max, storedParams) {
         amount = this.useBotsAmountField;
         submit = this.useBotsButton;
     }
-    else if(this.page == 'main') {
-        // This really should only happen in the nav screen...
+    else {
+        // This really should only happen in the nav and building
+        // screens, but it should work on any page...
         var form = this.getMadeUpBotsForm();
         amount = form.elements['amount'];
         submit = form.elements['useres'];
     }
-    else {
-        this.showNotification("SGPvP error 5003: bots form not found", 1500);
-        return;
-    }
 
     this.storeSettings(newSettings);
-    amount.value = bots.available;
+    amount.value = thisMany;
     submit.click();
 };
 
@@ -996,10 +1010,20 @@ SGPvP.prototype.getMadeUpBotsForm = function() {
     if(form)
         return form;
 
+    var action, method;
+    if(this.page == 'main') {
+        action = 'main.php';
+        method = 'get'; // for some reason main doesn't respond to posts..
+    }
+    else {
+        action = this.page + '.php';
+        method = 'post';
+    }
+
     form = this.createElement('form',
                               { display: 'none' },
-                              { id: 'sgpvp-useform', action: 'main.php',
-                                method: 'get', name: 'sgpvp-useform' },
+                              { id: 'sgpvp-useform', action: action,
+                                method: method },
                               null, null);
     this.createElement('input', null,
                        { type: 'text', name: 'resid', value: 8 },

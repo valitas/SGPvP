@@ -18,6 +18,9 @@ h2 {
   font-size: 130%;
   margin: 4ex 0 2ex 0;
 }
+h3 {
+  font-size: 100%;
+}
 li {
   margin: 1ex 0
 }
@@ -35,7 +38,7 @@ div.index-bar {
  <body>
   <div id="content">
 
-    <h1>The Scorpion Guard's Better PvP Script V29 User's Manual</h1>
+    <h1>The Scorpion Guard's Better PvP Script V30 User's Manual</h1>
 
     <div class="index-bar">
      <a href="#quickstart">Quick start</a> ·
@@ -88,6 +91,8 @@ div.index-bar {
 
     <h2><a name="configuration">Configuration</a></h2>
 
+    <h3>Targeting</h3>
+
     <p>The script requires that you specify which ships on your tile
     are to be attacked, and which are to be excluded from attack.</p>
 
@@ -112,18 +117,26 @@ div.index-bar {
     all else being the same, the pilot with the lowest ID will be
     engaged.</p>
 
+    <h3>Robots</h3>
+
     <p>You have to specify your ship's maximum armour points and
     installed armour strength (1 through 6).  This is required for
     computing the amount of robots to use when repairing your ship.
     Note that the script will repair you to full armour even if it has
-    to partially waste one robot.</p>
-
-    <p>If you'd rather the script doesn't waste bots, manually
-    configure your ship armour points to the result of:</p>
+    to partially waste one robot.  If you'd rather the script doesn't
+    waste bots, manually configure your ship armour points to the
+    result of:</p>
 
     <pre><em>max_ship_armour</em> - (180/<em>armour_strength</em>) + 1</pre>
 
     <p>(e.g. 445 for a Hawk with level V armour)</p>
+
+    <p>There are rare situations in which the script cannot ascertain
+    how many robots are available, or the state of the ship's armour;
+    the script will then guess, based on last known values, but it may
+    get it wrong.  For such cases, use the specific keys for 1, 4, or
+    8 robots: the script will attempt to use that many bots regardless
+    of what it "thinks" you have or are needed.</p>
 
     <h2><a name="keymap">Keymap</a></h2>
 
@@ -135,9 +148,9 @@ B - Use as many bots as needed to repair you to full armour.
 
 M - Engage MO or building.
 
-A - Use up to two bots.
-S - Use up to five bots.
-D - Use up to eight bots.
+A - Force use of one bot.
+S - Force use of four bots.
+D - Force use of eight bots.
 F - Refill your fuel tank.
 K - Cloak.
 L - Uncloak.
