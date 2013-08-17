@@ -1,5 +1,9 @@
 // Include sgpvp.js before this.
 
+SGPvP.prototype.getVersion = function() {
+    return chrome.runtime.getManifest().version;
+};
+
 SGPvP.prototype.loadSettings = function(keys, callback) {
     chrome.extension.sendMessage({ op: 'load', universe: this.universe, keys: keys }, callback);
 };
@@ -95,16 +99,22 @@ SGPvP.prototype.getShipEntryExtras = function(entry) {
         entry.faction = 'neu';
 };
 
-SGPvP.prototype.getUIHtml = function() {
-    return this.getResourceText('sgpvp_ui.xml');
+SGPvP.prototype.RESOURCE = {
+    ui_js: 'sgpvp_ui.js',
+    ui_html: 'sgpvp_ui.xml',
+    style: 'sgpvp_ui.css'
 };
 
-// Our version of GM_getResourceText(). We use this in Chrome to fetch
-// resources included in the extension.
-SGPvP.prototype.getResourceText = function(filename) {
-    var url = chrome.extension.getURL(filename);
+// Our versions of GM_getResourceURL and GM_getResourceText. We use
+// these in Chrome to fetch resources included in the extension.
+
+SGPvP.prototype.getResourceURL = function(resource_id) {
+    return chrome.extension.getURL(this.RESOURCE[resource_id]);
+};
+
+SGPvP.prototype.getResourceText = function(resource_id) {
     var rq = new XMLHttpRequest();
-    rq.open('GET', url, false);
+    rq.open('GET', this.getResourceURL(resource_id), false);
     rq.send();
     return rq.responseText;
 };

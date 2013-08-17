@@ -1,19 +1,22 @@
 {
-   "background": {
-      "persistent": false,
-      "scripts": [ "bg.js" ]
-   },
-   "content_scripts": [ {
-      "all_frames": true,
-      "js": [ "sgpvp.js", "chrome.js", "nav.js" ],
-      "matches": [ "*://*.pardus.at/main.php*", "*://*.pardus.at/building.php*", "*://*.pardus.at/ship2ship_combat.php*", "*://*.pardus.at/ship2opponent_combat.php*" ]
-   } ],
-   "description": "Keyboard commands for Pardus PvP - beta release",
-   "key": "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCnUG1bRyKxo6bpQ1NNRE91fojHUxqX3CmTdtr5lywscuALtJffk+SvgI/19AjXTPexMQFQCfssz+mqjDA23+nsiKR4ug86YLuaXHTk7XVUSYR6FhsekXVvoXx/o879ThHRIYa9h4LIUQ8b84AfXFqRaGV/uHHSYoWdJTMocCegJQIDAQAB",
-   "manifest_version": 2,
-   "name": "Scorpion Guard's Better PvP Pardus Extension",
-   "version": "30",
-    "web_accessible_resources": [
-        "sgpvp_ui.xml"
-    ]
+    "background": {
+        "persistent": false,
+        "scripts": [ "bg.js" ]
+    },
+    "content_scripts": [ {
+        "all_frames": true,
+        "js": [ "sgpvp.js", "chrome.js", "nav.js" ],
+        "matches": [ "*://*.pardus.at/main.php*",
+                     "*://*.pardus.at/building.php*",
+                     "*://*.pardus.at/ship2ship_combat.php*",
+                     "*://*.pardus.at/ship2opponent_combat.php*" ]
+    } ],
+    "description": "Keyboard commands for Pardus PvP - beta release",
+    "key": "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCnUG1bRyKxo6bpQ1NNRE91fojHUxqX3CmTdtr5lywscuALtJffk+SvgI/19AjXTPexMQFQCfssz+mqjDA23+nsiKR4ug86YLuaXHTk7XVUSYR6FhsekXVvoXx/o879ThHRIYa9h4LIUQ8b84AfXFqRaGV/uHHSYoWdJTMocCegJQIDAQAB",
+    "manifest_version": 2,
+    "name": "Scorpion Guard's Better PvP Pardus Extension",
+    "version": "30",
+    "web_accessible_resources": [ "sgpvp_ui.js",
+                                  "sgpvp_ui.xml",
+                                  "sgpvp_ui.css" ]
 }

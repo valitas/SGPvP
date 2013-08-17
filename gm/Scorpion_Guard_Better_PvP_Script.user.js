@@ -7,7 +7,9 @@
 // @include     http://*.pardus.at/ship2opponent_combat.php*
 // @include     http://*.pardus.at/building.php*
 // @require     sgpvp.js
+// @resource    ui_js   sgpvp_ui.js
 // @resource    ui_html sgpvp_ui.xml
+// @resource    style   sgpvp_ui.css
 // @author      Val
 // @version     30
 // @updateURL   https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.meta.js
@@ -15,9 +17,16 @@
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @grant       GM_deleteValue
+// @grant       GM_getResourceURL
+// @grant       GM_getResourceText
+// @grant       GM_info
 // ==/UserScript==
 
 // Firefox implementation of non-portable bits
+
+SGPvP.prototype.getVersion = function() {
+    return GM_info.script.version;
+};
 
 // Configuration loading... this seems ridiculously complicated, and
 // it is, but Chrome forces a rather weird callback model, which we
@@ -146,8 +155,8 @@ SGPvP.prototype.getLocation = function() {
 };
 
 // The following are here because they deal with oddities introduced
-// by the Firefox extension "Mr Xyzzy's Pardus Helper".  We can
-// simplify these in Chrome.
+// by the Firefox extension "Mr Xyzzy's Pardus Helper".  There is no
+// Mr. X in Chrome, so we can simplify these there.
 
 SGPvP.prototype.BUILDING_PLAYER_DETAIL_RX = /^building\.php\?detail_type=player&detail_id=(\d+)/;
 SGPvP.prototype.getShipsBuilding = function() {
@@ -251,8 +260,12 @@ SGPvP.prototype.getShipEntryExtras = function(entry) {
         entry.faction = 'neu';
 };
 
-SGPvP.prototype.getUIHtml = function() {
-    return GM_getResourceText('sgpvp_ui');
+SGPvP.prototype.getResourceURL = function(resource_id) {
+    return GM_getResourceURL(resource_id);
+};
+
+SGPvP.prototype.getResourceText = function(resource_id) {
+    return GM_getResourceText(resource_id);
 };
 
 // Just start the ball...
