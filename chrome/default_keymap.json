@@ -1,0 +1,24 @@
+{
+    /* Z */ 90: 'storeRP',
+    /* X */ 88: 'engage',
+    /* C */ 67: 'disengage',
+    /* V */ 86: 'nav',
+    /* B */ 66: 'bots',
+    /* N */ 78: 'testBots',
+    /* M */ 77: 'damageBuilding',
+    /* A */ 65: 'bots1',
+    /* S */ 83: 'bots4',
+    /* D */ 68: 'bots8',
+    /* F */ 70: 'fillUp',
+    /* K */ 75: 'cloak',
+    /* L */ 76: 'uncloak',
+    /* T */ 84: 'highlightTargets',
+    /* I */ 73: 'ui',
+    /* ESC */ 27: 'closeUi',
+
+    /* 1 */ 49: 'target',
+    /* 2 */ 50: 'engage',
+    /* 3 */ 51: 'nav',
+    /* 4 */ 52: 'disengage',
+    /* 5 */ 53: 'bots'
+}

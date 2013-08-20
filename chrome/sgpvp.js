@@ -46,28 +46,28 @@ SGPvP.prototype.LOCATION_RX = /^https?:\/\/([^.]+)\.pardus\.at\/([^.]+)\.php/;
 
 // the number is the keyCode, usually ASCII
 SGPvP.prototype.ACTIONS = {
-    /* Z */ 90: 'storeRP',
+    /* Z */ 90: 'setRetreatPoint',
     /* X */ 88: 'engage',
     /* C */ 67: 'disengage',
     /* V */ 86: 'nav',
-    /* B */ 66: 'bots',
-    /* N */ 78: 'testBots',
+    /* B */ 66: 'useRobots',
+    /* N */ 78: 'testRobots',
     /* M */ 77: 'damageBuilding',
     /* A */ 65: 'bots1',
     /* S */ 83: 'bots4',
     /* D */ 68: 'bots8',
-    /* F */ 70: 'fillUp',
+    /* F */ 70: 'fillTank',
     /* K */ 75: 'cloak',
     /* L */ 76: 'uncloak',
-    /* T */ 84: 'highlightTargets',
-    /* I */ 73: 'ui',
+    /* T */ 84: 'testTargeting',
+    /* I */ 73: 'openConfiguration',
     /* ESC */ 27: 'closeUi',
 
     /* 1 */ 49: 'target',
     /* 2 */ 50: 'engage',
     /* 3 */ 51: 'nav',
     /* 4 */ 52: 'disengage',
-    /* 5 */ 53: 'bots'
+    /* 5 */ 53: 'useRobots'
 };
 
 // ship priorities - all else being the same, first listed here are first shot
@@ -97,6 +97,226 @@ SGPvP.prototype.SHIPS = [
 
 // END CONFIGURABLE BITS, no user serviceable parts below
 
+SGPvP.prototype.perform = function(id) {
+    this.ACTION[id].call(this);
+};
+
+SGPvP.prototype.ACTION = {
+    setRetreatPoint: function() {
+        var userloc = this.getLocation();
+        if(userloc) {
+            this.storeSettings({ retreatTile: userloc });
+            this.showNotification('Retreat tile set: ' + userloc, 500);
+        }
+        else
+            this.showNotification('Can not set retreat tile', 500);
+    },
+
+    engage: function() {
+        var elt = document.evaluate('//input[@name="ok" and @type="submit" and @value="Attack"]',
+                                    document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                                    null).singleNodeValue;
+        if(elt && elt.click) {
+            elt.click();
+            return;
+        }
+
+        // no attack button?
+        this.target();
+    },
+
+    disengage: function() {
+        var elt = document.evaluate('//input[@name="retreat" and @type="submit"]',
+                                    document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                                    null).singleNodeValue;
+        if(elt && elt.click) {
+            elt.click();
+            return;
+        }
+
+        // no retreat button?
+        if(this.page != 'main') {
+            // XXX - we probably could skip this nav, by inserting an
+            // invisible form and submitting it...
+            this.perform('nav');
+            return;
+        }
+
+        var self = this;
+        this.loadSettings(['retreatTile'],
+                          function(results) {
+                              var tile_id = results[0];
+                              if(tile_id) {
+                                  var form = document.getElementById('navForm');
+                                  if(form) {
+                                      var destination = form.elements.destination;
+                                      if(destination) {
+                                          destination.value = tile_id;
+                                          form.submit();
+                                          return;
+                                      }
+                                  }
+                              }
+                              else
+                                  self.showNotification('NO RETREAT TILE SET', 500);
+
+                              self.perform('nav');
+                          });
+    },
+
+    nav: function() { document.location = 'main.php'; },
+    useRobots: function() { this.useBots(null); },
+
+    testRobots: function() {
+        var self = this;
+        self.loadSettings(['armourData',
+                           'lastKnownArmourPoints',
+                           'lastKnownBotsAvailable'],
+                          function(results) {
+                              self.showBotsNeeded(results);
+                          });
+    },
+
+    damageBuilding: function() {
+        var elt = document.evaluate('//input[@name="destroy" and @type="submit"]',
+                                    document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                                    null).singleNodeValue;
+        if(elt && elt.click) {
+            elt.click();
+            return;
+        }
+
+        // no destroy button?
+        document.location = 'building.php';
+    },
+
+    bots1: function() { this.useBots(1); },
+    bots4: function() { this.useBots(4); },
+    bots8: function() { this.useBots(8); },
+    fillTank: function() { document.location = 'main.php?fillup=1'; },
+    //SGPvP.prototype.enterBuilding = function() { document.location = 'building.php'; };
+
+    cloak: function() {
+        var elt = document.getElementById('inputShipCloak');
+        if(elt && elt.click)
+            elt.click();
+        else
+            this.perform('nav');
+    },
+
+    uncloak: function() {
+        var elt = document.getElementById('inputShipUncloak');
+        if(elt && elt.click)
+            elt.click();
+        else
+            this.perform('nav');
+    },
+
+    testTargeting: function() {
+        var url = this.url;
+        var page;
+        var ships;
+
+        if(this.page == 'building') {
+            page = 'b';
+            ships = this.getShipsBuilding();
+        }
+        else if(this.page == 'ship2ship_combat') {
+            page = 'c';
+            ships = this.getShipsCombat();
+        }
+        else {
+            page = 'n';
+            ships = this.getShipsNav();
+        }
+
+        var highlight_target = function(td, colour) {
+            td.style.backgroundColor = colour;
+            td.previousElementSibling.style.backgroundColor = colour;
+        };
+
+        if(ships) {
+            for(var i = 0, end = ships.length; i < end; i++)
+                highlight_target(ships[i].td, 'inherit');
+
+            var self = this;
+            this.loadSettings(['targetingData'],
+                              function(results) {
+                                  var targeting_data = results[0];
+                                  var targets = self.scanForTargets(targeting_data, ships);
+
+                                  // turn the excluded ships green
+                                  for(var i = 0, end = targets.excluded.length; i < end; i++)
+                                      highlight_target(targets.excluded[i].td, '#050');
+
+                                  if(targets.included.length > 0) {
+                                      // turn the included ships red
+                                      for(var i2 = 0, end2 = targets.included.length; i2 < end2; i2++)
+                                          highlight_target(targets.included[i2].td, '#500');
+
+                                      // highlight the chosen target
+                                      var ship_pri = (page == 'n') ?
+                                          self.getShipModelPriorities() : null;
+                                      var best = self.chooseTarget(targets.included, ship_pri);
+                                      highlight_target(best.td, '#900');
+                                  }
+                              });
+        }
+    },
+
+    openConfiguration: function() {
+        if(typeof(SGPvPUI) != 'function')
+            // load the UI code
+            eval(this.getResourceText('ui_js'));
+        if(!this.sgpvpui)
+            this.sgpvpui = new SGPvPUI(this, document);
+        this.sgpvpui.open();
+    },
+
+    closeUi: function() {
+        if(this.sgpvpui)
+            this.sgpvpui.close();
+    },
+
+    target: function() {
+        var url = this.url;
+        var page;
+        var ships;
+
+        if(this.page == 'building') {
+            page = 'b';
+            ships = this.getShipsBuilding();
+        }
+        else if(this.page == 'ship2ship_combat') {
+            page = 'c';
+            ships = this.getShipsCombat();
+        }
+        else {
+            page = 'n';
+            ships = this.getShipsNav();
+        }
+
+        if(ships) {
+            var self = this;
+            this.loadSettings(['targetingData'],
+                              function(results) {
+                                  var targeting_data = results[0];
+                                  var targets = self.scanForTargets(targeting_data, ships);
+
+                                  if(targets.included.length > 0) {
+                                      var ship_pri = (page == 'n') ?
+                                          self.getShipModelPriorities() : null;
+                                      var best = self.chooseTarget(targets.included, ship_pri);
+                                      document.location = 'ship2ship_combat.php?playerid=' + best.id;
+                                      return;
+                                  }
+
+                                  self.perform('nav');
+                              });
+        }
+    }
+};
+
 SGPvP.prototype.keyPressHandler = function(event) {
     if(window.name == '' || event.ctrlKey || event.altKey || event.metaKey) {
         if(this.game_kbd_handler)
@@ -112,7 +332,7 @@ SGPvP.prototype.keyPressHandler = function(event) {
 
     var method_name = this.ACTIONS[event.keyCode];
     if(method_name) {
-        var method = this[method_name];
+        var method = this.ACTION[method_name];
         if(method) {
             event.preventDefault();
             event.stopPropagation();
@@ -165,109 +385,6 @@ SGPvP.prototype.createElement = function(tag, style, attributes, text_content, p
     if(parent)
         parent.appendChild(e);
     return e;
-};
-
-SGPvP.prototype.ui = function() {
-    if(typeof(SGPvPUI) != 'function') {
-        // load the UI code
-        eval(this.getResourceText('ui_js'));
-    }
-    if(!this.sgpvpui)
-        this.sgpvpui = new SGPvPUI(this, document);
-    this.sgpvpui.open();
-};
-
-SGPvP.prototype.closeUi = function() {
-    if(this.sgpvpui)
-        this.sgpvpui.close();
-};
-
-SGPvP.prototype.target = function() {
-    var url = this.url;
-    var page;
-    var ships;
-
-    if(this.page == 'building') {
-        page = 'b';
-        ships = this.getShipsBuilding();
-    }
-    else if(this.page == 'ship2ship_combat') {
-        page = 'c';
-        ships = this.getShipsCombat();
-    }
-    else {
-        page = 'n';
-        ships = this.getShipsNav();
-    }
-
-    if(ships) {
-        var self = this;
-        this.loadSettings(['targetingData'],
-                          function(results) {
-                              var targeting_data = results[0];
-                              var targets = self.scanForTargets(targeting_data, ships);
-
-                              if(targets.included.length > 0) {
-                                  var ship_pri = (page == 'n') ? self.getShipModelPriorities() : null;
-                                  var best = self.chooseTarget(targets.included, ship_pri);
-                                  document.location = 'ship2ship_combat.php?playerid=' + best.id;
-                                  return;
-                              }
-
-                              self.nav();
-                          });
-    }
-};
-
-SGPvP.prototype.highlightTargets = function() {
-    var url = this.url;
-    var page;
-    var ships;
-
-    if(this.page == 'building') {
-        page = 'b';
-        ships = this.getShipsBuilding();
-    }
-    else if(this.page == 'ship2ship_combat') {
-        page = 'c';
-        ships = this.getShipsCombat();
-    }
-    else {
-        page = 'n';
-        ships = this.getShipsNav();
-    }
-
-    var highlight_target = function(td, colour) {
-        td.style.backgroundColor = colour;
-        td.previousElementSibling.style.backgroundColor = colour;
-    };
-
-    if(ships) {
-        for(var i = 0, end = ships.length; i < end; i++)
-            highlight_target(ships[i].td, 'inherit');
-
-        var self = this;
-        this.loadSettings(['targetingData'],
-                          function(results) {
-                              var targeting_data = results[0];
-                              var targets = self.scanForTargets(targeting_data, ships);
-
-                              // turn the excluded ships green
-                              for(var i = 0, end = targets.excluded.length; i < end; i++)
-                                  highlight_target(targets.excluded[i].td, '#050');
-
-                              if(targets.included.length > 0) {
-                                  // turn the included ships red
-                                  for(var i2 = 0, end2 = targets.included.length; i2 < end2; i2++)
-                                      highlight_target(targets.included[i2].td, '#500');
-
-                                  // highlight the chosen target
-                                  var ship_pri = (page == 'n') ? self.getShipModelPriorities() : null;
-                                  var best = self.chooseTarget(targets.included, ship_pri);
-                                  highlight_target(best.td, '#900');
-                              }
-                          });
-    }
 };
 
 SGPvP.prototype.scanForTargets = function(targeting_data, ships) {
@@ -353,105 +470,6 @@ SGPvP.prototype.getShipModelPriorities = function() {
         o[a[i]] = i + 1;
 
     return o;
-};
-
-SGPvP.prototype.storeRP = function() {
-    var userloc = this.getLocation();
-    if(userloc) {
-        this.storeSettings({ retreatTile: userloc });
-        this.showNotification('Retreat tile set: ' + userloc, 500);
-    }
-    else
-        this.showNotification('Can not set retreat tile', 500);
-};
-
-SGPvP.prototype.engage = function() {
-    var elt = document.evaluate('//input[@name="ok" and @type="submit" and @value="Attack"]',
-                                document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
-                                null).singleNodeValue;
-    if(elt && elt.click) {
-        elt.click();
-        return;
-    }
-
-    // no attack button?
-    this.target();
-};
-
-SGPvP.prototype.nav = function() { document.location = 'main.php'; };
-
-SGPvP.prototype.damageBuilding = function() {
-    var elt = document.evaluate('//input[@name="destroy" and @type="submit"]',
-                                document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
-                                null).singleNodeValue;
-    if(elt && elt.click) {
-        elt.click();
-        return;
-    }
-
-    // no destroy button?
-    document.location = 'building.php';
-};
-
-SGPvP.prototype.disengage = function() {
-    var elt = document.evaluate('//input[@name="retreat" and @type="submit"]',
-                                document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
-                                null).singleNodeValue;
-    if(elt && elt.click) {
-        elt.click();
-        return;
-    }
-
-    // no retreat button?
-    if(this.page != 'main') {
-        // XXX - we probably could skip this nav, by inserting an invisible form and submitting it...
-        this.nav();
-        return;
-    }
-
-    var self = this;
-    this.loadSettings(['retreatTile'],
-                      function(results) {
-                          var tile_id = results[0];
-                          if(tile_id) {
-                              var form = document.getElementById('navForm');
-                              if(form) {
-                                  var destination = form.elements.destination;
-                                  if(destination) {
-                                      destination.value = tile_id;
-                                      form.submit();
-                                      return;
-                                  }
-                              }
-                          }
-                          else
-                              self.showNotification('NO RETREAT TILE SET', 500);
-
-                          self.nav();
-                      });
-};
-
-SGPvP.prototype.bots = function() { this.useBots(null); };
-SGPvP.prototype.bots1 = function() { this.useBots(1); };
-SGPvP.prototype.bots4 = function() { this.useBots(4); };
-SGPvP.prototype.bots8 = function() { this.useBots(8); };
-SGPvP.prototype.fillUp = function() { document.location = 'main.php?fillup=1'; };
-//SGPvP.prototype.enterBuilding = function() { document.location = 'building.php'; };
-
-SGPvP.prototype.cloak = function() {
-    var elt = document.getElementById('inputShipCloak');
-    if(elt && elt.click)
-        elt.click();
-    else
-        this.nav();
-};
-
-SGPvP.prototype.uncloak = function() {
-    var elt = document.getElementById('inputShipUncloak');
-    if(elt && elt.click)
-        elt.click();
-    else
-        this.nav();
 };
 
 // This if called every time the nav page is loaded.  It should run
@@ -578,16 +596,6 @@ SGPvP.prototype.useBots = function(thisMany) {
                        'lastKnownBotsAvailable'],
                       function(results) {
                           self.useBots2(results, thisMany);
-                      });
-};
-
-SGPvP.prototype.testBots = function() {
-    var self = this;
-    self.loadSettings(['armourData',
-                       'lastKnownArmourPoints',
-                       'lastKnownBotsAvailable'],
-                      function(results) {
-                          self.showBotsNeeded(results);
                       });
 };
 
