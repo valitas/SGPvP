@@ -2,7 +2,7 @@
 // Google Chrome - no Greasemonkey calls and no chrome.extension stuff
 // here.  localStorage should not be accessed from here either.
 
-// V30
+// V31
 
 function SGPvP() {
     this.url = window.location.href;
@@ -199,7 +199,7 @@ SGPvP.prototype.ui = function() {
 
     tr = create_element('tr', null, null, null, table);
     td = create_element('td', { padding: '1em' }, { colSpan: 4 }, null, tr);
-    create_element('h3', { margin: 0, textAlign: 'center' }, null, "Scorpion Guard's Better PvP Script V30", td);
+    create_element('h3', { margin: 0, textAlign: 'center' }, null, "Scorpion Guard's Better PvP Script V31", td);
 
     tr = create_element('tr', null, null, null, table);
     td = create_element('td', { padding: '0 1em' }, { colSpan: 4 }, null, tr);
