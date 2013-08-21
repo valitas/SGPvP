@@ -14,20 +14,22 @@ function SGPvP() {
     this.universe = m[1];
     this.page = m[2];
 
-    if(this.page == 'main') {
+    switch(this.page) {
+    case 'main':
         this.setupNavPage();
-    }
-    else if(this.page == 'ship2ship_combat') {
+        break;
+    case 'ship2ship_combat':
         this.setupCombatPage();
         this.selectHighestRounds();
         this.selectMissiles();
-    }
-    else if(this.page == 'building') {
+        break;
+    case 'building':
         this.setupCombatPage();
         this.selectMissiles();
-    }
-    else if(this.page == 'ship2opponent_combat') {
+        break;
+    case 'ship2opponent_combat':
         this.setupCombatPage();
+    // default: logout, do nothing
     }
 
     // We wanted addEventListener, but need to use document.onkeydown,
@@ -65,13 +67,19 @@ SGPvP.prototype.ACTIONS = {
     /* L */ 76: 'uncloak',
     /* T */ 84: 'highlightTargets',
     /* I */ 73: 'ui',
-    /* ESC */ 27: 'closeUi',
+    /* Q */ 81: 'flyClose',
+    /* W */ 87: 'exitFlyClose',
+    /* O */ 79: 'undock',
+    /* P */ 80: 'dock',
+    // /* P */ 80: 'dockUndock', // if you prefer a single key
 
     /* 1 */ 49: 'target',
     /* 2 */ 50: 'engage',
     /* 3 */ 51: 'nav',
     /* 4 */ 52: 'disengage',
-    /* 5 */ 53: 'bots'
+    /* 5 */ 53: 'bots',
+
+    /* ESC */ 27: 'closeUi'		
 };
 
 // ship priorities - all else being the same, first listed here are first shot
@@ -388,17 +396,22 @@ SGPvP.prototype.target = function() {
     var page;
     var ships;
 
-    if(this.page == 'building') {
-        page = 'b';
-        ships = this.getShipsBuilding();
-    }
-    else if(this.page == 'ship2ship_combat') {
-        page = 'c';
-        ships = this.getShipsCombat();
-    }
-    else {
+    switch(this.page) {
+    case 'main':
         page = 'n';
         ships = this.getShipsNav();
+        break;
+    case 'building':
+        page = 'b';
+        ships = this.getShipsBuilding();
+        break;
+    case 'ship2ship_combat':
+        page = 'c';
+        ships = this.getShipsCombat();
+        break;
+    default:
+        // logout or ship2opponent, we do nothing there
+        return;
     }
 
     if(ships) {
@@ -425,17 +438,22 @@ SGPvP.prototype.highlightTargets = function() {
     var page;
     var ships;
 
-    if(this.page == 'building') {
-        page = 'b';
-        ships = this.getShipsBuilding();
-    }
-    else if(this.page == 'ship2ship_combat') {
-        page = 'c';
-        ships = this.getShipsCombat();
-    }
-    else {
+    switch(this.page) {
+    case 'main':
         page = 'n';
         ships = this.getShipsNav();
+        break;
+    case 'building':
+        page = 'b';
+        ships = this.getShipsBuilding();
+        break;
+    case 'ship2ship_combat':
+        page = 'c';
+        ships = this.getShipsCombat();
+        break;
+    default:
+        // logout or ship2opponent, we do nothing there
+        return;
     }
 
     var highlight_target = function(td, colour) {
@@ -605,8 +623,10 @@ SGPvP.prototype.disengage = function() {
 
     // no retreat button?
     if(this.page != 'main') {
-        // XXX - we probably could skip this nav, by inserting an invisible form and submitting it...
-        this.nav();
+        if(this.page != 'logout')
+            // XXX - we probably could skip this nav, by inserting an
+            // invisible form and submitting it...
+            this.nav();
         return;
     }
 
@@ -637,7 +657,23 @@ SGPvP.prototype.bots1 = function() { this.useBots(1); };
 SGPvP.prototype.bots4 = function() { this.useBots(4); };
 SGPvP.prototype.bots8 = function() { this.useBots(8); };
 SGPvP.prototype.fillUp = function() { document.location = 'main.php?fillup=1'; };
+SGPvP.prototype.flyClose = function() { document.location = 'main.php?entersb=1'; };
+SGPvP.prototype.exitFlyClose = function() { document.location = 'main.php?exitsb=1'; };
 //SGPvP.prototype.enterBuilding = function() { document.location = 'building.php'; };
+SGPvP.prototype.dockUndock = function() { this.undock() || this.dock(); };
+SGPvP.prototype.dock = function() { top.location = 'game.php?logout=1'; };
+
+SGPvP.prototype.undock = function() {
+    var elt = document.evaluate('//input[@value="Launch Ship" and @type="submit"]',
+                                document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                                null).singleNodeValue;
+    if(elt && elt.click) {
+        elt.click();
+        return true;
+    }
+
+    return false;
+};
 
 SGPvP.prototype.cloak = function() {
     var elt = document.getElementById('inputShipCloak');
