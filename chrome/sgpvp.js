@@ -2,7 +2,7 @@
 // Google Chrome - no Greasemonkey calls and no chrome.extension stuff
 // here.  localStorage should not be accessed from here either.
 
-// V30
+// V31
 
 function SGPvP() {
     this.url = window.location.href;
@@ -14,20 +14,22 @@ function SGPvP() {
     this.universe = m[1];
     this.page = m[2];
 
-    if(this.page == 'main') {
+    switch(this.page) {
+    case 'main':
         this.setupNavPage();
-    }
-    else if(this.page == 'ship2ship_combat') {
+        break;
+    case 'ship2ship_combat':
         this.setupCombatPage();
         this.selectHighestRounds();
         this.selectMissiles();
-    }
-    else if(this.page == 'building') {
+        break;
+    case 'building':
         this.setupCombatPage();
         this.selectMissiles();
-    }
-    else if(this.page == 'ship2opponent_combat') {
+        break;
+    case 'ship2opponent_combat':
         this.setupCombatPage();
+    // default: logout, do nothing
     }
 
     // We wanted addEventListener, but need to use document.onkeydown,
@@ -61,13 +63,19 @@ SGPvP.prototype.ACTIONS = {
     /* L */ 76: 'uncloak',
     /* T */ 84: 'testTargeting',
     /* I */ 73: 'openConfiguration',
-    /* ESC */ 27: 'closeUi',
+    /* Q */ 81: 'flyClose',
+    /* W */ 87: 'exitFlyClose',
+    /* O */ 79: 'undock',
+    /* P */ 80: 'dock',
+    // /* P */ 80: 'dockUndock', // if you prefer a single key
 
     /* 1 */ 49: 'target',
     /* 2 */ 50: 'engage',
     /* 3 */ 51: 'nav',
     /* 4 */ 52: 'disengage',
-    /* 5 */ 53: 'useRobots'
+    /* 5 */ 53: 'useRobots',
+
+    /* ESC */ 27: 'closeUi'		
 };
 
 // ship priorities - all else being the same, first listed here are first shot
@@ -195,6 +203,22 @@ SGPvP.prototype.ACTION = {
     bots8: function() { this.useBots(8); },
     fillTank: function() { document.location = 'main.php?fillup=1'; },
     //SGPvP.prototype.enterBuilding = function() { document.location = 'building.php'; };
+    flyClose: function() { document.location = 'main.php?entersb=1'; },
+    exitFlyClose: function() { document.location = 'main.php?exitsb=1'; },
+    dockUndock: function() { this.undock() || this.dock(); },
+    dock: function() { top.location = 'game.php?logout=1'; },
+
+    undock: function() {
+        var elt = document.evaluate('//input[@value="Launch Ship" and @type="submit"]',
+                                    document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                                    null).singleNodeValue;
+        if(elt && elt.click) {
+            elt.click();
+            return true;
+        }
+
+        return false;
+    },
 
     cloak: function() {
         var elt = document.getElementById('inputShipCloak');

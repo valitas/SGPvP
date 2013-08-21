@@ -2,16 +2,17 @@
 // @name        Scorpion Guard Better PvP Script
 // @namespace   tag:dssrzs.org,2012-07-16:PvP
 // @description Keyboard commands for Pardus combat
-// @include     http://*.pardus.at/main.php*
-// @include     http://*.pardus.at/ship2ship_combat.php*
-// @include     http://*.pardus.at/ship2opponent_combat.php*
-// @include     http://*.pardus.at/building.php*
+// @match       *://*.pardus.at/main.php*
+// @match       *://*.pardus.at/ship2ship_combat.php*
+// @match       *://*.pardus.at/ship2opponent_combat.php*
+// @match       *://*.pardus.at/building.php*
+// @match       *://*.pardus.at/logout.php
 // @require     sgpvp.js
 // @resource    ui_js   sgpvp_ui.js
 // @resource    ui_html sgpvp_ui.xml
 // @resource    style   sgpvp_ui.css
 // @author      Val
-// @version     30
+// @version     31
 // @updateURL   https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.meta.js
 // @downloadURL https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.user.js
 // @grant       GM_getValue
