@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>The Scorpion Guard's Better PvP Script User's Manual</title>
+  <style type="text/css">
+body {
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  font-size: 90%;
+  margin: 0.5in;
+}
+h1 {
+  /* color: #666; */
+  font-size: 160%;
+  margin: 4ex 0 2ex 0;
+}
+h2 {
+  color: #666;
+  font-size: 130%;
+  margin: 4ex 0 2ex 0;
+}
+h3 {
+  font-size: 100%;
+}
+li {
+  margin: 1ex 0
+}
+div#content {
+  margin-left: auto;
+  margin-right: auto;
+  width: 50em;
+}
+div.index-bar {
+  font-size: 90%;
+  text-align: center;
+}
+  </style>
+ </head>
+ <body>
+  <div id="content">
+
+   <h1>SGPvP Custom Key Bindings</h1>
+
+   <p><em>This is a technical note for advanced users.</em></p>
+
+   <p>You can configure SGPvP to trigger an action on almost any key
+   on your keyboard, not only the basic ones available from the user
+   interface.  To do this, though, you have edit the key map
+   yourself.</p>
+
+   <p>SGPvP stores its key bindings as a map of key codes to names of
+   actions, serialised in JSON format.  To access the parameter where
+   this is stored, do one of the following:</p>
+
+   <ul>
+    <li>On Firefox: Type "about:config" in the URL bar, promise you
+    will be careful, then look up the parameter
+    <em>extensions.greasemonkey.scriptvals.tag:dssrzs.org,2012-07-16:PvP/Scorpion
+    Guard Better PvP Script.keymap</em>.  Try searching for "dssrzs",
+    the keymap will be among the results.</li>
+
+    <li>On Google Chrome: Open the Extensions page and enable
+    developer mode, then find "Scorpion Guard's Better PvP Pardus
+    Extension" and inspect "_generated_background_page.html".  In the
+    inspector, go to Resources &#8594; Local Storage, click on the
+    entry with the funny name inside this, and find parameter
+    <em>keymap</em>.</li>
+   </ul>
+
+   <p>You will want to copy the text there and edit it in a proper
+   editor.  With a bit of formatting, the serialised map looks
+   something like this:</p>
+
+   <pre>{
+  90: "storeRP",
+  88: "engage",
+  67: "disengage",
+  86: "nav",
+  66: "bots",
+  78: "testBots",
+  77: "damageBuilding",
+  65: "bots1",
+  83: "bots4",
+  68: "bots8",
+  70: "fillUp",
+  75: "cloak",
+  76: "uncloak",
+  84: "highlightTargets",
+  73: "ui"
+}</pre>
+
+   <p>Numbers are key codes.  To find out the codes of the keys you
+   want to use, try <a href="http://whatthekeycode.com/">whatthekeycode.com</a>,
+   it's nice and pretty.  Note that you can't assign the Escape key
+   (23), that one is handled differently.</p>
+
+   <p>Strings are names of actions implemented by SGPvP.  As of
+   version 31, the available actions are: <em>bots, bots1, bots4,
+   bots8, cloak, damageBuilding, disengage, engage, fillUp,
+   highlightTargets, nav, storeRP, target, testBots, ui, uncloak</em>.
+   The names are self-descriptive, hopefully. Type them exactly as
+   listed here, capitalisation matters.  And mind your quotes and
+   commas.  You must write valid JSON here.  Hey, we did say geekery
+   ahead, didn't we.</p>
+
+   <p>Once you have your keymap, paste it back into the parameter
+   replacing the old value, reload the Pardus page, and test.</p>
+
+   <p>If you bungle this, you can restore the default keymap from the
+   SGPvP configuration dialogue.  If you managed to bork it so bad
+   that the configuration dialogue won't open, paste the text below
+   into the keymap parameter, reload, then press I for info and
+   restore the default keymap from there.</p>
+
+   <pre>{ 73: "openConfiguration" }</pre>
+
+  </div>
+ </body>
+</html>

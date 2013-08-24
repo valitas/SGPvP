@@ -15,14 +15,14 @@ function SGPvPUI(sgpvp, doc) {
 SGPvPUI.prototype.injectStyle = function() {
     var doc = this.doc;
 
-    if(doc.getElementById('sgpvp-style'))
+    if(doc.getElementById('sg-style'))
         return;
 
     var head = doc.evaluate('/html/head', doc, null,
                                  XPathResult.ANY_UNORDERED_NODE_TYPE,
                                  null).singleNodeValue;
     var link = doc.createElement('link');
-    link.id = 'sgpvp-style';
+    link.id = 'sg-style';
     link.rel = 'stylesheet';
     link.type = 'text/css';
     link.href = this.sgpvp.getResourceURL('style');
@@ -40,115 +40,205 @@ SGPvPUI.prototype.open = function() {
     dummy.innerHTML = this.sgpvp.getResourceText('ui_html');
     var div = dummy.removeChild(dummy.firstChild);
     doc.body.appendChild(div);
+    this.setUIElement(div);
+};
 
-    doc.getElementById('sgpvp-version').textContent = this.sgpvp.getVersion();
-    var swt = doc.getElementById('sgpvp-switch-targeting');
-    var swk = doc.getElementById('sgpvp-switch-keys');
-    var pant = doc.getElementById('sgpvp-targeting');
-    var pank = doc.getElementById('sgpvp-keys');
-    var ql_ta = doc.getElementById('sgpvp-ql');
-    var inc_ta = doc.getElementById('sgpvp-inc');
-    var exc_ta = doc.getElementById('sgpvp-exc');
-    var rid_field = doc.getElementById('sgpvp-rid');
-    var arm_field = doc.getElementById('sgpvp-arm');
-    var lvl_field = doc.getElementById('sgpvp-lvl');
-    var setkey_prompt = doc.getElementById('sgpvp-setkey-prompt');
-    var setkey_prompt_default = setkey_prompt.textContent;
-    var close_but = doc.getElementById('sgpvp-close');
+// We use all these elements in the UI DOM.
+SGPvPUI.prototype.UI_ELEMENT_IDS =
+    [ 'sg-version',
+      'sg-arm',
+      'sg-close',
+      'sg-exc',
+      'sg-inc',
+      'sg-keybindings',
+      'sg-keyboard',
+      'sg-lvl',
+      'sg-ql',
+      'sg-rid',
+      'sg-setkey',
+      'sg-setkey-code',
+      'sg-setkey-done',
+      'sg-setkey-key',
+      'sg-setkey-select',
+      'sg-switch-keys',
+      'sg-switch-targeting',
+      'sg-targeting'
+    ];
+
+SGPvPUI.prototype.setUIElement = function(div) {
+    this.ui_element = div;
+    var doc  = this.doc;
+
+    // Centre it
+    //var screen_width = doc.body.offsetWidth;
+    div.style.left = ((doc.body.clientWidth - 600) / 2) + 'px';
+
+    // Get the elements we use for controlling the UI
+    var e = new Object();
+    for(var i in this.UI_ELEMENT_IDS) {
+        var id = this.UI_ELEMENT_IDS[i];
+        e[id.substr(3).replace('-','_')] = doc.getElementById(id);
+    }
+
+    e.version.textContent = this.sgpvp.getVersion();
 
     // handlers
     var self = this;
-    var switch_targeting = function() {
-        swt.className = 'active';
-        swk.className = '';
-        pant.style.display = 'table';
-        pank.style.display = 'none';
-    };
-    var switch_keys = function() {
-        swt.className = '';
-        swk.className = 'active';
-        pant.style.display = 'none';
-        pank.style.display = 'table';
-    };
-    var enable_button = function(enabled) {
-        if(enabled) {
-            close_but.disabled = false;
-            close_but.style.borderColor = 'inherit';
-            close_but.style.color = 'inherit';
-        }
-        else {
-            close_but.disabled = true;
-            close_but.style.borderColor = 'rgb(0,0,28)';
-            close_but.style.color = 'rgb(56,56,84)';
-        }
-    };
     var timer;
-    var save_handler = function() {
-        if(self.saveTargetingData(ql_ta.value, inc_ta.value, exc_ta.value,
-                                  rid_field.value, arm_field.value,
-                                  lvl_field.value))
-            enable_button(true);
-        timer = null;
-    };
-    var change_handler = function() {
-        enable_button(false);
-        if(timer)
-            clearTimeout(timer);
-        timer = window.setTimeout(save_handler, 500);
-    };
-    var setkey_td;
-    var setkey_handler = function(k) {
-        var keyname;
+    var keymap;
+    var setKey, setKeyId;
+    var actionName = new Object();
+    var func = {
+        switchToTargeting: function() {
+            e.switch_targeting.className = 'active';
+            e.switch_keys.className = '';
+            e.targeting.style.display = 'block';
+            e.keybindings.style.display = 'none';
+            e.setkey.style.display = 'none';
+            // Flaky, should validate targeting contents...
+            func.setCloseButtonEnabled(true);
+        },
+        switchToKeybindings: function() {
+            e.switch_targeting.className = '';
+            e.switch_keys.className = 'active';
+            e.targeting.style.display = 'none';
+            e.keybindings.style.display = 'block';
+            e.setkey.style.display = 'none';
+            // Flaky, should validate targeting contents...
+            func.setCloseButtonEnabled(true);
+        },
+        switchToSetKey: function(keydiv) {
+            // Switch to setkeys
+            setKey = keydiv;
+            setKeyId = parseInt(keydiv.id.substr(4));
+            var cap = keydiv.firstChild.textContent; // bit flaky but succinct
+            var fn = keymap[setKeyId];
 
-        if((k >= 48 && k <= 57) || (k >= 65 && k <= 90))
-            keyname = String.fromCharCode(k);
-        else
-            keyname = '<key ' + k + '>';
+            e.keybindings.style.display = 'none';
+            e.setkey.style.display = 'block';
+            e.setkey_code.textContent = setKeyId;
+            e.setkey_key.textContent = cap;
+            func.setSelectedAction(fn);
+            // Flaky, should validate targeting contents...
+            func.setCloseButtonEnabled(false);
+        },
+        setSelectedAction: function(action) {
+            if(!action)
+                action = '';
+            var opts = e.setkey_select.options;
+            for(var i = 0, end = opts.length; i < end; i++) {
+                var opt = opts.item(i);
+                if(action == opt.value) {
+                    e.setkey_select.selectedIndex = i;
+                    func.setKeyLegend(e.setkey_key, action);
+                    break;
+                }
+            }
+        },
+        keyClickHandler: function(event) {
+            func.switchToSetKey(event.currentTarget);
+        },
+        setKeyLegend: function(key, action) {
+            var legend = actionName[action];
+            if(!legend)
+                legend = action;
 
-        setkey_prompt.textContent = setkey_prompt_default;
-        setkey_td.textContent = keyname;
-        self.sgpvp.setkey_handler = null;
-    };
-    var setkey_start = function(e) {
-        var th = e.target;
-        setkey_prompt.textContent = 'Type the key for ' +
-            th.textContent.toLowerCase() + ' or press ESC to cancel.';
-        self.sgpvp.setkey_handler = setkey_handler;
-        setkey_td = th.nextElementSibling;
-    };
-    var close_handler = function() { self.close(); };
+            var legenddiv = key.firstElementChild;
+            if(!legenddiv) {
+                legenddiv = key.ownerDocument.createElement('div');
+                key.appendChild(legenddiv);
+            }
 
-    var configure = function(results) {
-        ql_ta.value = results[0];
-        var targetingData = results[1];
-        inc_ta.value = self.stringifyOverrideList(targetingData.include);
-        exc_ta.value = self.stringifyOverrideList(targetingData.exclude);
-        rid_field.value = results[2];
-        var armourData = results[3];
-        arm_field.value = armourData.points;
-        lvl_field.value = armourData.level;
+            legenddiv.textContent = legend;
+        },
+        setKeySelectChangeHandler: function() {
+            var opts = e.setkey_select.options;
+            var action = opts[e.setkey_select.selectedIndex].value;
+            func.setKeyLegend(e.setkey_key, action);
+            func.setKeyLegend(setKey, action);
+            if(action)
+                keymap[setKeyId] = action;
+            else
+                delete keymap[setKeyId];
+            self.saveKeyMap(keymap);
+        },
+        setCloseButtonEnabled: function(enabled) {
+            if(enabled) {
+                e.close.disabled = false;
+                e.close.style.borderColor = '';
+                e.close.style.color = '';
+            }
+            else {
+                e.close.disabled = true;
+                e.close.style.borderColor = 'rgb(0,0,28)';
+                e.close.style.color = 'rgb(56,56,84)';
+            }
+        },
+        saveTargetingData: function() {
+            if(self.saveTargetingData(e.ql.value, e.inc.value, e.exc.value,
+                                      e.rid.value, e.arm.value, e.lvl.value))
+                func.setCloseButtonEnabled(true);
+            timer = null;
+        },
+        targetingControlChangeHandler: function() {
+            func.setCloseButtonEnabled(false);
+            if(timer)
+                window.clearTimeout(timer);
+            timer = window.setTimeout(func.saveTargetingData, 250);
+        },
+        closeHandler: function() { self.close(); },
+        configure: function(cfg) {
+            keymap = cfg.keymap;
+            e.ql.value = cfg.ql;
+            var targetingData = cfg.targeting;
+            e.inc.value = self.stringifyOverrideList(targetingData.include);
+            e.exc.value = self.stringifyOverrideList(targetingData.exclude);
+            e.rid.value = cfg.rtid;
+            var armourData = cfg.armour;
+            e.arm.value = armourData.points;
+            e.lvl.value = armourData.level;
 
-        swt.addEventListener('click', switch_targeting, false);
-        swk.addEventListener('click', switch_keys, false);
-        ql_ta.addEventListener('keyup', change_handler, false);
-        inc_ta.addEventListener('keyup', change_handler, false);
-        exc_ta.addEventListener('keyup', change_handler, false);
-        rid_field.addEventListener('keyup', change_handler, false);
-        arm_field.addEventListener('keyup', change_handler, false);
-        lvl_field.addEventListener('keyup', change_handler, false);
-        close_but.addEventListener('click', close_handler, false);
+            e.switch_targeting.addEventListener('click', func.switchToTargeting, false);
+            e.switch_keys.addEventListener('click', func.switchToKeybindings, false);
+            e.ql.addEventListener('keyup', func.targetingControlChangeHandler, false);
+            e.inc.addEventListener('keyup', func.targetingControlChangeHandler, false);
+            e.exc.addEventListener('keyup', func.targetingControlChangeHandler, false);
+            e.rid.addEventListener('keyup', func.targetingControlChangeHandler, false);
+            e.arm.addEventListener('keyup', func.targetingControlChangeHandler, false);
+            e.lvl.addEventListener('keyup', func.targetingControlChangeHandler, false);
+            e.close.addEventListener('click', func.closeHandler, false);
+            e.setkey_done.addEventListener('click', func.switchToKeybindings, false);
+            e.setkey_select.addEventListener('change', func.setKeySelectChangeHandler, false);
 
-        var ths = pank.getElementsByTagName('th');
-        for(var i = 0, end = ths.length; i < end; i++) {
-            ths[i].addEventListener('click', setkey_start, false);
+            // We fetch the human names for actions from #sg-setkey-select.
+            // Hey they're needed there anyway, and this saves code.
+            var xpr = doc.evaluate('.//option', e.setkey_select, null,
+                                   XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
+            var kopt;
+            while((kopt = xpr.iterateNext())) {
+                var val = kopt.value;
+                if(val)
+                    actionName[val] = kopt.textContent;
+            }
+
+            // Bind the keys
+            xpr = doc.evaluate('div', e.keyboard, null,
+                               XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
+            for(var i = 0, end = xpr.snapshotLength; i < end; i++) {
+                var kdiv = xpr.snapshotItem(i);
+                var code = parseInt(kdiv.id.substr(4));
+                var fn = keymap[code];
+                if(fn)
+                    func.setKeyLegend(kdiv, fn);
+                kdiv.addEventListener('click', func.keyClickHandler, false);
+            }
         }
     };
 
     // load settings and configure
-    this.sgpvp.loadSettings(['textQL', 'targetingData',
-                             'retreatTile', 'armourData'],
-                            configure);
-    this.ui_element = div;
+    this.sgpvp.loadSettings(['keymap', 'ql', 'targeting',
+                             'rtid', 'armour'],
+                            func.configure);
 };
 
 SGPvPUI.prototype.close = function() {
@@ -156,6 +246,10 @@ SGPvPUI.prototype.close = function() {
         this.ui_element.parentNode.removeChild(this.ui_element);
         delete this.ui_element;
     }
+};
+
+SGPvPUI.prototype.saveKeyMap = function(keymap) {
+    this.sgpvp.setKeyMap(keymap);
 };
 
 SGPvPUI.prototype.saveTargetingData = function(ql,
@@ -176,10 +270,11 @@ SGPvPUI.prototype.saveTargetingData = function(ql,
                 exclude: this.parseOverrideList(exclude_overrides)
             };
 
-            this.sgpvp.storeSettings({ targetingData: {ql: qo.ql, data: o},
-                                       retreatTile: retreat_tile,
-                                       armourData: {points: armour_points,
-                                                    level: armour_level} });
+            this.sgpvp.storeSettings({ ql: qo.ql,
+                                       targeting: o,
+                                       rtid: retreat_tile,
+                                       armour: {points: armour_points,
+                                                level: armour_level} });
             ok = true;
         }
     }

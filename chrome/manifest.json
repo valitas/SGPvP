@@ -9,7 +9,8 @@
         "matches": [ "*://*.pardus.at/main.php*",
                      "*://*.pardus.at/building.php*",
                      "*://*.pardus.at/ship2ship_combat.php*",
-                     "*://*.pardus.at/ship2opponent_combat.php*" ]
+                     "*://*.pardus.at/ship2opponent_combat.php*",
+                     "*://*.pardus.at/logout.php" ]
     } ],
     "description": "Keyboard commands for Pardus PvP - beta release",
     // "key": "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCnUG1bRyKxo6bpQ1NNRE91fojHUxqX3CmTdtr5lywscuALtJffk+SvgI/19AjXTPexMQFQCfssz+mqjDA23+nsiKR4ug86YLuaXHTk7XVUSYR6FhsekXVvoXx/o879ThHRIYa9h4LIUQ8b84AfXFqRaGV/uHHSYoWdJTMocCegJQIDAQAB",

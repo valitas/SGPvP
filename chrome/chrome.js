@@ -4,12 +4,12 @@ SGPvP.prototype.getVersion = function() {
     return chrome.runtime.getManifest().version;
 };
 
-SGPvP.prototype.loadSettings = function(keys, callback) {
+SGPvP.prototype.loadValues = function(keys, callback) {
     chrome.extension.sendMessage({ op: 'load', universe: this.universe, keys: keys }, callback);
 };
 
-SGPvP.prototype.storeSettings = function(settings) {
-    chrome.extension.sendMessage({ op: 'store', universe: this.universe, settings: settings });
+SGPvP.prototype.saveValues = function(entries) {
+    chrome.extension.sendMessage({ op: 'save', universe: this.universe, entries: entries });
 };
 
 SGPvP.prototype.getLocation = function() {
@@ -31,9 +31,9 @@ SGPvP.prototype.getLocation = function() {
     return null;
 };
 
-// The following are here because they deal with oddities introduced
-// by the Firefox extension "Mr Xyzzy's Pardus Helper".  We can
-// simplify these in Chrome.
+// The following are here because the Firefox implementations have to
+// deal with oddities introduced by "Mr Xyzzy's Pardus Helper".
+// There's no such thing on Chrome, so we can simplify here.
 
 SGPvP.prototype.BUILDING_PLAYER_DETAIL_RX = /^building\.php\?detail_type=player&detail_id=(\d+)/;
 SGPvP.prototype.getShipsBuilding = function() {
@@ -99,14 +99,15 @@ SGPvP.prototype.getShipEntryExtras = function(entry) {
         entry.faction = 'neu';
 };
 
+
+// Our versions of GM_getResourceURL and GM_getResourceText. We use
+// these in Chrome to fetch resources included in the extension.
+
 SGPvP.prototype.RESOURCE = {
     ui_js: 'sgpvp_ui.js',
     ui_html: 'sgpvp_ui.xml',
     style: 'sgpvp_ui.css'
 };
-
-// Our versions of GM_getResourceURL and GM_getResourceText. We use
-// these in Chrome to fetch resources included in the extension.
 
 SGPvP.prototype.getResourceURL = function(resource_id) {
     return chrome.extension.getURL(this.RESOURCE[resource_id]);

@@ -1,105 +1,161 @@
-<div id="sgpvp-ui">
- <h3>Scorpion Guard's Better PvP Script V<span id="sgpvp-version"></span></h3>
- <div id="sgpvp-switch">
-  <span id="sgpvp-switch-targeting" class="active">Targeting</span> |
-  <span id="sgpvp-switch-keys">Key bindings</span>
+<div id="sg-ui">
+ <div id="sg-header">
+  <h3>Scorpion Guard's Better PvP Script V<span id="sg-version">31</span></h3>
+  <div id="sg-switch">
+   <span id="sg-switch-targeting" class="active">Targeting</span> |
+   <span id="sg-switch-keys">Key bindings</span>
+  </div>
  </div>
- 
- <table id="sgpvp-targeting">
-  <tr>
-   <td colspan="4">
-    <label for="sgpvp-ql">Inclusions and exclusions (quick list format):</label>
-   </td>
-  </tr>
-  <tr>
-   <td colspan="4">
-    <textarea rows="5" id="sgpvp-ql"></textarea>
-   </td>
-  </tr>
-  <tr>
-   <td style="padding-top: 1em" colspan="4">
-    Overrides (names or IDs, one per line, includes are prioritised)
-     </td>
-  </tr>
-  <tr style="vertical-align: top;">
-   <td style="padding-right: 0.5em; width: 50%;" colspan="2">
-    <div><label for="sgpvp-inc">include:</label></div>
-    <div><textarea rows="6" id="sgpvp-inc"></textarea></div>
-   </td>
-   <td style="padding-left: 0.5em; width: 50%;" colspan="2">
-    <div><label for="sgpvp-exc">exclude:</label></div>
-    <div><textarea rows="6" id="sgpvp-exc"></textarea></div>
-   </td>
-  </tr>
-  <tr>
-   <td style="padding-top: 1em; width: 25%;">
-    <label for="sgpvp-rid">Retreat tile ID: </label><input style="text-align: right;" size="5" id="sgpvp-rid" type="text" />
-   </td>
-   <td style="padding-top: 1em; width: 50%; text-align: center;" colspan="2">
-    <label for="sgpvp-arm">Ship armour points: </label><input style="text-align: right;" size="3" id="sgpvp-arm" type="text" /><label for="sgpvp-lvl"> level: </label><input style="text-align: right;" size="1" id="sgpvp-lvl" type="text" />
-   </td>
-   <td style="padding-top: 1em; width: 25%; text-align: right;">
-    <a target="_blank" href="https://dl.dropboxusercontent.com/u/28969566/sgpvp/help.html">Help</a>
-   </td>
-  </tr>
-  <tr>
-   <td style="padding: 2em 1em 1em; text-align: center;" colspan="4">
-    <input id="sgpvp-close" value="Close" type="button" />
-   </td>
-  </tr>
- </table>
 
- <table id="sgpvp-keys" style="display:none">
-  <tr data-fn="storeRP">
-   <th>Set retreat point</th>
-   <td>Z</td>
-   <td rowspan="12">
-    <p id="sgpvp-setkey-prompt">Click on a procedure.</p>
-   </td>
-  </tr>
-  <tr data-fn="engage">
-   <th>Engage</th>
-   <td>X</td>
-  </tr>
-  <tr data-fn="disengage">
-   <th>Disengage</th>
-   <td>C</td>
-  </tr>
-  <tr data-fn="nav">
-   <th>Nav</th>
-   <td>V</td>
-  </tr>
-  <tr data-fn="bots">
-   <th>Use robots</th>
-   <td>B</td>
-  </tr>
-  <tr data-fn="testBots">
-   <th>Test robots</th>
-   <td>N</td>
-  </tr>
-  <tr data-fn="damageBuilding">
-   <th>Damage building</th>
-   <td>M</td>
-  </tr>
-  <tr data-fn="fillUp">
-   <th>Fill tank</th>
-   <td>F</td>
-  </tr>
-  <tr data-fn="cloak">
-   <th>Cloak</th>
-   <td>K</td>
-  </tr>
-  <tr data-fn="uncloak">
-   <th>Uncloak</th>
-   <td>L</td>
-  </tr>
-  <tr data-fn="highlightTargets">
-   <th>Test targeting</th>
-   <td>T</td>
-  </tr>
-  <tr data-fn="ui">
-   <th>Open configuration</th>
-   <td>I</td>
-  </tr>
- </table>
+ <div id="sg-targeting">
+
+  <div>
+   <div>
+    <label for="sg-ql">Inclusions and exclusions (quick list format):</label>
+   </div>
+   <div>
+    <textarea id="sg-ql"></textarea>
+   </div>
+  </div>
+
+  <div>
+   <div>
+    Overrides (names or IDs, one per line, includes are prioritised)
+   </div>
+
+   <div id="sg-overrides-row">
+    <div>
+     <div><label for="sg-inc">include:</label></div>
+     <div><textarea rows="6" id="sg-inc"></textarea></div>
+    </div>
+
+    <div>
+     <div><label for="sg-exc">exclude:</label></div>
+     <div><textarea rows="6" id="sg-exc"></textarea></div>
+    </div>
+   </div>
+  </div>
+
+  <div id="sg-armour-row">
+   <span>
+    <label for="sg-rid">Retreat tile ID: </label><input style="text-align: right;" size="5" id="sg-rid" type="text" />
+   </span>
+
+   <span>
+    <label for="sg-arm">Ship armour points: </label><input style="text-align: right;" size="3" id="sg-arm" type="text" /><label for="sg-lvl"> level: </label><input style="text-align: right;" size="1" id="sg-lvl" type="text" />
+
+    <a id="sg-help" target="_blank" href="https://dl.dropboxusercontent.com/u/28969566/sgpvp/help.html">Help</a>
+   </span>
+  </div>
+ </div>
+
+ <div id="sg-keybindings" style="display:none">
+  <div id="sg-keyboard">
+   <div id="sg-k49">1</div>
+   <div id="sg-k50">2</div>
+   <div id="sg-k51">3</div>
+   <div id="sg-k52">4</div>
+   <div id="sg-k53">5</div>
+   <div id="sg-k54">6</div>
+   <div id="sg-k55">7</div>
+   <div id="sg-k56">8</div>
+   <div id="sg-k57">9</div>
+   <div id="sg-k48">0</div>
+   <div id="sg-k8">&#9003;</div>
+
+   <div id="sg-k9">&#8677;</div>
+   <div id="sg-k81">Q</div>
+   <div id="sg-k87">W</div>
+   <div id="sg-k69">E</div>
+   <div id="sg-k82">R</div>
+   <div id="sg-k84">T</div>
+   <div id="sg-k89">Y</div>
+   <div id="sg-k85">U</div>
+   <div id="sg-k73">I</div>
+   <div id="sg-k79">O</div>
+   <div id="sg-k80">P</div>
+
+   <div id="sg-k65">A</div>
+   <div id="sg-k83">S</div>
+   <div id="sg-k68">D</div>
+   <div id="sg-k70">F</div>
+   <div id="sg-k71">G</div>
+   <div id="sg-k72">H</div>
+   <div id="sg-k74">J</div>
+   <div id="sg-k75">K</div>
+   <div id="sg-k76">L</div>
+   <div id="sg-k13">&#9166;</div>
+
+   <div id="sg-k90">Z</div>
+   <div id="sg-k88">X</div>
+   <div id="sg-k67">C</div>
+   <div id="sg-k86">V</div>
+   <div id="sg-k66">B</div>
+   <div id="sg-k78">N</div>
+   <div id="sg-k77">M</div>
+   <div id="sg-k44">,</div>
+   <div id="sg-k46">.</div>
+
+   <div id="sg-k32">&#160;</div>
+  </div>
+
+  <div>
+   <span id="sg-default-keymap">Use default bindings</span> |
+   <span id="sg-illarion-keymap">Use Illarion's bindings</span>
+  </div>
+ </div>
+
+ <div id="sg-setkey" style="display:none">
+  <h4>Key <span id="sg-setkey-code">65</span></h4>
+  <p>
+   <label for="sg-setkey-select">Select the function you want for this key:</label>
+   <select id="sg-setkey-select">
+    <optgroup label="Basics">
+     <option value="">No action</option>
+     <option value="configure">Configure</option>
+     <option value="testTargeting">Test targeting</option>
+     <option value="setRetreatPoint">Set retreat point</option>
+     <option value="nav">Nav</option>
+    </optgroup>
+    <optgroup label="Combat">
+     <option value="disengage">Disengage</option>
+     <option value="engage">Engage</option>
+     <option value="engage10">Engage 10 rounds</option>
+     <option value="engage15">Engage 15 rounds</option>
+     <option value="raid">Raid</option>
+     <option value="raid10">Raid 10 rounds</option>
+     <option value="raid15">Raid 15 rounds</option>
+     <option value="target">Target</option>
+     <option value="damageBuilding">Damage building</option>
+    </optgroup>
+    <optgroup label="Robots">
+     <option value="testBots">Test robots</option>
+     <option value="bots">Use robots</option>
+     <option value="bots1">Use 1 robot</option>
+     <option value="bots2">Use 2 robots</option>
+     <option value="bots3">Use 3 robots</option>
+     <option value="bots4">Use 4 robots</option>
+     <option value="bots5">Use 5 robots</option>
+     <option value="bots8">Use 8 robots</option>
+     <option value="bots12">Use 12 robots</option>
+    </optgroup>
+    <optgroup label="Various">
+     <option value="fillTank">Fill tank</option>
+     <option value="cloak">Cloak</option>
+     <option value="uncloak">Uncloak</option>
+     <option value="dock">Dock</option>
+     <option value="undock">Undock</option>
+     <option value="flyClose">Fly close</option>
+     <option value="exitFlyClose">Exit fly close</option>
+    </optgroup>
+   </select>
+   <input id="sg-setkey-done" type="button" value="Done" />
+  </p>
+  <div id="sg-setkey-key">A</div>
+ </div>
+
+ <div id="sg-footer">
+  <input id="sg-close" value="Close" type="button" />
+ </div>
+
 </div>

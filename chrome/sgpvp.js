@@ -32,51 +32,27 @@ function SGPvP() {
     // default: logout, do nothing
     }
 
+    var self = this;
+    this.loadSettings(['keymap'], function(r) {
+                          var km = r.keymap;
+                          if(km)
+                              self.keymap = km;
+                          else
+                              // load default keymap
+                              self.setKeyMap(JSON.parse(this.getResourceText('default-keymap')));
+                      });
+
     // We wanted addEventListener, but need to use document.onkeydown,
     // because that's what pardus uses and we need to trap the cursor
     // keys while the info dialogue is open.
-
-    var self = this;
-
     this.game_kbd_handler = document.onkeydown;
+    console.log('game_kbd_handler', this.game_kbd_handler);
     document.onkeydown = function(event) { self.keyPressHandler(event); };
 }
 
 SGPvP.prototype.LOCATION_RX = /^https?:\/\/([^.]+)\.pardus\.at\/([^.]+)\.php/;
 
 // CONFIGURABLE BITS, IF YOU KNOW WHAT YOU'RE DOING:
-
-// the number is the keyCode, usually ASCII
-SGPvP.prototype.ACTIONS = {
-    /* Z */ 90: 'setRetreatPoint',
-    /* X */ 88: 'engage',
-    /* C */ 67: 'disengage',
-    /* V */ 86: 'nav',
-    /* B */ 66: 'useRobots',
-    /* N */ 78: 'testRobots',
-    /* M */ 77: 'damageBuilding',
-    /* A */ 65: 'bots1',
-    /* S */ 83: 'bots4',
-    /* D */ 68: 'bots8',
-    /* F */ 70: 'fillTank',
-    /* K */ 75: 'cloak',
-    /* L */ 76: 'uncloak',
-    /* T */ 84: 'testTargeting',
-    /* I */ 73: 'openConfiguration',
-    /* Q */ 81: 'flyClose',
-    /* W */ 87: 'exitFlyClose',
-    /* O */ 79: 'undock',
-    /* P */ 80: 'dock',
-    // /* P */ 80: 'dockUndock', // if you prefer a single key
-
-    /* 1 */ 49: 'target',
-    /* 2 */ 50: 'engage',
-    /* 3 */ 51: 'nav',
-    /* 4 */ 52: 'disengage',
-    /* 5 */ 53: 'useRobots',
-
-    /* ESC */ 27: 'closeUi'		
-};
 
 // ship priorities - all else being the same, first listed here are first shot
 SGPvP.prototype.SHIPS = [
@@ -105,15 +81,115 @@ SGPvP.prototype.SHIPS = [
 
 // END CONFIGURABLE BITS, no user serviceable parts below
 
+
+// Configuration handling.  This is a tad more complicated than one
+// would expect, because Chrome imposes a funny callback architecture.
+// On Chrome we don't access localStorage directly from here, see, but
+// from a background page instead, and we exchange messages with that
+// page to load or save settings.  There is a reason for this.
+//
+// And on Firefox we just emulate that brouhaha - see the user script.
+// It's not expensive at all, really, just a bit confusing.
+
+SGPvP.prototype.loadSettings = function(keys, callback) {
+    console.log(keys);
+    var loaders = this.CFG_DESERIALISERS;
+    var cb = function(r) {
+        var results = new Object();
+        for(var key in r) {
+            var val;
+            var loader = loaders[key];
+            if(loader)
+                val = loader(r[key]);
+            else
+                val = r[key];
+            results[key] = val;
+        }
+        console.log('loadSettings', keys, results);
+        callback(results);
+    };
+
+    this.loadValues(keys, cb);
+};
+
+SGPvP.prototype.storeSettings = function(settings) {
+    var savers = this.CFG_SERIALISERS;
+    var entries = new Object();
+    for(var key in settings) {
+        var saver = savers[key];
+        if(saver)
+            entries[key] = saver(settings[key]);
+    }
+    console.log('storeSettings', entries);
+    this.saveValues(entries);
+};
+
+SGPvP.prototype.CFG_DESERIALISERS = {
+    // targeting - return the default targeting object if unset
+    targeting: function(s) {
+        if(s)
+            return JSON.parse(s);
+
+        return {
+            ql:{includeFactions:{},
+                excludeFactions:{},
+                includeAlliances:{},
+                excludeAlliances:{},
+                includeCharacters:{},
+                excludeCharacters:{}},
+            include:{ids:{},names:{}},
+            exclude:{ids:{},names:{}},
+            prioritiseTraders:false,
+            retreatTile:null
+        };
+    },
+    // text QL
+    ql: function(s) { return s ? s : ''; },
+    // retreat tile id
+    rtid: function(s) {
+        var n = parseInt(s);
+        return (n > 0) ? n : null;
+    },
+    // armour configuration
+    armour: function(s) { return s ?  JSON.parse(s) : { points: null, level: 5 }; },
+    // last known armour points
+    lkap: function(s) { return s ? parseInt(s) : null; },
+    // last known bots available
+    lkba: function(s) { return s ? parseInt(s) : null; },
+    // keymap - don't return the default keymap if unset, because that
+    // has to be loaded, and we're in an event handler
+    keymap: function(s) { return s ? JSON.parse(s) : null; }
+};
+
+SGPvP.prototype.CFG_SERIALISERS = {
+    // XXX - used to save both targeting and ql, review usage
+    targeting: function(data) { return JSON.stringify(data); },
+    ql: function(ql) { return ql; },
+    rtid: function(rtid) { return rtid; },
+    armour: function(adata) { return JSON.stringify(adata); },
+    lkap: function(lkap) { return lkap; },
+    lkba: function(lkba) { return lkba; },
+    keymap: function(km) { return JSON.stringify(km); }
+};
+
+
+// Sets the current keymap, and also stores it in settings.
+SGPvP.prototype.setKeyMap = function(keymap) {
+    this.keymap = keymap;
+    this.storeSettings({ 'keymap': keymap });
+};
+
 SGPvP.prototype.perform = function(id) {
     this.ACTION[id].call(this);
 };
 
+// These are the actual actions we perform in response to key presses.
+// Keep the method names in sync with the UI.
 SGPvP.prototype.ACTION = {
     setRetreatPoint: function() {
         var userloc = this.getLocation();
         if(userloc) {
-            this.storeSettings({ retreatTile: userloc });
+            this.storeSettings({ rtid: userloc });
             this.showNotification('Retreat tile set: ' + userloc, 500);
         }
         else
@@ -151,9 +227,9 @@ SGPvP.prototype.ACTION = {
         }
 
         var self = this;
-        this.loadSettings(['retreatTile'],
+        this.loadSettings(['rtid'],
                           function(results) {
-                              var tile_id = results[0];
+                              var tile_id = results.rtid;
                               if(tile_id) {
                                   var form = document.getElementById('navForm');
                                   if(form) {
@@ -173,13 +249,11 @@ SGPvP.prototype.ACTION = {
     },
 
     nav: function() { document.location = 'main.php'; },
-    useRobots: function() { this.useBots(null); },
+    bots: function() { this.useBots(null); },
 
-    testRobots: function() {
+    testBots: function() {
         var self = this;
-        self.loadSettings(['armourData',
-                           'lastKnownArmourPoints',
-                           'lastKnownBotsAvailable'],
+        self.loadSettings(['armour', 'lkap', 'lkba' ],
                           function(results) {
                               self.showBotsNeeded(results);
                           });
@@ -264,9 +338,9 @@ SGPvP.prototype.ACTION = {
                 highlight_target(ships[i].td, 'inherit');
 
             var self = this;
-            this.loadSettings(['targetingData'],
+            this.loadSettings(['targeting'],
                               function(results) {
-                                  var targeting_data = results[0];
+                                  var targeting_data = results.targeting;
                                   var targets = self.scanForTargets(targeting_data, ships);
 
                                   // turn the excluded ships green
@@ -288,18 +362,13 @@ SGPvP.prototype.ACTION = {
         }
     },
 
-    openConfiguration: function() {
+    configure: function() {
         if(typeof(SGPvPUI) != 'function')
             // load the UI code
             eval(this.getResourceText('ui_js'));
         if(!this.sgpvpui)
             this.sgpvpui = new SGPvPUI(this, document);
         this.sgpvpui.open();
-    },
-
-    closeUi: function() {
-        if(this.sgpvpui)
-            this.sgpvpui.close();
     },
 
     target: function() {
@@ -322,9 +391,9 @@ SGPvP.prototype.ACTION = {
 
         if(ships) {
             var self = this;
-            this.loadSettings(['targetingData'],
+            this.loadSettings(['targeting'],
                               function(results) {
-                                  var targeting_data = results[0];
+                                  var targeting_data = results.targeting;
                                   var targets = self.scanForTargets(targeting_data, ships);
 
                                   if(targets.included.length > 0) {
@@ -341,27 +410,36 @@ SGPvP.prototype.ACTION = {
     }
 };
 
+SGPvP.prototype.closeUi = function() {
+    if(this.sgpvpui)
+        this.sgpvpui.close();
+};
+
 SGPvP.prototype.keyPressHandler = function(event) {
-    if(window.name == '' || event.ctrlKey || event.altKey || event.metaKey) {
+    // XXX we used to test for window.name here and i can't remember why, please review.
+    if(event.ctrlKey || event.altKey || event.metaKey) {
         if(this.game_kbd_handler)
             this.game_kbd_handler(event);
         return;
     }
 
+    if(event.keyCode == 27) {
+        this.closeUi();
+        return;
+    }
+
     if(event.target &&
        (event.target.nodeName == 'INPUT' || event.target.nodeName == 'TEXTAREA')) {
+        // XXX - we are no longer ignoring the game's default key handler on chrome <_<
         // nop, and don't call the game's handler cause it may move the ship
         return;
     }
 
-    var method_name = this.ACTIONS[event.keyCode];
+    var method_name = this.keymap[event.keyCode];
     if(method_name) {
-        var method = this.ACTION[method_name];
-        if(method) {
-            event.preventDefault();
-            event.stopPropagation();
-            method.call(this);
-        }
+        event.preventDefault();
+        event.stopPropagation();
+        this.ACTION[method_name].call(this);
     }
     else if(this.game_kbd_handler) {
         this.game_kbd_handler(event);
@@ -516,7 +594,7 @@ SGPvP.prototype.setupNavPage = function() {
         if(elt)
             n = parseInt(elt.textContent);
         if(!isNaN(n))
-            settings.lastKnownArmourPoints = n;
+            settings.lkap = n;
 
         // Get amount of bots in the cargo hold, from the Nav
         // screen. This information is always available, except when
@@ -551,7 +629,7 @@ SGPvP.prototype.setupNavPage = function() {
             }
         }
         if(!isNaN(n))
-            settings.lastKnownBotsAvailable = n;
+            settings.lkba = n;
 
         self.storeSettings(settings);
     };
@@ -581,7 +659,7 @@ SGPvP.prototype.setupCombatPage = function() {
         // the next input, the submit button.
         var available = parseInt(elt.parentNode.previousElementSibling.textContent);
         if(!isNaN(available))
-            settings.lastKnownBotsAvailable = available;
+            settings.lkba = available;
 
         var amountField = elt.nextElementSibling;
         if(amountField && amountField.name == 'amount') {
@@ -598,7 +676,7 @@ SGPvP.prototype.setupCombatPage = function() {
         // how many bots we have (e.g. if the building isn't blocking)
         // so in that case we let the script use the last known value.
         if(this.page != 'building')
-            settings.lastKnownBotsAvailable = 0;
+            settings.lkba = 0;
     }
 
     elt = document.evaluate("//font[starts-with(text(), 'Armor points:')]",
@@ -607,7 +685,7 @@ SGPvP.prototype.setupCombatPage = function() {
     if(elt) {
         var armour = parseInt(elt.textContent.substring(13));
         if(!isNaN(armour))
-            settings.lastKnownArmourPoints = armour;
+            settings.lkap = armour;
     }
 
     this.storeSettings(settings);
@@ -615,9 +693,7 @@ SGPvP.prototype.setupCombatPage = function() {
 
 SGPvP.prototype.useBots = function(thisMany) {
     var self = this;
-    self.loadSettings(['armourData',
-                       'lastKnownArmourPoints',
-                       'lastKnownBotsAvailable'],
+    self.loadSettings(['armour', 'lkap', 'lkba'],
                       function(results) {
                           self.useBots2(results, thisMany);
                       });
@@ -625,10 +701,10 @@ SGPvP.prototype.useBots = function(thisMany) {
 
 // If thisMany is not supplied, compute the amount needed to the best
 // of our knowledge.
-SGPvP.prototype.useBots2 = function(storedParams, thisMany) {
-    var armourData = storedParams[0];
-    var lastKnownArmourPoints = storedParams[1];
-    var lastKnownBotsAvailable = storedParams[2];
+SGPvP.prototype.useBots2 = function(cfg, thisMany) {
+    var armourData = cfg.armour;
+    var lastKnownArmourPoints = cfg.lkap;
+    var lastKnownBotsAvailable = cfg.lkba;
     var botRepair;
 
     if(thisMany)
@@ -647,9 +723,9 @@ SGPvP.prototype.useBots2 = function(storedParams, thisMany) {
     // Compute how much armour the bots will repair, and how many
     // we'll have left, and update last known values.
     var newSettings = {
-        lastKnownArmourPoints: (lastKnownArmourPoints == null) ?
+        lkap: (lastKnownArmourPoints == null) ?
             null : lastKnownArmourPoints + thisMany * botRepair,
-        lastKnownBotsAvailable: (lastKnownBotsAvailable > thisMany) ?
+        lkba: (lastKnownBotsAvailable > thisMany) ?
             lastKnownBotsAvailable - thisMany : 0
     };
 
@@ -706,10 +782,10 @@ SGPvP.prototype.getMadeUpBotsForm = function() {
     return form;
 };
 
-SGPvP.prototype.showBotsNeeded = function(storedParams) {
-    var armourData = storedParams[0];
-    var lastKnownArmourPoints = storedParams[1];
-    var lastKnownBotsAvailable = storedParams[2];
+SGPvP.prototype.showBotsNeeded = function(cfg) {
+    var armourData = cfg.armour;
+    var lastKnownArmourPoints = cfg.lkap;
+    var lastKnownBotsAvailable = cfg.lkba;
     var bots = this.computeBotsNeeded(armourData, lastKnownArmourPoints, lastKnownBotsAvailable);
     if(!bots)
         return;

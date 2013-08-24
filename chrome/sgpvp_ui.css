@@ -1,56 +1,226 @@
-#sgpvp-ui {
-    background-color: rgb(0, 0, 28);
-    border: 2px ridge rgb(85, 85, 102);
+/* The main dialogue */
+
+#sg-ui {
+    background-color: #00002C;
+    border: 1px outset #335; /* rgb(85, 85, 102); */
+    border-radius: 4px;
     height: auto;
-    left: 50%;
-    margin-left: -25em;
-    padding: 1em;
+    left: 200px;
+    margin: 0;
+    padding: 0;
     position: fixed;
-    top: 3em;
-    width: 50em;
+    top: 20px;
+    width: 600px;
     z-index: 10;
 }
 
-#sgpvp-ui h3 {
+#sg-header, #sg-footer {
+    margin: 14px;
     text-align: center;
 }
 
-#sgpvp-switch {
+#sg-footer {
+    margin: 21px;
+}
+
+#sg-header h3 {
+    font-size: 16px;
+    line-height: 28px;
+    margin: 0;
+}
+
+#sg-switch {
     text-align: center;
     font-size: 11px;
-    margin: 1em 0;
+    line-height: 14px;
+    margin: 0;
 }
 
-#sgpvp-switch span {
+#sg-switch span,
+#sg-default-keymap, #sg-illarion-keymap {
     color: rgb(208, 209, 217);
     cursor: pointer;
 }
 
-#sgpvp-switch span.active {
+#sg-switch span.active {
     color: inherit;
+    cursor: inherit;
 }
 
-#sgpvp-targeting {
-    border-collapse: collapse;
-    width: 100%;
+
+/* Common panel styles */
+
+#sg-targeting, #sg-keybindings, #sg-setkey {
+    padding: 0 8px;
+    width: 584px;
+    line-height: 14px;
+    position: relative;
 }
 
-#sgpvp-targeting textarea {
-    width: 100%;
+#sg-targeting > div, #sg-keybindings > div, #sg-setkey > div {
+    margin: 12px 0;
+    position: relative;
 }
 
-#sgpvp-targeting label {
+#sg-targeting label, #sg-keybindings label, #sg-setkey label {
     cursor: pointer;
 }
 
-#sgpvp-keys th {
-    cursor: pointer;
+
+/* The targeting panel */
+
+#sg-ql {
+    width: 578px;
+    height: 72px;
 }
 
-#sgpvp-keys th:hover {
-    background-color: rgb(208, 209, 217);
+#sg-overrides-row {
+    height: 100px;
 }
 
-#sgpvp-keys td {
-    padding: 0 1em;
+#sg-overrides-row > div {
+    width: 294px;
+    position: absolute;
+    top: 14px;
+    left: 0;
+}
+
+#sg-overrides-row > div + div {
+    left: 296px;
+}
+
+#sg-inc, #sg-exc {
+    width: 282px;
+    height: 80px;
+    margin: 0; padding: 2px;
+}
+
+#sg-armour-row > span + span {
+    margin-left: 14px;
+}
+
+#sg-help {
+    display: inline-block;
+    margin: 2px;
+    float: right;
+    padding: 3px;
+}
+
+
+/* The keybindings panel */
+
+#sg-keybindings > div {
+    text-align: center;
+}
+
+#sg-keyboard {
+  background-color: #111;
+  font-family: sans-serif;
+  height: 255px;
+  position: relative;
+  top:0; left: -3px;
+  width: 590px;
+}
+
+#sg-keyboard > div, #sg-setkey-key {
+  background-image: linear-gradient(#eee,#ccc);
+  background-repeat: repeat-x;
+  border-radius: 4px;
+  border: 1px outset #eee;
+  color: black;
+  cursor: pointer;
+  font-size: 16px;
+  height: 42px;
+  padding: 4px 0 0 0;
+  position: absolute;
+  text-align: center;
+  width: 46px;
+}
+
+#sg-keyboard > div:hover {
+  border-color: #fff;
+  background-color: #ddd;
+  background-image: linear-gradient(#fff,#ddd);
+}
+
+#sg-keyboard #sg-k9, #sg-keyboard #sg-k13 {
+  width: 56px;
+}
+
+#sg-keyboard #sg-k32 {
+  width: 246px;
+}
+
+#sg-keyboard > div > div, #sg-setkey-key > div {
+  font-size: 9px;
+  line-height: 10px;
+}
+
+#sg-k49 { top: 4px; left: 38px }
+#sg-k50 { top: 4px; left: 88px }
+#sg-k51 { top: 4px; left: 138px }
+#sg-k52 { top: 4px; left: 188px }
+#sg-k53 { top: 4px; left: 238px }
+#sg-k54 { top: 4px; left: 288px }
+#sg-k55 { top: 4px; left: 338px }
+#sg-k56 { top: 4px; left: 388px }
+#sg-k57 { top: 4px; left: 438px }
+#sg-k48 { top: 4px; left: 488px }
+#sg-k8 { top: 4px; left: 538px }
+
+#sg-k9 { top: 54px; left: 4px }
+#sg-k81 { top: 54px; left: 64px }
+#sg-k87 { top: 54px; left: 114px }
+#sg-k69 { top: 54px; left: 164px }
+#sg-k82 { top: 54px; left: 214px }
+#sg-k84 { top: 54px; left: 264px }
+#sg-k89 { top: 54px; left: 314px }
+#sg-k85 { top: 54px; left: 364px }
+#sg-k73 { top: 54px; left: 414px }
+#sg-k79 { top: 54px; left: 464px }
+#sg-k80 { top: 54px; left: 514px }
+
+#sg-k65 { top: 104px; left: 78px }
+#sg-k83 { top: 104px; left: 128px }
+#sg-k68 { top: 104px; left: 178px }
+#sg-k70 { top: 104px; left: 228px }
+#sg-k71 { top: 104px; left: 278px }
+#sg-k72 { top: 104px; left: 328px }
+#sg-k74 { top: 104px; left: 378px }
+#sg-k75 { top: 104px; left: 428px }
+#sg-k76 { top: 104px; left: 478px }
+#sg-k13 { top: 104px; left: 528px }
+
+#sg-k90 { top: 154px; left: 102px }
+#sg-k88 { top: 154px; left: 152px }
+#sg-k67 { top: 154px; left: 202px }
+#sg-k86 { top: 154px; left: 252px }
+#sg-k66 { top: 154px; left: 302px }
+#sg-k78 { top: 154px; left: 352px }
+#sg-k77 { top: 154px; left: 402px }
+#sg-k44 { top: 154px; left: 452px }
+#sg-k46 { top: 154px; left: 502px }
+
+#sg-k32 { top: 204px; left: 202px }
+
+
+/* The setkey panel */
+
+#sg-setkey {
+    padding: 80px 32px;
+}
+
+#sg-setkey h4 {
+    font-size: 14px;
+    margin: 0;
+}
+
+#sg-setkey p {
+    vertical-align: middle;
+}
+
+#sg-setkey > #sg-setkey-key {
+    position: absolute;
+    top: 66px; left: 516px;
+    cursor: default;
 }
