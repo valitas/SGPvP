@@ -33,14 +33,15 @@ function SGPvP() {
     }
 
     var self = this;
-    this.loadSettings(['keymap'], function(r) {
-                          var km = r.keymap;
-                          if(km)
-                              self.keymap = km;
-                          else
-                              // load default keymap
-                              self.setKeyMap(JSON.parse(this.getResourceText('default_keymap')));
-                      });
+    var setkeys = function(r) {
+        var km = r.keymap;
+        if(km)
+            self.keymap = km;
+        else
+            // load default keymap
+            self.setKeyMap(JSON.parse(self.getResourceText('default_keymap')));
+    };
+    this.loadSettings(['keymap'], setkeys);
 
     document.addEventListener('keydown',
                               function(event) { self.keyPressHandler(event); },
@@ -49,9 +50,7 @@ function SGPvP() {
 
 SGPvP.prototype.LOCATION_RX = /^https?:\/\/([^.]+)\.pardus\.at\/([^.]+)\.php/;
 
-// CONFIGURABLE BITS, IF YOU KNOW WHAT YOU'RE DOING:
-
-// ship priorities - all else being the same, first listed here are first shot
+// Ship priorities - all else being the same, first listed here are first shot
 SGPvP.prototype.SHIPS = [
     // 1 - real traders and low level hybrids
     'leviathan', 'boa_ultimate_carrier', 'behemoth', 'extender', 'celeus',
@@ -76,9 +75,6 @@ SGPvP.prototype.SHIPS = [
     'wasp', 'ficon', 'rustclaw', 'sabre'
 ];
 
-// END CONFIGURABLE BITS, no user serviceable parts below
-
-
 // Configuration handling.  This is a tad more complicated than one
 // would expect, because Chrome imposes a funny callback architecture.
 // On Chrome we don't access localStorage directly from here, see, but
@@ -89,7 +85,6 @@ SGPvP.prototype.SHIPS = [
 // It's not expensive at all, really, just a bit confusing.
 
 SGPvP.prototype.loadSettings = function(keys, callback) {
-    console.log(keys);
     var loaders = this.CFG_DESERIALISERS;
     var cb = function(r) {
         var results = new Object();
@@ -102,7 +97,6 @@ SGPvP.prototype.loadSettings = function(keys, callback) {
                 val = r[key];
             results[key] = val;
         }
-        console.log('loadSettings', keys, results);
         callback(results);
     };
 
@@ -117,7 +111,6 @@ SGPvP.prototype.storeSettings = function(settings) {
         if(saver)
             entries[key] = saver(settings[key]);
     }
-    console.log('storeSettings', entries);
     this.saveValues(entries);
 };
 
@@ -169,242 +162,10 @@ SGPvP.prototype.CFG_SERIALISERS = {
     keymap: function(km) { return JSON.stringify(km); }
 };
 
-
 // Sets the current keymap, and also stores it in settings.
 SGPvP.prototype.setKeyMap = function(keymap) {
     this.keymap = keymap;
     this.storeSettings({ 'keymap': keymap });
-};
-
-SGPvP.prototype.perform = function(id) {
-    this.ACTION[id].call(this);
-};
-
-// These are the actual actions we perform in response to key presses.
-// Keep the method names in sync with the UI.
-SGPvP.prototype.ACTION = {
-    setRetreatPoint: function() {
-        var userloc = this.getLocation();
-        if(userloc) {
-            this.storeSettings({ rtid: userloc });
-            this.showNotification('Retreat tile set: ' + userloc, 500);
-        }
-        else
-            this.showNotification('Can not set retreat tile', 500);
-    },
-
-    engage: function() {
-        var elt = document.evaluate('//input[@name="ok" and @type="submit" and @value="Attack"]',
-                                    document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
-                                    null).singleNodeValue;
-        if(elt && elt.click) {
-            elt.click();
-            return;
-        }
-
-        // no attack button?
-        this.target();
-    },
-
-    disengage: function() {
-        var elt = document.evaluate('//input[@name="retreat" and @type="submit"]',
-                                    document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
-                                    null).singleNodeValue;
-        if(elt && elt.click) {
-            elt.click();
-            return;
-        }
-
-        // no retreat button?
-        if(this.page != 'main') {
-            // XXX - we probably could skip this nav, by inserting an
-            // invisible form and submitting it...
-            this.perform('nav');
-            return;
-        }
-
-        var self = this;
-        this.loadSettings(['rtid'],
-                          function(results) {
-                              var tile_id = results.rtid;
-                              if(tile_id) {
-                                  var form = document.getElementById('navForm');
-                                  if(form) {
-                                      var destination = form.elements.destination;
-                                      if(destination) {
-                                          destination.value = tile_id;
-                                          form.submit();
-                                          return;
-                                      }
-                                  }
-                              }
-                              else
-                                  self.showNotification('NO RETREAT TILE SET', 500);
-
-                              self.perform('nav');
-                          });
-    },
-
-    nav: function() { document.location = 'main.php'; },
-    bots: function() { this.useBots(null); },
-
-    testBots: function() {
-        var self = this;
-        self.loadSettings(['armour', 'lkap', 'lkba' ],
-                          function(results) {
-                              self.showBotsNeeded(results);
-                          });
-    },
-
-    damageBuilding: function() {
-        var elt = document.evaluate('//input[@name="destroy" and @type="submit"]',
-                                    document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
-                                    null).singleNodeValue;
-        if(elt && elt.click) {
-            elt.click();
-            return;
-        }
-
-        // no destroy button?
-        document.location = 'building.php';
-    },
-
-    bots1: function() { this.useBots(1); },
-    bots4: function() { this.useBots(4); },
-    bots8: function() { this.useBots(8); },
-    fillTank: function() { document.location = 'main.php?fillup=1'; },
-    //SGPvP.prototype.enterBuilding = function() { document.location = 'building.php'; };
-    flyClose: function() { document.location = 'main.php?entersb=1'; },
-    exitFlyClose: function() { document.location = 'main.php?exitsb=1'; },
-    dockUndock: function() { this.undock() || this.dock(); },
-    dock: function() { top.location = 'game.php?logout=1'; },
-
-    undock: function() {
-        var elt = document.evaluate('//input[@value="Launch Ship" and @type="submit"]',
-                                    document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
-                                    null).singleNodeValue;
-        if(elt && elt.click) {
-            elt.click();
-            return true;
-        }
-
-        return false;
-    },
-
-    cloak: function() {
-        var elt = document.getElementById('inputShipCloak');
-        if(elt && elt.click)
-            elt.click();
-        else
-            this.perform('nav');
-    },
-
-    uncloak: function() {
-        var elt = document.getElementById('inputShipUncloak');
-        if(elt && elt.click)
-            elt.click();
-        else
-            this.perform('nav');
-    },
-
-    testTargeting: function() {
-        var url = this.url;
-        var page;
-        var ships;
-
-        if(this.page == 'building') {
-            page = 'b';
-            ships = this.getShipsBuilding();
-        }
-        else if(this.page == 'ship2ship_combat') {
-            page = 'c';
-            ships = this.getShipsCombat();
-        }
-        else {
-            page = 'n';
-            ships = this.getShipsNav();
-        }
-
-        var highlight_target = function(td, colour) {
-            td.style.backgroundColor = colour;
-            td.previousElementSibling.style.backgroundColor = colour;
-        };
-
-        if(ships) {
-            for(var i = 0, end = ships.length; i < end; i++)
-                highlight_target(ships[i].td, 'inherit');
-
-            var self = this;
-            this.loadSettings(['targeting'],
-                              function(results) {
-                                  var targeting_data = results.targeting;
-                                  var targets = self.scanForTargets(targeting_data, ships);
-
-                                  // turn the excluded ships green
-                                  for(var i = 0, end = targets.excluded.length; i < end; i++)
-                                      highlight_target(targets.excluded[i].td, '#050');
-
-                                  if(targets.included.length > 0) {
-                                      // turn the included ships red
-                                      for(var i2 = 0, end2 = targets.included.length; i2 < end2; i2++)
-                                          highlight_target(targets.included[i2].td, '#500');
-
-                                      // highlight the chosen target
-                                      var ship_pri = (page == 'n') ?
-                                          self.getShipModelPriorities() : null;
-                                      var best = self.chooseTarget(targets.included, ship_pri);
-                                      highlight_target(best.td, '#900');
-                                  }
-                              });
-        }
-    },
-
-    configure: function() {
-        if(typeof(SGPvPUI) != 'function')
-            // load the UI code
-            eval(this.getResourceText('ui_js'));
-        if(!this.sgpvpui)
-            this.sgpvpui = new SGPvPUI(this, document);
-        this.sgpvpui.open();
-    },
-
-    target: function() {
-        var url = this.url;
-        var page;
-        var ships;
-
-        if(this.page == 'building') {
-            page = 'b';
-            ships = this.getShipsBuilding();
-        }
-        else if(this.page == 'ship2ship_combat') {
-            page = 'c';
-            ships = this.getShipsCombat();
-        }
-        else {
-            page = 'n';
-            ships = this.getShipsNav();
-        }
-
-        if(ships) {
-            var self = this;
-            this.loadSettings(['targeting'],
-                              function(results) {
-                                  var targeting_data = results.targeting;
-                                  var targets = self.scanForTargets(targeting_data, ships);
-
-                                  if(targets.included.length > 0) {
-                                      var ship_pri = (page == 'n') ?
-                                          self.getShipModelPriorities() : null;
-                                      var best = self.chooseTarget(targets.included, ship_pri);
-                                      document.location = 'ship2ship_combat.php?playerid=' + best.id;
-                                      return;
-                                  }
-
-                                  self.perform('nav');
-                              });
-        }
-    }
 };
 
 SGPvP.prototype.closeUi = function() {
@@ -413,7 +174,6 @@ SGPvP.prototype.closeUi = function() {
 };
 
 SGPvP.prototype.keyPressHandler = function(event) {
-    // XXX we used to test for window.name here and i can't remember why, please review.
     if(event.ctrlKey || event.altKey || event.metaKey)
         return;
 
@@ -424,29 +184,28 @@ SGPvP.prototype.keyPressHandler = function(event) {
 
     if(event.target &&
        (event.target.nodeName == 'INPUT' || event.target.nodeName == 'TEXTAREA'))
-        // leave it, dude is typing
         return;
 
     var method_name = this.keymap[event.keyCode];
     if(method_name) {
         event.preventDefault();
         event.stopPropagation();
-        this.ACTION[method_name].call(this);
+        this[method_name].call(this);
     }
 };
 
+SGPvP.prototype.NOTIFICATION_STYLE = {
+    background: '#00002C', border: '2px outset #335', fontSize: '18px',
+    left: '50%', margin: '-2.2em 0 0 -4em', padding: '0.5em',
+    position: 'fixed', textAlign: 'center', top: '50%', width: '8em',
+    zIndex: '15'
+};
 SGPvP.prototype.showNotification = function(text, delay) {
     if(this.notification_timer)
         clearTimeout(this.notification_timer);
     this.hideNotification();
     this.notification =
-        this.createElement('div',
-                           { position: 'fixed', zIndex: '15', padding: '0.5em', textAlign: 'center',
-                             fontSize: '18px', verticalAlign: 'middle',
-                             top: '50%', left: '50%', width: '8em', height: 'auto',
-                             marginLeft: '-4em', marginTop: '-2.2em',
-                             border: 'ridge 2px #556', backgroundColor: 'rgb(0,0,28)' },
-                           null, text, null);
+        this.createElement('div', this.NOTIFICATION_STYLE, null, text, null);
     document.body.appendChild(this.notification);
 
     var self = this;
@@ -522,8 +281,7 @@ SGPvP.prototype.chooseTarget = function(ships, ship_pri) {
             best = ship;
         else {
             if(best.includePriority) {
-                if(ship.includePriority &&
-                   (ship.includePriority < best.includePriority))
+                if(ship.includePriority && (ship.includePriority < best.includePriority))
                     best = ship;
             }
             else {
@@ -691,17 +449,13 @@ SGPvP.prototype.useBots = function(thisMany) {
 // If thisMany is not supplied, compute the amount needed to the best
 // of our knowledge.
 SGPvP.prototype.useBots2 = function(cfg, thisMany) {
-    var armourData = cfg.armour;
-    var lastKnownArmourPoints = cfg.lkap;
-    var lastKnownBotsAvailable = cfg.lkba;
     var botRepair;
 
     if(thisMany)
         // dont bother trying to compute armour, use what we're told exactly
-        botRepair = Math.floor(180 / armourData.level);
+        botRepair = Math.floor(180 / cfg.armour.level);
     else {
-        var bots = this.computeBotsNeeded(armourData, lastKnownArmourPoints,
-                                          lastKnownBotsAvailable);
+        var bots = this.computeBotsNeeded(cfg.armour, cfg.lkap, cfg.lkba);
         if(!bots)
             return;
 
@@ -712,14 +466,11 @@ SGPvP.prototype.useBots2 = function(cfg, thisMany) {
     // Compute how much armour the bots will repair, and how many
     // we'll have left, and update last known values.
     var newSettings = {
-        lkap: (lastKnownArmourPoints == null) ?
-            null : lastKnownArmourPoints + thisMany * botRepair,
-        lkba: (lastKnownBotsAvailable > thisMany) ?
-            lastKnownBotsAvailable - thisMany : 0
+        lkap: (cfg.lkap == null) ? null : cfg.lkap + thisMany * botRepair,
+        lkba: (cfg.lkba > thisMany) ? cfg.lkba - thisMany : 0
     };
 
     var amount, submit;
-
     if(this.useBotsAmountField) {
         amount = this.useBotsAmountField;
         submit = this.useBotsButton;
@@ -772,10 +523,7 @@ SGPvP.prototype.getMadeUpBotsForm = function() {
 };
 
 SGPvP.prototype.showBotsNeeded = function(cfg) {
-    var armourData = cfg.armour;
-    var lastKnownArmourPoints = cfg.lkap;
-    var lastKnownBotsAvailable = cfg.lkba;
-    var bots = this.computeBotsNeeded(armourData, lastKnownArmourPoints, lastKnownBotsAvailable);
+    var bots = this.computeBotsNeeded(cfg.armour, cfg.lkap, cfg.lkba);
     if(!bots)
         return;
 
@@ -790,35 +538,35 @@ SGPvP.prototype.showBotsNeeded = function(cfg) {
 
 // This function shows notifications. If it returns null, bots are not
 // needed or can't be used, and the user already knows.
-SGPvP.prototype.computeBotsNeeded = function(armourData, lastKnownArmourPoints, lastKnownBotsAvailable) {
-    if(!(armourData.points > 0 && armourData.level > 0)) {
+SGPvP.prototype.computeBotsNeeded = function(armour, lkap, lkba) {
+    if(!(armour.points > 0 && armour.level > 0)) {
         this.showNotification('Ship armour not configured', 1500);
         return null;
     }
 
-    if(lastKnownArmourPoints == null || lastKnownArmourPoints < 0) {
+    if(lkap == null || lkap < 0) {
         // In the nav screen, we should always see the ship's armour
         this.showNotification("SGPvP error 5001: ship armour not found", 1500);
         return null;
     }
 
-    if(!lastKnownBotsAvailable) {
+    if(!lkba) {
         this.showNotification("No bots available!", 500);
         return null;
     }
 
-    if(lastKnownArmourPoints >= armourData.points) {
+    if(lkap >= armour.points) {
         this.showNotification('Bots not needed', 500);
         return null;
     }
 
-    var botRepair = Math.floor(180 / armourData.level);
-    var needed = Math.floor((armourData.points - lastKnownArmourPoints + botRepair - 1) / botRepair);
+    var botRepair = Math.floor(180 / armour.level);
+    var needed = Math.floor((armour.points - lkap + botRepair - 1) / botRepair);
 
     return {
         botRepair: botRepair,
         needed: needed,
-        available: needed > lastKnownBotsAvailable ? lastKnownBotsAvailable : needed
+        available: needed > lkba ? lkba : needed
     };
 };
 
@@ -904,11 +652,10 @@ SGPvP.prototype.selectMissiles = function() {
 
 SGPvP.prototype.selectHighestRounds = function() {
     var elts = document.getElementsByName('rounds');
-
     var selectHighestRoundsInSelectElement = function(elt) {
         var highest = 0, highestElt = null;
         var opts = elt.getElementsByTagName('option');
-        for(var j = 0; j < opts.length; j++) {
+        for(var j = 0, jend = opts.length; j < jend; j++) {
             var opt = opts[j];
             var n = parseInt(opt.value);
             if(n > highest) {
@@ -920,7 +667,7 @@ SGPvP.prototype.selectHighestRounds = function() {
             highestElt.selected = true;
     };
 
-    for(var i = 0; i < elts.length; i++) {
+    for(var i = 0, end = elts.length; i < end; i++) {
         var elt = elts[i];
         if(elt.style.display == 'none') {
             // for some reason, Pardus now hides the rounds select,
@@ -932,5 +679,236 @@ SGPvP.prototype.selectHighestRounds = function() {
         }
         else
             selectHighestRoundsInSelectElement(elt);
+    }
+};
+
+
+// Methods below are the actual actions we perform in response to key presses.
+// Keep the method names in sync with the UI.
+
+SGPvP.prototype.setRetreatPoint = function() {
+    var userloc = this.getLocation();
+    if(userloc) {
+        this.storeSettings({ rtid: userloc });
+        this.showNotification('Retreat tile set: ' + userloc, 500);
+    }
+    else
+        this.showNotification('Can not set retreat tile', 500);
+};
+
+SGPvP.prototype.engage = function() {
+    var elt = document.evaluate('//input[@name="ok" and @type="submit" and @value="Attack"]',
+                                document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                                null).singleNodeValue;
+    if(elt && elt.click) {
+        elt.click();
+        return;
+    }
+
+    // no attack button?
+    this.target();
+};
+
+SGPvP.prototype.disengage = function() {
+    var elt = document.evaluate('//input[@name="retreat" and @type="submit"]',
+                                document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                                null).singleNodeValue;
+    if(elt && elt.click) {
+        elt.click();
+        return;
+    }
+
+    // no retreat button?
+    if(this.page != 'main') {
+        // XXX - we probably could skip this nav, by inserting an
+        // invisible form and submitting it...
+        this.nav();
+        return;
+    }
+
+    var self = this;
+    this.loadSettings(['rtid'],
+                      function(results) {
+                          var tile_id = results.rtid;
+                          if(tile_id) {
+                              var form = document.getElementById('navForm');
+                              if(form) {
+                                  var destination = form.elements.destination;
+                                  if(destination) {
+                                      destination.value = tile_id;
+                                      form.submit();
+                                      return;
+                                  }
+                              }
+                          }
+                          else
+                              self.showNotification('NO RETREAT TILE SET', 500);
+
+                          self.nav();
+                      });
+};
+
+SGPvP.prototype.nav = function() { document.location = 'main.php'; };
+SGPvP.prototype.bots = function() { this.useBots(null); };
+
+SGPvP.prototype.testBots = function() {
+    var self = this;
+    self.loadSettings(['armour', 'lkap', 'lkba' ],
+                      function(results) {
+                          self.showBotsNeeded(results);
+                      });
+};
+
+SGPvP.prototype.damageBuilding = function() {
+    var elt = document.evaluate('//input[@name="destroy" and @type="submit"]',
+                                document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                                null).singleNodeValue;
+    if(elt && elt.click) {
+        elt.click();
+        return;
+    }
+
+    // no destroy button?
+    document.location = 'building.php';
+};
+
+SGPvP.prototype.bots1 = function() { this.useBots(1); };
+SGPvP.prototype.bots2 = function() { this.useBots(2); };
+SGPvP.prototype.bots3 = function() { this.useBots(3); };
+SGPvP.prototype.bots4 = function() { this.useBots(4); };
+SGPvP.prototype.bots5 = function() { this.useBots(5); };
+SGPvP.prototype.bots8 = function() { this.useBots(8); };
+SGPvP.prototype.bots12 = function() { this.useBots(12); };
+SGPvP.prototype.fillTank = function() { document.location = 'main.php?fillup=1'; };
+SGPvP.prototype.enterBuilding = function() { document.location = 'building.php'; };
+SGPvP.prototype.flyClose = function() { document.location = 'main.php?entersb=1'; };
+SGPvP.prototype.exitFlyClose = function() { document.location = 'main.php?exitsb=1'; };
+SGPvP.prototype.dockUndock = function() { this.undock() || this.dock(); };
+SGPvP.prototype.dock = function() { top.location = 'game.php?logout=1'; };
+
+SGPvP.prototype.undock = function() {
+    var elt = document.evaluate('//input[@value="Launch Ship" and @type="submit"]',
+                                document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                                null).singleNodeValue;
+    if(elt && elt.click) {
+        elt.click();
+        return true;
+    }
+
+    return false;
+};
+
+SGPvP.prototype.cloak = function() {
+    var elt = document.getElementById('inputShipCloak');
+    if(elt && elt.click)
+        elt.click();
+    else
+        this.nav();
+};
+
+SGPvP.prototype.uncloak = function() {
+    var elt = document.getElementById('inputShipUncloak');
+    if(elt && elt.click)
+        elt.click();
+    else
+        this.nav();
+};
+
+SGPvP.prototype.testTargeting = function() {
+    var url = this.url;
+    var page;
+    var ships;
+
+    if(this.page == 'building') {
+        page = 'b';
+        ships = this.getShipsBuilding();
+    }
+    else if(this.page == 'ship2ship_combat') {
+        page = 'c';
+        ships = this.getShipsCombat();
+    }
+    else {
+        page = 'n';
+        ships = this.getShipsNav();
+    }
+
+    var highlight_target = function(td, colour) {
+        td.style.backgroundColor = colour;
+        td.previousElementSibling.style.backgroundColor = colour;
+    };
+
+    if(ships) {
+        for(var i = 0, end = ships.length; i < end; i++)
+            highlight_target(ships[i].td, 'inherit');
+
+        var self = this;
+        this.loadSettings(['targeting'],
+                          function(results) {
+                              var targeting_data = results.targeting;
+                              var targets = self.scanForTargets(targeting_data, ships);
+
+                              // turn the excluded ships green
+                              for(var i = 0, end = targets.excluded.length; i < end; i++)
+                                  highlight_target(targets.excluded[i].td, '#050');
+
+                              if(targets.included.length > 0) {
+                                  // turn the included ships red
+                                  for(var i2 = 0, end2 = targets.included.length; i2 < end2; i2++)
+                                      highlight_target(targets.included[i2].td, '#500');
+
+                                  // highlight the chosen target
+                                  var ship_pri = (page == 'n') ?
+                                      self.getShipModelPriorities() : null;
+                                  var best = self.chooseTarget(targets.included, ship_pri);
+                                  highlight_target(best.td, '#900');
+                              }
+                          });
+    }
+};
+
+SGPvP.prototype.configure = function() {
+    if(typeof(SGPvPUI) != 'function')
+        // load the UI code
+        eval(this.getResourceText('ui_js'));
+    if(!this.sgpvpui)
+        this.sgpvpui = new SGPvPUI(this, document);
+    this.sgpvpui.open();
+};
+
+SGPvP.prototype.target = function() {
+    var url = this.url;
+    var page;
+    var ships;
+
+    if(this.page == 'building') {
+        page = 'b';
+        ships = this.getShipsBuilding();
+    }
+    else if(this.page == 'ship2ship_combat') {
+        page = 'c';
+        ships = this.getShipsCombat();
+    }
+    else {
+        page = 'n';
+        ships = this.getShipsNav();
+    }
+
+    if(ships) {
+        var self = this;
+        this.loadSettings(['targeting'],
+                          function(results) {
+                              var targeting_data = results.targeting;
+                              var targets = self.scanForTargets(targeting_data, ships);
+
+                              if(targets.included.length > 0) {
+                                  var ship_pri = (page == 'n') ?
+                                      self.getShipModelPriorities() : null;
+                                  var best = self.chooseTarget(targets.included, ship_pri);
+                                  document.location = 'ship2ship_combat.php?playerid=' + best.id;
+                                  return;
+                              }
+
+                              self.nav();
+                          });
     }
 };

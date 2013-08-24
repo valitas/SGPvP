@@ -13,22 +13,22 @@ function handler(request, sender, sendResponse) {
         for(var i in keys) {
             var key = keys[i];
             r[key] = localStorage.getItem(universe + '-' + key);
-            console.log('loaded ' + key, r[key]);
+            // console.log('loaded ' + key, r[key]);
         }
         sendResponse(r);
         break;
 
     case 'save':
-        console.log('save', request);
+        // console.log('save', request);
         var entries = request.entries;
         for(var key in entries) {
             var val = entries[key];
             if(val == null) {
-                console.log('removing ' + universe + '-' + key);
+                // console.log('removing ' + universe + '-' + key);
                 localStorage.removeItem(universe + '-' + key);
             }
             else {
-                console.log('storing ' + universe + '-' + key, val);
+                // console.log('storing ' + universe + '-' + key, val);
                 localStorage.setItem(universe + '-' + key, val);
             }
         }
