@@ -12,31 +12,24 @@ function handler(request, sender, sendResponse) {
         var keys = request.keys, r = new Object();
         for(var i in keys) {
             var key = keys[i];
-            r[key] = localStorage.getItem(universe + '-' + key);
-            // console.log('loaded ' + key, r[key]);
+            var lskey = (key == 'keymap') ? 'keymap' : universe + '-' + key;
+            r[key] = localStorage.getItem(lskey);
         }
         sendResponse(r);
         break;
-
     case 'save':
-        // console.log('save', request);
         var entries = request.entries;
         for(var key in entries) {
             var val = entries[key];
-            if(val == null) {
-                // console.log('removing ' + universe + '-' + key);
-                localStorage.removeItem(universe + '-' + key);
-            }
-            else {
-                // console.log('storing ' + universe + '-' + key, val);
-                localStorage.setItem(universe + '-' + key, val);
-            }
+            var lskey = (key == 'keymap') ? 'keymap' : universe + '-' + key;
+            if(val == null)
+                localStorage.removeItem(lskey);
+            else
+                localStorage.setItem(lskey, val);
         }
         if(sendResponse)
             sendResponse(true);
     }
-
-    return false;
 };
 
 chrome.extension.onMessage.addListener(handler);
