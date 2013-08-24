@@ -146,13 +146,12 @@ SGPvP.prototype.CFG_DESERIALISERS = {
     lkap: function(s) { return s ? parseInt(s) : null; },
     // last known bots available
     lkba: function(s) { return s ? parseInt(s) : null; },
-    // keymap - don't return the default keymap if unset, because that
-    // has to be loaded, and we're in an event handler
+    // keymap - do not return the default keymap if unset, because
+    // that has to be loaded, and we're in an event handler
     keymap: function(s) { return s ? JSON.parse(s) : null; }
 };
 
 SGPvP.prototype.CFG_SERIALISERS = {
-    // XXX - used to save both targeting and ql, review usage
     targeting: function(data) { return JSON.stringify(data); },
     ql: function(ql) { return ql; },
     rtid: function(rtid) { return rtid; },
@@ -161,6 +160,7 @@ SGPvP.prototype.CFG_SERIALISERS = {
     lkba: function(lkba) { return lkba; },
     keymap: function(km) { return JSON.stringify(km); }
 };
+
 
 // Sets the current keymap, and also stores it in settings.
 SGPvP.prototype.setKeyMap = function(keymap) {
@@ -312,12 +312,9 @@ SGPvP.prototype.chooseTarget = function(ships, ship_pri) {
 };
 
 SGPvP.prototype.getShipModelPriorities = function() {
-    var a = this.SHIPS;
-    var o = new Object();
-
+    var a = this.SHIPS, o = new Object();
     for(var i = 0, end = a.length; i < end; i++)
         o[a[i]] = i + 1;
-
     return o;
 };
 
@@ -441,9 +438,7 @@ SGPvP.prototype.setupCombatPage = function() {
 SGPvP.prototype.useBots = function(thisMany) {
     var self = this;
     self.loadSettings(['armour', 'lkap', 'lkba'],
-                      function(results) {
-                          self.useBots2(results, thisMany);
-                      });
+                      function(results) { self.useBots2(results, thisMany); });
 };
 
 // If thisMany is not supplied, compute the amount needed to the best
@@ -503,20 +498,14 @@ SGPvP.prototype.getMadeUpBotsForm = function() {
         method = 'post';
     }
 
-    form = this.createElement('form',
-                              { display: 'none' },
-                              { id: 'sgpvp-useform', action: action,
-                                method: method },
+    form = this.createElement('form', {display: 'none'},
+                              {id: 'sgpvp-useform', action: action, method: method},
                               null, null);
+    this.createElement('input', null, {type: 'text', name: 'resid', value: 8}, null, form);
+    this.createElement('input', null, {type: 'text', name: 'amount'}, null, form);
     this.createElement('input', null,
-                       { type: 'text', name: 'resid', value: 8 },
-                       null, form);
-    this.createElement('input', null,
-                       { type: 'text', name: 'amount' },
-                       null, form);
-    this.createElement('input', null,
-                       { type: 'submit', name: 'useres', value: 'Use',
-                         onclick: 'useRes(document.getElementById("sgpvp-useform").elements["resid"].value, document.getElementById("sgpvp-useform").elements["amount"].value);return false;' },
+                       {type: 'submit', name: 'useres', value: 'Use',
+                        onclick: 'useRes(document.getElementById("sgpvp-useform").elements["resid"].value, document.getElementById("sgpvp-useform").elements["amount"].value);return false;'},
                        null, form);
     document.body.appendChild(form);
     return form;
@@ -562,12 +551,23 @@ SGPvP.prototype.computeBotsNeeded = function(armour, lkap, lkba) {
 
     var botRepair = Math.floor(180 / armour.level);
     var needed = Math.floor((armour.points - lkap + botRepair - 1) / botRepair);
-
     return {
         botRepair: botRepair,
         needed: needed,
         available: needed > lkba ? lkba : needed
     };
+};
+
+SGPvP.prototype.getShips = function() {
+    switch(this.page) {
+    case 'building':
+        return this.getShipsBuilding();
+    case 'ship2ship_combat':
+        return this.getShipsCombat();
+    case 'main':
+        return this.getShipsNav();
+    }
+    return null;
 };
 
 SGPvP.prototype.SCANID_RX =
@@ -583,8 +583,7 @@ SGPvP.prototype.getShipsNav = function() {
         while((a = xpr.iterateNext())) {
             var m = this.SCANID_RX.exec(a.getAttribute('href'));
             if(m) {
-                var td = a.parentNode;
-                var r;
+                var r, td = a.parentNode;
                 if(!(r = m[1]))
                     r = m[2];
                 var entry = {
@@ -611,10 +610,9 @@ SGPvP.prototype.getShipsNav = function() {
 };
 
 SGPvP.prototype.parseOtherShipsTable = function(tbody, link_rx) {
-    var ships = [];
+    var a, ships = [];
     var xpr = document.evaluate("tr/td/a", tbody, null,
                                XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
-    var a;
     while((a = xpr.iterateNext())) {
         var m = link_rx.exec(a.getAttribute('href'));
         if(m) {
@@ -704,7 +702,6 @@ SGPvP.prototype.engage = function() {
         elt.click();
         return;
     }
-
     // no attack button?
     this.target();
 };
@@ -727,25 +724,25 @@ SGPvP.prototype.disengage = function() {
     }
 
     var self = this;
-    this.loadSettings(['rtid'],
-                      function(results) {
-                          var tile_id = results.rtid;
-                          if(tile_id) {
-                              var form = document.getElementById('navForm');
-                              if(form) {
-                                  var destination = form.elements.destination;
-                                  if(destination) {
-                                      destination.value = tile_id;
-                                      form.submit();
-                                      return;
-                                  }
-                              }
-                          }
-                          else
-                              self.showNotification('NO RETREAT TILE SET', 500);
+    var act = function(results) {
+        var tile_id = results.rtid;
+        if(tile_id) {
+            var form = document.getElementById('navForm');
+            if(form) {
+                var destination = form.elements.destination;
+                if(destination) {
+                    destination.value = tile_id;
+                    form.submit();
+                    return;
+                }
+            }
+        }
+        else
+            self.showNotification('NO RETREAT TILE SET', 500);
+        self.nav();
+    };
 
-                          self.nav();
-                      });
+    this.loadSettings(['rtid'], act);
 };
 
 SGPvP.prototype.nav = function() { document.location = 'main.php'; };
@@ -767,7 +764,6 @@ SGPvP.prototype.damageBuilding = function() {
         elt.click();
         return;
     }
-
     // no destroy button?
     document.location = 'building.php';
 };
@@ -794,7 +790,6 @@ SGPvP.prototype.undock = function() {
         elt.click();
         return true;
     }
-
     return false;
 };
 
@@ -815,55 +810,59 @@ SGPvP.prototype.uncloak = function() {
 };
 
 SGPvP.prototype.testTargeting = function() {
-    var url = this.url;
-    var page;
-    var ships;
+    var ships = this.getShips();
+    if(!ships)
+        return;
 
-    if(this.page == 'building') {
-        page = 'b';
-        ships = this.getShipsBuilding();
-    }
-    else if(this.page == 'ship2ship_combat') {
-        page = 'c';
-        ships = this.getShipsCombat();
-    }
-    else {
-        page = 'n';
-        ships = this.getShipsNav();
-    }
-
+    var self = this;
     var highlight_target = function(td, colour) {
         td.style.backgroundColor = colour;
         td.previousElementSibling.style.backgroundColor = colour;
     };
+    var act = function(results) {
+        var targeting_data = results.targeting;
+        var targets = self.scanForTargets(targeting_data, ships);
+        // turn the excluded ships green
+        for(var i = 0, end = targets.excluded.length; i < end; i++)
+            highlight_target(targets.excluded[i].td, '#050');
+        if(targets.included.length > 0) {
+            // turn the included ships red
+            for(var i2 = 0, end2 = targets.included.length; i2 < end2; i2++)
+                highlight_target(targets.included[i2].td, '#500');
+            // highlight the chosen target
+            var ship_pri = (self.page == 'main') ?
+                self.getShipModelPriorities() : null;
+            var best = self.chooseTarget(targets.included, ship_pri);
+            highlight_target(best.td, '#900');
+        }
+    };
 
-    if(ships) {
-        for(var i = 0, end = ships.length; i < end; i++)
-            highlight_target(ships[i].td, 'inherit');
+    for(var i = 0, end = ships.length; i < end; i++)
+        highlight_target(ships[i].td, 'inherit');
 
-        var self = this;
-        this.loadSettings(['targeting'],
-                          function(results) {
-                              var targeting_data = results.targeting;
-                              var targets = self.scanForTargets(targeting_data, ships);
+    this.loadSettings(['targeting'], act);
+};
 
-                              // turn the excluded ships green
-                              for(var i = 0, end = targets.excluded.length; i < end; i++)
-                                  highlight_target(targets.excluded[i].td, '#050');
+SGPvP.prototype.target = function() {
+    var ships = this.getShips();
+    if(!ships)
+        return;
 
-                              if(targets.included.length > 0) {
-                                  // turn the included ships red
-                                  for(var i2 = 0, end2 = targets.included.length; i2 < end2; i2++)
-                                      highlight_target(targets.included[i2].td, '#500');
+    var self = this;
+    var act = function(results) {
+        var targeting_data = results.targeting;
+        var targets = self.scanForTargets(targeting_data, ships);
+        if(targets.included.length > 0) {
+            var ship_pri = (self.page == 'main') ?
+                self.getShipModelPriorities() : null;
+            var best = self.chooseTarget(targets.included, ship_pri);
+            document.location = 'ship2ship_combat.php?playerid=' + best.id;
+            return;
+        }
+        self.nav();
+    };
 
-                                  // highlight the chosen target
-                                  var ship_pri = (page == 'n') ?
-                                      self.getShipModelPriorities() : null;
-                                  var best = self.chooseTarget(targets.included, ship_pri);
-                                  highlight_target(best.td, '#900');
-                              }
-                          });
-    }
+    this.loadSettings(['targeting'], act);
 };
 
 SGPvP.prototype.configure = function() {
@@ -873,42 +872,4 @@ SGPvP.prototype.configure = function() {
     if(!this.sgpvpui)
         this.sgpvpui = new SGPvPUI(this, document);
     this.sgpvpui.open();
-};
-
-SGPvP.prototype.target = function() {
-    var url = this.url;
-    var page;
-    var ships;
-
-    if(this.page == 'building') {
-        page = 'b';
-        ships = this.getShipsBuilding();
-    }
-    else if(this.page == 'ship2ship_combat') {
-        page = 'c';
-        ships = this.getShipsCombat();
-    }
-    else {
-        page = 'n';
-        ships = this.getShipsNav();
-    }
-
-    if(ships) {
-        var self = this;
-        this.loadSettings(['targeting'],
-                          function(results) {
-                              var targeting_data = results.targeting;
-                              var targets = self.scanForTargets(targeting_data, ships);
-
-                              if(targets.included.length > 0) {
-                                  var ship_pri = (page == 'n') ?
-                                      self.getShipModelPriorities() : null;
-                                  var best = self.chooseTarget(targets.included, ship_pri);
-                                  document.location = 'ship2ship_combat.php?playerid=' + best.id;
-                                  return;
-                              }
-
-                              self.nav();
-                          });
-    }
 };
