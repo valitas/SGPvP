@@ -25,7 +25,7 @@ SGPvPUI.prototype.injectStyle = function() {
     link.id = 'sg-style';
     link.rel = 'stylesheet';
     link.type = 'text/css';
-    link.href = this.sgpvp.getResourceURL('style');
+    link.href = this.sgpvp.getResourceURL('ui_style');
     head.appendChild(link);
 };
 
@@ -184,7 +184,7 @@ SGPvPUI.prototype.setUIElement = function(div) {
             func.setCloseButtonEnabled(false);
             if(timer)
                 window.clearTimeout(timer);
-            timer = window.setTimeout(func.saveTargetingData, 250);
+            timer = window.setTimeout(func.saveTargetingData, 500);
         },
         closeHandler: function() { self.close(); },
         configure: function(cfg) {

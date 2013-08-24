@@ -17,7 +17,6 @@
     "manifest_version": 2,
     "name": "Scorpion Guard's Better PvP Pardus Extension",
     "version": "31",
-    "web_accessible_resources": [ "sgpvp_ui.js",
-                                  "sgpvp_ui.xml",
-                                  "sgpvp_ui.css" ]
+    "web_accessible_resources": [ "ui.js", "ui.html", "ui.css",
+                                  "default-keymap.json" ]
 }

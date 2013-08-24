@@ -101,12 +101,13 @@ SGPvP.prototype.getShipEntryExtras = function(entry) {
 
 
 // Our versions of GM_getResourceURL and GM_getResourceText. We use
-// these in Chrome to fetch resources included in the extension.
+// these in Chrome to fetch resources included with the extension.
 
 SGPvP.prototype.RESOURCE = {
-    ui_js: 'sgpvp_ui.js',
-    ui_html: 'sgpvp_ui.xml',
-    style: 'sgpvp_ui.css'
+    ui_js: 'ui.js',
+    ui_html: 'ui.html',
+    ui_style: 'ui.css',
+    default_keymap: 'default-keymap.json'
 };
 
 SGPvP.prototype.getResourceURL = function(resource_id) {

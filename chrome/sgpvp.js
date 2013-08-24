@@ -39,15 +39,12 @@ function SGPvP() {
                               self.keymap = km;
                           else
                               // load default keymap
-                              self.setKeyMap(JSON.parse(this.getResourceText('default-keymap')));
+                              self.setKeyMap(JSON.parse(this.getResourceText('default_keymap')));
                       });
 
-    // We wanted addEventListener, but need to use document.onkeydown,
-    // because that's what pardus uses and we need to trap the cursor
-    // keys while the info dialogue is open.
-    this.game_kbd_handler = document.onkeydown;
-    console.log('game_kbd_handler', this.game_kbd_handler);
-    document.onkeydown = function(event) { self.keyPressHandler(event); };
+    document.addEventListener('keydown',
+                              function(event) { self.keyPressHandler(event); },
+                              false);
 }
 
 SGPvP.prototype.LOCATION_RX = /^https?:\/\/([^.]+)\.pardus\.at\/([^.]+)\.php/;
@@ -417,11 +414,8 @@ SGPvP.prototype.closeUi = function() {
 
 SGPvP.prototype.keyPressHandler = function(event) {
     // XXX we used to test for window.name here and i can't remember why, please review.
-    if(event.ctrlKey || event.altKey || event.metaKey) {
-        if(this.game_kbd_handler)
-            this.game_kbd_handler(event);
+    if(event.ctrlKey || event.altKey || event.metaKey)
         return;
-    }
 
     if(event.keyCode == 27) {
         this.closeUi();
@@ -429,20 +423,15 @@ SGPvP.prototype.keyPressHandler = function(event) {
     }
 
     if(event.target &&
-       (event.target.nodeName == 'INPUT' || event.target.nodeName == 'TEXTAREA')) {
-        // XXX - we are no longer ignoring the game's default key handler on chrome <_<
-        // nop, and don't call the game's handler cause it may move the ship
+       (event.target.nodeName == 'INPUT' || event.target.nodeName == 'TEXTAREA'))
+        // leave it, dude is typing
         return;
-    }
 
     var method_name = this.keymap[event.keyCode];
     if(method_name) {
         event.preventDefault();
         event.stopPropagation();
         this.ACTION[method_name].call(this);
-    }
-    else if(this.game_kbd_handler) {
-        this.game_kbd_handler(event);
     }
 };
 
