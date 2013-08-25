@@ -45,10 +45,11 @@ SGPvPUI.prototype.open = function() {
 
 // We use all these elements in the UI DOM.
 SGPvPUI.prototype.UI_ELEMENT_IDS =
-    [ 'sg-version',
-      'sg-arm',
+    [ 'sg-arm',
       'sg-close',
+      'sg-default-keymap',
       'sg-exc',
+      'sg-illarion-keymap',
       'sg-inc',
       'sg-keybindings',
       'sg-keyboard',
@@ -62,8 +63,8 @@ SGPvPUI.prototype.UI_ELEMENT_IDS =
       'sg-setkey-select',
       'sg-switch-keys',
       'sg-switch-targeting',
-      'sg-targeting'
-    ];
+      'sg-targeting',
+      'sg-version' ];
 
 SGPvPUI.prototype.setUIElement = function(div) {
     this.ui_element = div;
@@ -112,13 +113,13 @@ SGPvPUI.prototype.setUIElement = function(div) {
             setKey = keydiv;
             setKeyId = parseInt(keydiv.id.substr(4));
             var cap = keydiv.firstChild.textContent; // bit flaky but succinct
-            var fn = keymap[setKeyId];
+            var action = keymap[setKeyId];
 
             e.keybindings.style.display = 'none';
             e.setkey.style.display = 'block';
             e.setkey_code.textContent = setKeyId;
             e.setkey_key.textContent = cap;
-            func.setSelectedAction(fn);
+            func.setSelectedAction(action);
             // Flaky, should validate targeting contents...
             func.setCloseButtonEnabled(false);
         },
@@ -227,9 +228,9 @@ SGPvPUI.prototype.setUIElement = function(div) {
             for(var i = 0, end = xpr.snapshotLength; i < end; i++) {
                 var kdiv = xpr.snapshotItem(i);
                 var code = parseInt(kdiv.id.substr(4));
-                var fn = keymap[code];
-                if(fn)
-                    func.setKeyLegend(kdiv, fn);
+                var action = keymap[code];
+                if(action)
+                    func.setKeyLegend(kdiv, action);
                 kdiv.addEventListener('click', func.keyClickHandler, false);
             }
         }
@@ -283,7 +284,7 @@ SGPvPUI.prototype.saveTargetingData = function(ql,
 };
 
 SGPvPUI.prototype.parseOverrideList = function(list) {
-    var a = list.split('\n');
+    var a = list.split(/\n|,/);
     var ids = new Object();
     var names = new Object();
     for(var i = 0, end = a.length; i < end; i++) {

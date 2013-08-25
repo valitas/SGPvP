@@ -29,6 +29,8 @@ function SGPvP() {
         break;
     case 'ship2opponent_combat':
         this.setupCombatPage();
+        this.selectHighestRounds(); // XXX - remove
+        this.selectMissiles(); // XXX - remove
     // default: logout, do nothing
     }
 
@@ -42,7 +44,6 @@ function SGPvP() {
             self.setKeyMap(JSON.parse(self.getResourceText('default_keymap')));
     };
     this.loadSettings(['keymap'], setkeys);
-
     document.addEventListener('keydown',
                               function(event) { self.keyPressHandler(event); },
                               false);
@@ -162,7 +163,6 @@ SGPvP.prototype.CFG_SERIALISERS = {
 };
 
 
-// Sets the current keymap, and also stores it in settings.
 SGPvP.prototype.setKeyMap = function(keymap) {
     this.keymap = keymap;
     this.storeSettings({ 'keymap': keymap });
@@ -648,38 +648,38 @@ SGPvP.prototype.selectMissiles = function() {
     }
 };
 
-SGPvP.prototype.selectHighestRounds = function() {
-    var elts = document.getElementsByName('rounds');
-    var selectHighestRoundsInSelectElement = function(elt) {
-        var highest = 0, highestElt = null;
-        var opts = elt.getElementsByTagName('option');
-        for(var j = 0, jend = opts.length; j < jend; j++) {
-            var opt = opts[j];
-            var n = parseInt(opt.value);
-            if(n > highest) {
-                highest = n;
-                highestElt = opt;
-            }
-        }
-        if(highestElt)
-            highestElt.selected = true;
-    };
+// Find in the given select element the option with the largest
+// numeric value that is less than or equal to limit, and select it.
+// Don't assume options are in any specific order, because some people
+// use round reversers.
+SGPvP.prototype.selectMaxValue = function(select, limit) {
+    var opts = select.options, max = -1, maxindex = -1;
+    for(var i = 0, end = opts.length; i < end; i++) {
+        var n = parseInt(opts[i].value);
+        if(n <= limit && n > max)
+            maxindex = i;
+    }
+    if(maxindex >= 0)
+        select.selectedIndex = maxindex;
+};
 
-    for(var i = 0, end = elts.length; i < end; i++) {
-        var elt = elts[i];
-        if(elt.style.display == 'none') {
+SGPvP.prototype.selectRounds = function(limit) {
+    var xpr = document.evaluate('//select[@name = "rounds"]', document, null,
+                                XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
+    var sel;
+    while((sel = xpr.iterateNext())) {
+        if(sel.style.display == 'none' && sel.nextElementSibling.tagName == 'SELECT')
             // for some reason, Pardus now hides the rounds select,
             // and instead adds a second, visible select element, with
             // a gibberish name.
-            elt = elt.nextElementSibling;
-            if(elt && elt.tagName == 'SELECT')
-                selectHighestRoundsInSelectElement(elt);
-        }
-        else
-            selectHighestRoundsInSelectElement(elt);
+            sel = sel.nextElementSibling;
+        this.selectMaxValue(sel, limit);
     }
 };
 
+SGPvP.prototype.selectHighestRounds = function(limit) {
+    this.selectRounds(1000);
+};
 
 // Methods below are the actual actions we perform in response to key presses.
 // Keep the method names in sync with the UI.
@@ -699,12 +699,17 @@ SGPvP.prototype.engage = function() {
                                 document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
                                 null).singleNodeValue;
     if(elt && elt.click) {
+        if(arguments.length > 0)
+            this.selectRounds(arguments[0]);
         elt.click();
         return;
     }
     // no attack button?
     this.target();
 };
+
+SGPvP.prototype.engage10 = function() { this.engage(10); };
+SGPvP.prototype.engage15 = function() { this.engage(15); };
 
 SGPvP.prototype.disengage = function() {
     var elt = document.evaluate('//input[@name="retreat" and @type="submit"]',
