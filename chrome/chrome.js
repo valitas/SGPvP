@@ -12,25 +12,6 @@ SGPvP.prototype.saveValues = function(entries) {
     chrome.extension.sendMessage({ op: 'save', universe: this.universe, entries: entries });
 };
 
-SGPvP.prototype.getLocation = function() {
-    // We can't use unsafeWindow, so we'll read the bit of script instead...
-
-    // XXX - note this may be very wrong if partial refresh is
-    // enabled, and we can't fix that easily <_<
-
-    var scripts = document.getElementsByTagName('script');
-    for(var i = 0, end = scripts.length; i < end; i++) {
-        var script = scripts[i];
-        if(!script.src) {
-            var m = /^\s*var userloc = (\d+);/m.exec(script.textContent);
-            if(m)
-                return m[1];
-        }
-    }
-
-    return null;
-};
-
 // The following are here because the Firefox implementations have to
 // deal with oddities introduced by "Mr Xyzzy's Pardus Helper".
 // There's no such thing on Chrome, so we can simplify here.

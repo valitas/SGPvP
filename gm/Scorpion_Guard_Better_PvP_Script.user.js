@@ -52,12 +52,6 @@ SGPvP.prototype.saveValues = function(entries) {
     }
 };
 
-// We can't use unsafeWindow in Chrome, but we can here
-
-SGPvP.prototype.getLocation = function() {
-    return unsafeWindow.userloc;
-};
-
 // The following are here because they deal with oddities introduced
 // by the Firefox extension "Mr Xyzzy's Pardus Helper".  There is no
 // Mr. X in Chrome, so we can simplify these there.

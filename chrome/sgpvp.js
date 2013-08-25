@@ -16,22 +16,31 @@ function SGPvP() {
 
     switch(this.page) {
     case 'main':
-        this.setupNavPage();
+        this.setupPageSpecific = this.setupNavPage;
         break;
     case 'ship2ship_combat':
-        this.setupCombatPage();
-        this.selectHighestRounds();
-        this.selectMissiles();
+        this.setupPageSpecific = function() {
+            self.setupCombatPage();
+            self.selectHighestRounds();
+            self.selectMissiles();
+        };
         break;
     case 'building':
-        this.setupCombatPage();
-        this.selectMissiles();
+        this.setupPageSpecific = function() {
+            self.setupCombatPage();
+            self.selectMissiles();
+        };
         break;
     case 'ship2opponent_combat':
-        this.setupCombatPage();
-        this.selectHighestRounds(); // XXX - remove
-        this.selectMissiles(); // XXX - remove
-    // default: logout, do nothing
+        this.setupPageSpecific = function() {
+            this.setupCombatPage();
+            this.selectHighestRounds(); // XXX - remove
+            this.selectMissiles(); // XXX - remove
+        };
+        break;
+    default:
+        // logout
+        this.setupPageSpecific = function() {}; // nop
     }
 
     var self = this;
@@ -47,6 +56,16 @@ function SGPvP() {
     document.addEventListener('keydown',
                               function(event) { self.keyPressHandler(event); },
                               false);
+
+    // Insert a bit of script to execute in the page's context and
+    // send us what we need. And add a listener to receive the call.
+    window.addEventListener('message',
+                            function(event) { self.setupPage(event); },
+                            false);
+    var script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.textContent = '(function() {var fn=function(){window.postMessage({sgpvp:1,loc:userloc},window.location.origin);};if(typeof(addUserFunction)=="function")addUserFunction(fn);fn();})();';
+    document.body.appendChild(script);
 }
 
 SGPvP.prototype.LOCATION_RX = /^https?:\/\/([^.]+)\.pardus\.at\/([^.]+)\.php/;
@@ -75,6 +94,23 @@ SGPvP.prototype.SHIPS = [
     'thunderbird', 'spectre', 'interceptor', 'adder', 'tyrant', 'rustfire',
     'wasp', 'ficon', 'rustclaw', 'sabre'
 ];
+
+// This is a handler for DOM messages coming from the game page.  It's
+// called once after the page loads, and again every time a partial
+// refresh occurs (latter in the nav screen only, so far).  It
+// contains the value of the userloc variable, set by the page on its
+// javascript context.
+//
+// Doing things this way may seem a bit awkward to Firefox userscript
+// writers, but it is the proper (only?) way to do it in Chrome.
+// Plus, this spares us from using unsafeWindow at all, which is a
+// Good Thing.
+SGPvP.prototype.setupPage = function(event) {
+    if(!event.data || event.data.sgpvp != 1)
+        return;
+    this.userloc = parseInt(event.data.loc);
+    this.setupPageSpecific();
+};
 
 // Configuration handling.  This is a tad more complicated than one
 // would expect, because Chrome imposes a funny callback architecture.
@@ -318,73 +354,59 @@ SGPvP.prototype.getShipModelPriorities = function() {
     return o;
 };
 
-// This if called every time the nav page is loaded.  It should run
-// fast and report no errors.
+// This if called every time the nav page is loaded or a partial
+// refresh completes.  It should run fast and report no errors.
 SGPvP.prototype.setupNavPage = function() {
-    var self = this;
+    // we'll set these if found below
+    this.useBotsAmountField = null;
+    this.useBotsButton = null;
 
-    // We want this code to run now, and each time the cargo box
-    // mutates, to keep track of our armour and how many bots we have.
-    var updateLastKnown = function() {
-        // we'll set these if found below
-        self.useBotsAmountField = null;
-        self.useBotsButton = null;
+    var settings = new Object();
 
-        var settings = new Object();
+    // Get the current ship armour. It's in a properly ID'd span.
+    var n = NaN;
+    var elt = document.getElementById('spanShipArmor');
+    if(elt)
+        n = parseInt(elt.textContent);
+    if(!isNaN(n))
+        settings.lkap = n;
 
-        // Get the current ship armour. It's in a properly ID'd span.
-        var n = NaN;
-        var elt = document.getElementById('spanShipArmor');
-        if(elt)
-            n = parseInt(elt.textContent);
-        if(!isNaN(n))
-            settings.lkap = n;
-
-        // Get amount of bots in the cargo hold, from the Nav
-        // screen. This information is always available, except when
-        // the user clicked on the "[Use]" link for a resource other
-        // than bots. In that case, the script will use the last known
-        // value stored in the settings.
-        n = NaN;
-        elt = document.getElementById('tdCargoRes8');
+    // Get amount of bots in the cargo hold, from the Nav screen. This
+    // information is always available, except when the user clicked
+    // on the "[Use]" link for a resource other than bots. In that
+    // case, the script will use the last known value stored in the
+    // settings.
+    n = NaN;
+    elt = document.getElementById('tdCargoRes8');
+    if(elt) {
+        var m = elt.textContent.match(/(\d+)/);
+        if(m)
+            n = parseInt(m[1]);
+    }
+    else {
+        elt = document.getElementById('useform');
         if(elt) {
-            var m = elt.textContent.match(/(\d+)/);
-            if(m)
-                n = parseInt(m[1]);
+            var resid = elt.elements.namedItem('resid');
+            if(resid && resid.value == 8) {
+                // The useres form is open for bots. Remember this...
+                this.useResourceForm = elt;
+                this.useBotsAmountField = elt.elements.namedItem('amount');
+                this.useBotsButton = elt.elements.namedItem('useres');
+                // ... and get the amount of bots available:
+                var m = elt.textContent.match(/On board:[\s:]*(\d+)/);
+                if(m)
+                    n = parseInt(m[1]);
+            }
         }
         else {
-            elt = document.getElementById('useform');
-            if(elt) {
-                var resid = elt.elements.namedItem('resid');
-                if(resid && resid.value == 8) {
-                    // The useres form is open for bots. Remember this...
-                    self.useResourceForm = elt;
-                    self.useBotsAmountField = elt.elements.namedItem('amount');
-                    self.useBotsButton = elt.elements.namedItem('useres');
-                    // ... and get the amount of bots available:
-                    var m = elt.textContent.match(/On board:[\s:]*(\d+)/);
-                    if(m)
-                        n = parseInt(m[1]);
-                }
-            }
-            else {
-                // the useres form is closed. we *know* we have no bots.
-                n = 0;
-            }
+            // the useres form is closed. we *know* we have no bots.
+            n = 0;
         }
-        if(!isNaN(n))
-            settings.lkba = n;
-
-        self.storeSettings(settings);
-    };
-
-    updateLastKnown();
-
-    var cargo = document.getElementById("cargo_content");
-    if(cargo) {
-        var observer = new MutationObserver(updateLastKnown);
-        observer.observe(cargo.parentNode, {childList:true});
     }
+    if(!isNaN(n))
+        settings.lkba = n;
+
+    this.storeSettings(settings);
 };
 
 // This if called every time the ship2ship and building page is
@@ -685,10 +707,9 @@ SGPvP.prototype.selectHighestRounds = function(limit) {
 // Keep the method names in sync with the UI.
 
 SGPvP.prototype.setRetreatPoint = function() {
-    var userloc = this.getLocation();
-    if(userloc) {
-        this.storeSettings({ rtid: userloc });
-        this.showNotification('Retreat tile set: ' + userloc, 500);
+    if(this.userloc) {
+        this.storeSettings({ rtid: this.userloc });
+        this.showNotification('Retreat tile set: ' + this.userloc, 500);
     }
     else
         this.showNotification('Can not set retreat tile', 500);
