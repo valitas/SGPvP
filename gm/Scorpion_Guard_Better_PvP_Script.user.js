@@ -8,13 +8,12 @@
 // @match       *://*.pardus.at/building.php*
 // @match       *://*.pardus.at/logout.php
 // @require     sgpvp.js
-// @resource    ui_js   sgpvp_ui.js
-// @resource    ui_html sgpvp_ui.xml
-// @resource    style   sgpvp_ui.css
+// @resource    ui_js ui.js
+// @resource    ui_html ui.html
+// @resource    ui_style ui.css
+// @resource    default_keymap default-keymap.json
 // @author      Val
 // @version     31
-// @updateURL   https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.meta.js
-// @downloadURL https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.user.js
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @grant       GM_deleteValue
@@ -23,129 +22,33 @@
 // @grant       GM_info
 // ==/UserScript==
 
+// updateURL   https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.meta.js
+// downloadURL https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.user.js
+
 // Firefox implementation of non-portable bits
 
 SGPvP.prototype.getVersion = function() {
     return GM_info.script.version;
 };
 
-// Configuration loading... this seems ridiculously complicated, and
-// it is, but Chrome forces a rather weird callback model, which we
-// emulate in FF to keep the main logic portable.
-
-SGPvP.prototype.LOADERS = {
-    targetingData: function(universe) {
-        var s = GM_getValue(universe + '-targeting');
-        if(s)
-            return JSON.parse(s);
-
-        return {
-            ql:{includeFactions:{},
-                excludeFactions:{},
-                includeAlliances:{},
-                excludeAlliances:{},
-                includeCharacters:{},
-                excludeCharacters:{}},
-            include:{ids:{},names:{}},
-            exclude:{ids:{},names:{}},
-            prioritiseTraders:false,
-            retreatTile:null
-        };
-    },
-
-    textQL: function(universe) {
-        var s = GM_getValue(universe + '-ql');
-        if(s)
-            return s;
-        return '';
-    },
-
-    retreatTile: function(universe) {
-        var n = parseInt(GM_getValue(universe + '-rtid'));
-        if(n > 0)
-            return n;
-        return null;
-    },
-
-    armourData: function(universe) {
-        var s = GM_getValue(universe + '-armour');
-        if(s)
-            return JSON.parse(s);
-
-        return {
-            points: null,
-            level: 5
-        };
-    },
-
-    lastKnownArmourPoints: function(universe) {
-        var n = GM_getValue(universe + '-lkap');
-        if(n)
-            return parseInt(n);
-        return null;
-    },
-
-    lastKnownBotsAvailable: function(universe) {
-        var n = GM_getValue(universe + '-lkba');
-        if(n)
-            return parseInt(n);
-        return null;
+SGPvP.prototype.loadValues = function(keys, callback) {
+    var r = new Object();
+    for(var i in keys) {
+        var key = keys[i];
+        var lskey = (key == 'keymap') ? 'keymap' : this.universe + '-' + key;
+        r[key] = GM_getValue(lskey);
     }
-
-};
-
-SGPvP.prototype.SAVERS = {
-    targetingData: function(universe, tdata) {
-        GM_setValue(universe + '-ql', tdata.ql);
-        GM_setValue(universe + '-targeting', JSON.stringify(tdata.data));
-    },
-
-    retreatTile: function(universe, id) {
-        id = parseInt(id);
-        if(id > 0)
-            GM_setValue(universe + '-rtid', id);
-        else
-            GM_deleteValue(universe + '-rtid');
-    },
-
-    armourData: function(universe, adata) {
-        GM_setValue(universe + '-armour', JSON.stringify(adata));
-    },
-
-    lastKnownArmourPoints: function(universe, value) {
-        value = parseInt(value);
-        if(isNaN(value))
-            GM_deleteValue(universe + '-lkap');
-        else
-            GM_setValue(universe + '-lkap', value);
-    },
-
-    lastKnownBotsAvailable: function(universe, value) {
-        value = parseInt(value);
-        if(isNaN(value))
-            GM_deleteValue(universe + '-lkba');
-        else
-            GM_setValue(universe + '-lkba', value);
-    }
-};
-
-SGPvP.prototype.loadSettings = function(keys, callback) {
-    var r = new Array();
-
-    for(var i = 0, end = keys.length; i < end; i++) {
-        var loader = this.LOADERS[keys[i]];
-        if(loader)
-            r.push(loader(this.universe));
-    }
-
     callback(r);
 };
 
-SGPvP.prototype.storeSettings = function(settings) {
-    for(var key in settings) {
-        var saver = this.SAVERS[key];
-        if(saver)
-            saver(this.universe, settings[key]);
+SGPvP.prototype.saveValues = function(entries) {
+    for(var key in entries) {
+        var val = entries[key];
+        var lskey = (key == 'keymap') ? 'keymap' : this.universe + '-' + key;
+        if(val == null)
+            GM_deleteValue(lskey);
+        else
+            GM_setValue(lskey, val);
     }
 };
 
