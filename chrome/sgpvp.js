@@ -19,24 +19,16 @@ function SGPvP() {
         this.setupPageSpecific = this.setupNavPage;
         break;
     case 'ship2ship_combat':
-        this.setupPageSpecific = function() {
-            self.setupCombatPage();
-            self.selectHighestRounds();
-            self.selectMissiles();
-        };
-        break;
     case 'building':
         this.setupPageSpecific = function() {
             self.setupCombatPage();
-            self.selectMissiles();
+            self.setMissiles(true);
+            // leave rounds alone for now. if the user engages with a
+            // key, we'll set the proper option then
         };
         break;
     case 'ship2opponent_combat':
-        this.setupPageSpecific = function() {
-            this.setupCombatPage();
-            this.selectHighestRounds(); // XXX - remove
-            this.selectMissiles(); // XXX - remove
-        };
+        this.setupPageSpecific = function() { this.setupCombatPage(); };
         break;
     default:
         // logout
@@ -592,14 +584,15 @@ SGPvP.prototype.parseOtherShipsTable = function(tbody, link_rx) {
     return ships;
 };
 
-SGPvP.prototype.selectMissiles = function() {
-    var inputs = document.getElementsByTagName('input');
-    for(var i = 0, end = inputs.length; i < end; i++) {
-        var input = inputs[i];
-        if(input.type == 'checkbox' && /^\d+_missile$/.test(input.id))
-            input.checked = true;
-    }
-};
+SGPvP.prototype.setMissiles = function(fire) {
+    // ends-with() would be better, but not supported on FF
+    var xpr = document.evaluate("//input[@type='checkbox' and contains(@name,'_missile')]",
+                                document, null,
+                                XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
+    var ck;
+    while((ck = xpr.iterateNext()))
+        ck.checked = fire;
+}
 
 // Find in the given select element the option with the largest
 // numeric value that is less than or equal to limit, and select it.
@@ -616,22 +609,20 @@ SGPvP.prototype.selectMaxValue = function(select, limit) {
         select.selectedIndex = maxindex;
 };
 
-SGPvP.prototype.selectRounds = function(limit) {
+SGPvP.prototype.setRounds = function(limit) {
     var xpr = document.evaluate('//select[@name = "rounds"]', document, null,
                                 XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
     var sel;
     while((sel = xpr.iterateNext())) {
-        if(sel.style.display == 'none' && sel.nextElementSibling.tagName == 'SELECT')
+        if(sel.style.display == 'none' && sel.nextElementSibling.tagName == 'SELECT') {
             // for some reason, Pardus now hides the rounds select,
             // and instead adds a second, visible select element, with
             // a gibberish name.
+            sel.selectedIndex = 0; // XXX - review
             sel = sel.nextElementSibling;
+        }
         this.selectMaxValue(sel, limit);
     }
-};
-
-SGPvP.prototype.selectHighestRounds = function(limit) {
-    this.selectRounds(1000);
 };
 
 // Methods below are the actual actions we perform in response to key presses.
@@ -648,22 +639,44 @@ SGPvP.prototype.setRetreatPoint = function() {
         this.showNotification('Can not set retreat tile', 500);
 };
 
-SGPvP.prototype.engage = function() {
+SGPvP.prototype.engage = function() { this.doEngage(1000, false); };
+SGPvP.prototype.engage15 = function() { this.doEngage(15, false); };
+SGPvP.prototype.engage10 = function() { this.doEngage(10, false); };
+
+SGPvP.prototype.raid = function() { this.doEngage(1000, true); };
+SGPvP.prototype.raid10 = function() { this.doEngage(10, true); };
+SGPvP.prototype.raid15 = function() { this.doEngage(15, true); };
+
+SGPvP.prototype.doEngage = function(rounds, raid) {
     var elt = document.evaluate('//input[@name="ok" and @type="submit" and @value="Attack"]',
                                 document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
                                 null).singleNodeValue;
     if(elt && elt.click) {
-        if(arguments.length > 0)
-            this.selectRounds(arguments[0]);
+        this.setRounds(rounds);
+        if(this.page == 'ship2opponent_combat')
+            this.setMissiles(false);
+        else {
+            var surr = document.getElementById('letsurrender');
+            if(surr && raid) {
+                // load rmsl... maybe we should just load all config from the start, hm.
+                surr.checked = true;
+                var self = this, u = this.universe;
+                this.getValues([u+'-rmsl'],
+                              function(r) {
+                                  self.setMissiles(r[u+'-rmsl'] ? true : false);
+                                  elt.click();
+                              });
+                return;
+            }
+            // else...
+            this.setMissiles(true);
+        }
         elt.click();
         return;
     }
-    // no attack button?
+    // else no attack button..
     this.target();
 };
-
-SGPvP.prototype.engage10 = function() { this.engage(10); };
-SGPvP.prototype.engage15 = function() { this.engage(15); };
 
 SGPvP.prototype.disengage = function() {
     var elt = document.evaluate('//input[@name="retreat" and @type="submit"]',

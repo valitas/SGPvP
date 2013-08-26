@@ -54,6 +54,7 @@ SGPvPUI.prototype.UI_ELEMENT_IDS =
       'sg-keyboard',
       'sg-lvl',
       'sg-ql',
+      'sg-raidmiss',
       'sg-rid',
       'sg-setkey',
       'sg-setkey-code',
@@ -199,7 +200,8 @@ SGPvPUI.prototype.setUIElement = function(div) {
         },
         saveTargetingData: function() {
             if(self.saveTargetingData(e.ql.value, e.inc.value, e.exc.value,
-                                      e.rid.value, e.arm.value, e.lvl.value))
+                                      e.rid.value, e.arm.value, e.lvl.value,
+                                      e.raidmiss.checked))
                 func.setCloseButtonEnabled(true);
             timer = null;
         },
@@ -220,6 +222,8 @@ SGPvPUI.prototype.setUIElement = function(div) {
             var armourData = cfg[u+'-armour'] || self.sgpvp.DEFAULT_ARMOUR;
             e.arm.value = armourData.points;
             e.lvl.value = armourData.level;
+            if(cfg[u+'-rmsl'])
+                e.raidmiss.checked = true;
 
             e.switch_targeting.addEventListener('click', func.switchToTargeting, false);
             e.switch_keys.addEventListener('click', func.switchToKeybindings, false);
@@ -233,6 +237,7 @@ SGPvPUI.prototype.setUIElement = function(div) {
             e.setkey_done.addEventListener('click', func.switchToKeybindings, false);
             e.setkey_select.addEventListener('change', func.setKeySelectChangeHandler, false);
             e.default_keymap.addEventListener('click', func.restoreDefaultKeyBindings, false);
+            e.raidmiss.addEventListener('click', func.targetingControlChangeHandler, false);
 
             // We fetch the human names for actions from #sg-setkey-select.
             // Hey they're needed there anyway, and this saves code.
@@ -261,7 +266,7 @@ SGPvPUI.prototype.setUIElement = function(div) {
 
     // load settings and configure
     this.sgpvp.getValues(['keymap', u+'-ql', u+'-targeting',
-                          u+'-rtid', u+'-armour'],
+                          u+'-rtid', u+'-armour', u+'-rmsl'],
                          func.configure);
 };
 
@@ -281,7 +286,8 @@ SGPvPUI.prototype.saveTargetingData = function(ql,
                                                include_overrides,
                                                exclude_overrides,
                                                retreat_tile,
-                                               armour_points, armour_level) {
+                                               armour_points, armour_level,
+                                               raidmiss) {
     var drx = this.DIGITS_RX;
     if(!drx.test(retreat_tile) ||
        !drx.test(armour_points) || !drx.test(armour_level))
@@ -311,6 +317,7 @@ SGPvPUI.prototype.saveTargetingData = function(ql,
         sett[u+'-rtid'] = retreat_tile;
     sett[u+'-armour'] = { points: armour_points,
                           level: armour_level };
+    sett[u+'-rmsl'] = raidmiss ? 1 : 0;
     this.sgpvp.setValues(sett);
     return true;
 };
