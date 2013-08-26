@@ -4,12 +4,12 @@ SGPvP.prototype.getVersion = function() {
     return chrome.runtime.getManifest().version;
 };
 
-SGPvP.prototype.loadValues = function(keys, callback) {
-    chrome.extension.sendMessage({ op: 'load', universe: this.universe, keys: keys }, callback);
+SGPvP.prototype.getValues = function(keys, callback) {
+    chrome.storage.local.get(keys, callback);
 };
 
-SGPvP.prototype.saveValues = function(entries) {
-    chrome.extension.sendMessage({ op: 'save', universe: this.universe, entries: entries });
+SGPvP.prototype.setValues = function(entries) {
+    chrome.storage.local.set(entries);
 };
 
 // The following are here because the Firefox implementations have to

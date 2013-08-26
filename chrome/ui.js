@@ -84,10 +84,8 @@ SGPvPUI.prototype.setUIElement = function(div) {
     e.version.textContent = this.sgpvp.getVersion();
 
     // handlers
-    var self = this;
-    var timer;
-    var keymap;
-    var setKey, setKeyId;
+    var self = this, u = this.sgpvp.universe;
+    var timer, keymap, setKey, setKeyId;
     var actionName = new Object();
     var func = {
         switchToTargeting: function() {
@@ -190,12 +188,12 @@ SGPvPUI.prototype.setUIElement = function(div) {
         closeHandler: function() { self.close(); },
         configure: function(cfg) {
             keymap = cfg.keymap;
-            e.ql.value = cfg.ql;
-            var targetingData = cfg.targeting;
+            e.ql.value = cfg[u+'-ql'] || '';
+            var targetingData = cfg[u+'-targeting'] || self.sgpvp.DEFAULT_TARGETING;
             e.inc.value = self.stringifyOverrideList(targetingData.include);
             e.exc.value = self.stringifyOverrideList(targetingData.exclude);
-            e.rid.value = cfg.rtid;
-            var armourData = cfg.armour;
+            e.rid.value = cfg[u+'-rtid'] || '';
+            var armourData = cfg[u+'-armour'] || self.sgpvp.DEFAULT_ARMOUR;
             e.arm.value = armourData.points;
             e.lvl.value = armourData.level;
 
@@ -237,9 +235,9 @@ SGPvPUI.prototype.setUIElement = function(div) {
     };
 
     // load settings and configure
-    this.sgpvp.loadSettings(['keymap', 'ql', 'targeting',
-                             'rtid', 'armour'],
-                            func.configure);
+    this.sgpvp.getValues(['keymap', u+'-ql', u+'-targeting',
+                          u+'-rtid', u+'-armour'],
+                         func.configure);
 };
 
 SGPvPUI.prototype.close = function() {
@@ -253,34 +251,43 @@ SGPvPUI.prototype.saveKeyMap = function(keymap) {
     this.sgpvp.setKeyMap(keymap);
 };
 
+SGPvPUI.prototype.DIGITS_RX = /^\s*[0-9]*\s*$/;
 SGPvPUI.prototype.saveTargetingData = function(ql,
                                                include_overrides,
                                                exclude_overrides,
                                                retreat_tile,
                                                armour_points, armour_level) {
-    var ok;
+    var drx = this.DIGITS_RX;
+    if(!drx.test(retreat_tile) ||
+       !drx.test(armour_points) || !drx.test(armour_level))
+        return false;
 
     armour_points = parseInt(armour_points);
     armour_level = parseInt(armour_level);
-    if(armour_points > 0 && armour_level > 0 && armour_level <= 6) {
-        var qo = this.parseQL(ql);
-        if(qo) {
-            var o = {
-                ql: qo.parsed,
-                include: this.parseOverrideList(include_overrides),
-                exclude: this.parseOverrideList(exclude_overrides)
-            };
+    if(!(armour_points > 0 && armour_level > 0 && armour_level <= 6))
+        return false;
 
-            this.sgpvp.storeSettings({ ql: qo.ql,
-                                       targeting: o,
-                                       rtid: retreat_tile,
-                                       armour: {points: armour_points,
-                                                level: armour_level} });
-            ok = true;
-        }
-    }
+    retreat_tile = parseInt(retreat_tile);
+    if(!(retreat_tile > 0))
+        retreat_tile = false;
 
-    return ok;
+    var qo = this.parseQL(ql);
+    if(!qo)
+        return false;
+
+    var sett = new Object(), u = this.sgpvp.universe;
+    sett[u+'-ql'] = qo.ql;
+    sett[u+'-targeting'] = {
+        ql: qo.parsed,
+        include: this.parseOverrideList(include_overrides),
+        exclude: this.parseOverrideList(exclude_overrides)
+    };
+    if(retreat_tile)
+        sett[u+'-rtid'] = retreat_tile;
+    sett[u+'-armour'] = { points: armour_points,
+                          level: armour_level };
+    this.sgpvp.setValues(sett);
+    return true;
 };
 
 SGPvPUI.prototype.parseOverrideList = function(list) {

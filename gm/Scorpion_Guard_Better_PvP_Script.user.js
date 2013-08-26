@@ -31,25 +31,35 @@ SGPvP.prototype.getVersion = function() {
     return GM_info.script.version;
 };
 
-SGPvP.prototype.loadValues = function(keys, callback) {
+// Configuration handling is a tad more complicated than one would
+// expect, because chrome.storage imposes a funny callback
+// architecture, and here on Firefox we emulate it so we can have a
+// single source with the main logic. This isn't expensive at all,
+// really, just a bit confusing.
+
+SGPvP.prototype.getValues = function(keys, callback) {
     var r = new Object();
     for(var i in keys) {
         var key = keys[i];
-        var lskey = (key == 'keymap') ? 'keymap' : this.universe + '-' + key;
-        r[key] = GM_getValue(lskey);
+        var val = GM_getValue(key);
+        if(typeof(val) != 'undefined') {
+            // This check is for smooth upgrading of installed
+            // versions; we'll remove in the future.  Thing is, we
+            // used to store one parameter, only one, in a form that
+            // isn't amenable to JSON.parse(). So, we test for that
+            // here, and if detected we return the literal string.
+            if(/^[0-9{"]/.test(val))
+                r[key] = JSON.parse(val);
+            else
+                r[key] = val;
+        }
     }
     callback(r);
 };
 
-SGPvP.prototype.saveValues = function(entries) {
-    for(var key in entries) {
-        var val = entries[key];
-        var lskey = (key == 'keymap') ? 'keymap' : this.universe + '-' + key;
-        if(val == null)
-            GM_deleteValue(lskey);
-        else
-            GM_setValue(lskey, val);
-    }
+SGPvP.prototype.setValues = function(entries) {
+    for(var key in entries)
+        GM_setValue(key, JSON.stringify(entries[key]));
 };
 
 // The following are here because they deal with oddities introduced

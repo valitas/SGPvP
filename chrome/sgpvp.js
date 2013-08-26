@@ -45,14 +45,13 @@ function SGPvP() {
 
     var self = this;
     var setkeys = function(r) {
-        var km = r.keymap;
-        if(km)
-            self.keymap = km;
+        if(r.keymap)
+            self.keymap = r.keymap;
         else
             // load default keymap
             self.setKeyMap(JSON.parse(self.getResourceText('default_keymap')));
     };
-    this.loadSettings(['keymap'], setkeys);
+    this.getValues(['keymap'], setkeys);
     document.addEventListener('keydown',
                               function(event) { self.keyPressHandler(event); },
                               false);
@@ -112,96 +111,23 @@ SGPvP.prototype.setupPage = function(event) {
     this.setupPageSpecific();
 };
 
-// Configuration handling.  This is a tad more complicated than one
-// would expect, because Chrome imposes a funny callback architecture.
-// On Chrome we don't access localStorage directly from here, see, but
-// from a background page instead, and we exchange messages with that
-// page to load or save settings.  There is a reason for this.
-//
-// And on Firefox we just emulate that brouhaha - see the user script.
-// It's not expensive at all, really, just a bit confusing.
-
-SGPvP.prototype.loadSettings = function(keys, callback) {
-    var loaders = this.CFG_DESERIALISERS;
-    var cb = function(r) {
-        var results = new Object();
-        for(var key in r) {
-            var val;
-            var loader = loaders[key];
-            if(loader)
-                val = loader(r[key]);
-            else
-                val = r[key];
-            results[key] = val;
-        }
-        callback(results);
-    };
-
-    this.loadValues(keys, cb);
+SGPvP.prototype.DEFAULT_TARGETING = {
+    ql:{includeFactions:{},
+        excludeFactions:{},
+        includeAlliances:{},
+        excludeAlliances:{},
+        includeCharacters:{},
+        excludeCharacters:{}},
+    include:{ids:{},names:{}},
+    exclude:{ids:{},names:{}},
+    prioritiseTraders:false,
+    retreatTile:null
 };
-
-SGPvP.prototype.storeSettings = function(settings) {
-    var savers = this.CFG_SERIALISERS;
-    var entries = new Object();
-    for(var key in settings) {
-        var saver = savers[key];
-        if(saver)
-            entries[key] = saver(settings[key]);
-    }
-    this.saveValues(entries);
-};
-
-SGPvP.prototype.CFG_DESERIALISERS = {
-    // targeting - return the default targeting object if unset
-    targeting: function(s) {
-        if(s)
-            return JSON.parse(s);
-
-        return {
-            ql:{includeFactions:{},
-                excludeFactions:{},
-                includeAlliances:{},
-                excludeAlliances:{},
-                includeCharacters:{},
-                excludeCharacters:{}},
-            include:{ids:{},names:{}},
-            exclude:{ids:{},names:{}},
-            prioritiseTraders:false,
-            retreatTile:null
-        };
-    },
-    // text QL
-    ql: function(s) { return s ? s : ''; },
-    // retreat tile id
-    rtid: function(s) {
-        var n = parseInt(s);
-        return (n > 0) ? n : null;
-    },
-    // armour configuration
-    armour: function(s) { return s ?  JSON.parse(s) : { points: null, level: 5 }; },
-    // last known armour points
-    lkap: function(s) { return s ? parseInt(s) : null; },
-    // last known bots available
-    lkba: function(s) { return s ? parseInt(s) : null; },
-    // keymap - do not return the default keymap if unset, because
-    // that has to be loaded, and we're in an event handler
-    keymap: function(s) { return s ? JSON.parse(s) : null; }
-};
-
-SGPvP.prototype.CFG_SERIALISERS = {
-    targeting: function(data) { return JSON.stringify(data); },
-    ql: function(ql) { return ql; },
-    rtid: function(rtid) { return rtid; },
-    armour: function(adata) { return JSON.stringify(adata); },
-    lkap: function(lkap) { return lkap; },
-    lkba: function(lkba) { return lkba; },
-    keymap: function(km) { return JSON.stringify(km); }
-};
-
+SGPvP.prototype.DEFAULT_ARMOUR = { points: null, level: 5 };
 
 SGPvP.prototype.setKeyMap = function(keymap) {
     this.keymap = keymap;
-    this.storeSettings({ 'keymap': keymap });
+    this.setValues({ 'keymap': keymap });
 };
 
 SGPvP.prototype.closeUi = function() {
@@ -361,7 +287,7 @@ SGPvP.prototype.setupNavPage = function() {
     this.useBotsAmountField = null;
     this.useBotsButton = null;
 
-    var settings = new Object();
+    var settings = new Object(), u = this.universe;
 
     // Get the current ship armour. It's in a properly ID'd span.
     var n = NaN;
@@ -369,7 +295,7 @@ SGPvP.prototype.setupNavPage = function() {
     if(elt)
         n = parseInt(elt.textContent);
     if(!isNaN(n))
-        settings.lkap = n;
+        settings[u+'-lkap'] = n;
 
     // Get amount of bots in the cargo hold, from the Nav screen. This
     // information is always available, except when the user clicked
@@ -404,16 +330,15 @@ SGPvP.prototype.setupNavPage = function() {
         }
     }
     if(!isNaN(n))
-        settings.lkba = n;
+        settings[u+'-lkba'] = n;
 
-    this.storeSettings(settings);
+    this.setValues(settings);
 };
 
 // This if called every time the ship2ship and building page is
 // loaded. It should run fast and report no errors.
 SGPvP.prototype.setupCombatPage = function() {
-    var settings = new Object();
-    var elt;
+    var settings = new Object(), u = this.universe, elt;
 
     elt = document.evaluate("//td/input[@name = 'resid' and @value = '8']",
                             document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
@@ -425,7 +350,7 @@ SGPvP.prototype.setupCombatPage = function() {
         // the next input, the submit button.
         var available = parseInt(elt.parentNode.previousElementSibling.textContent);
         if(!isNaN(available))
-            settings.lkba = available;
+            settings[u+'-lkba'] = available;
 
         var amountField = elt.nextElementSibling;
         if(amountField && amountField.name == 'amount') {
@@ -442,7 +367,7 @@ SGPvP.prototype.setupCombatPage = function() {
         // how many bots we have (e.g. if the building isn't blocking)
         // so in that case we let the script use the last known value.
         if(this.page != 'building')
-            settings.lkba = 0;
+            settings[u+'-lkba'] = 0;
     }
 
     elt = document.evaluate("//font[starts-with(text(), 'Armor points:')]",
@@ -451,28 +376,30 @@ SGPvP.prototype.setupCombatPage = function() {
     if(elt) {
         var armour = parseInt(elt.textContent.substring(13));
         if(!isNaN(armour))
-            settings.lkap = armour;
+            settings[u+'-lkap'] = armour;
     }
 
-    this.storeSettings(settings);
+    this.setValues(settings);
 };
 
 SGPvP.prototype.useBots = function(thisMany) {
-    var self = this;
-    self.loadSettings(['armour', 'lkap', 'lkba'],
-                      function(results) { self.useBots2(results, thisMany); });
+    var self = this, u = this.universe;
+    self.getValues([u+'-armour', u+'-lkap', u+'-lkba'],
+                   function(results) { self.useBots2(results, thisMany); });
 };
 
 // If thisMany is not supplied, compute the amount needed to the best
 // of our knowledge.
 SGPvP.prototype.useBots2 = function(cfg, thisMany) {
-    var botRepair;
+    var botRepair, u = this.universe;
+    var armour = cfg[u+'-armour'] || this.DEFAULT_ARMOUR;
+    var lkap = cfg[u+'-lkap'], lkba = cfg[u+'-lkba'];
 
     if(thisMany)
         // dont bother trying to compute armour, use what we're told exactly
-        botRepair = Math.floor(180 / cfg.armour.level);
+        botRepair = Math.floor(180 / armour.level);
     else {
-        var bots = this.computeBotsNeeded(cfg.armour, cfg.lkap, cfg.lkba);
+        var bots = this.computeBotsNeeded(armour, lkap, lkba);
         if(!bots)
             return;
 
@@ -482,10 +409,10 @@ SGPvP.prototype.useBots2 = function(cfg, thisMany) {
 
     // Compute how much armour the bots will repair, and how many
     // we'll have left, and update last known values.
-    var newSettings = {
-        lkap: (cfg.lkap == null) ? null : cfg.lkap + thisMany * botRepair,
-        lkba: (cfg.lkba > thisMany) ? cfg.lkba - thisMany : 0
-    };
+    var newSettings = new Object();
+    newSettings[u+'-lkap'] =
+        typeof(lkap) == 'number' ? lkap + thisMany * botRepair : null;
+    newSettings[u+'-lkba'] = lkba > thisMany ? lkba - thisMany : 0;
 
     var amount, submit;
     if(this.useBotsAmountField) {
@@ -500,7 +427,7 @@ SGPvP.prototype.useBots2 = function(cfg, thisMany) {
         submit = form.elements['useres'];
     }
 
-    this.storeSettings(newSettings);
+    this.setValues(newSettings);
     amount.value = thisMany;
     submit.click();
 };
@@ -534,7 +461,10 @@ SGPvP.prototype.getMadeUpBotsForm = function() {
 };
 
 SGPvP.prototype.showBotsNeeded = function(cfg) {
-    var bots = this.computeBotsNeeded(cfg.armour, cfg.lkap, cfg.lkba);
+    var u = this.universe;
+    var bots =
+        this.computeBotsNeeded(cfg[u+'-armour'] || this.DEFAULT_ARMOUR,
+                               cfg[u+'-lkap'], cfg[u+'-lkba']);
     if(!bots)
         return;
 
@@ -555,7 +485,7 @@ SGPvP.prototype.computeBotsNeeded = function(armour, lkap, lkba) {
         return null;
     }
 
-    if(lkap == null || lkap < 0) {
+    if(typeof(lkap) != 'number' || lkap < 0) {
         // In the nav screen, we should always see the ship's armour
         this.showNotification("SGPvP error 5001: ship armour not found", 1500);
         return null;
@@ -708,7 +638,9 @@ SGPvP.prototype.selectHighestRounds = function(limit) {
 
 SGPvP.prototype.setRetreatPoint = function() {
     if(this.userloc) {
-        this.storeSettings({ rtid: this.userloc });
+        var sett = new Object();
+        sett[this.universe+'-rtid'] = this.userloc;
+        this.setValues(sett);
         this.showNotification('Retreat tile set: ' + this.userloc, 500);
     }
     else
@@ -749,9 +681,9 @@ SGPvP.prototype.disengage = function() {
         return;
     }
 
-    var self = this;
+    var self = this, u = this.universe;
     var act = function(results) {
-        var tile_id = results.rtid;
+        var tile_id = results[u+'-rtid'];
         if(tile_id) {
             var form = document.getElementById('navForm');
             if(form) {
@@ -768,18 +700,18 @@ SGPvP.prototype.disengage = function() {
         self.nav();
     };
 
-    this.loadSettings(['rtid'], act);
+    this.getValues([u+'-rtid'], act);
 };
 
 SGPvP.prototype.nav = function() { document.location = 'main.php'; };
 SGPvP.prototype.bots = function() { this.useBots(null); };
 
 SGPvP.prototype.testBots = function() {
-    var self = this;
-    self.loadSettings(['armour', 'lkap', 'lkba' ],
-                      function(results) {
-                          self.showBotsNeeded(results);
-                      });
+    var self = this, u = this.universe;
+    this.getValues([u+'-armour', u+'-lkap', u+'-lkba'],
+                   function(results) {
+                       self.showBotsNeeded(results);
+                   });
 };
 
 SGPvP.prototype.damageBuilding = function() {
@@ -840,13 +772,13 @@ SGPvP.prototype.testTargeting = function() {
     if(!ships)
         return;
 
-    var self = this;
+    var self = this, u = this.universe;
     var highlight_target = function(td, colour) {
         td.style.backgroundColor = colour;
         td.previousElementSibling.style.backgroundColor = colour;
     };
     var act = function(results) {
-        var targeting_data = results.targeting;
+        var targeting_data = results[u+'-targeting'] || self.DEFAULT_TARGETING;
         var targets = self.scanForTargets(targeting_data, ships);
         // turn the excluded ships green
         for(var i = 0, end = targets.excluded.length; i < end; i++)
@@ -866,7 +798,7 @@ SGPvP.prototype.testTargeting = function() {
     for(var i = 0, end = ships.length; i < end; i++)
         highlight_target(ships[i].td, 'inherit');
 
-    this.loadSettings(['targeting'], act);
+    this.getValues([u+'-targeting'], act);
 };
 
 SGPvP.prototype.target = function() {
@@ -874,9 +806,9 @@ SGPvP.prototype.target = function() {
     if(!ships)
         return;
 
-    var self = this;
+    var self = this, u = this.universe;
     var act = function(results) {
-        var targeting_data = results.targeting;
+        var targeting_data = results[u+'-targeting'] || this.DEFAULT_TARGETING;
         var targets = self.scanForTargets(targeting_data, ships);
         if(targets.included.length > 0) {
             var ship_pri = (self.page == 'main') ?
@@ -888,7 +820,7 @@ SGPvP.prototype.target = function() {
         self.nav();
     };
 
-    this.loadSettings(['targeting'], act);
+    this.getValues([u+'-targeting'], act);
 };
 
 SGPvP.prototype.configure = function() {
