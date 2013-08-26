@@ -16,5 +16,5 @@
     "permissions": [ "storage" ],
     "web_accessible_resources": [ "ui.js", "ui.html", "ui.css",
                                   "default-keymap.json" ],
-    "version": "31"
+    "version": "31.2"
 }

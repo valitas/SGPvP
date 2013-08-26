@@ -49,7 +49,6 @@ SGPvPUI.prototype.UI_ELEMENT_IDS =
       'sg-close',
       'sg-default-keymap',
       'sg-exc',
-      'sg-illarion-keymap',
       'sg-inc',
       'sg-keybindings',
       'sg-keyboard',
@@ -88,6 +87,24 @@ SGPvPUI.prototype.setUIElement = function(div) {
     var timer, keymap, setKey, setKeyId;
     var actionName = new Object();
     var func = {
+        restoreDefaultKeyBindings: function() {
+            var r = confirm('This will remove all custom key bindings you may have defined. '
+                            + 'You OK with this?');
+            if(r) {
+                keymap = JSON.parse(self.sgpvp.getResourceText('default_keymap'));
+                self.sgpvp.setKeyMap(keymap);
+                // XXX this code is almost duplicated below, reuse
+                var xpr = doc.evaluate('div', e.keyboard, null,
+                                       XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE,
+                                       null);
+                for(var i = 0, end = xpr.snapshotLength; i < end; i++) {
+                    var kdiv = xpr.snapshotItem(i);
+                    var code = parseInt(kdiv.id.substr(4));
+                    var action = keymap[code];
+                    func.setKeyLegend(kdiv, action);
+                }
+            }
+        },
         switchToTargeting: function() {
             e.switch_targeting.className = 'active';
             e.switch_keys.className = '';
@@ -138,17 +155,24 @@ SGPvPUI.prototype.setUIElement = function(div) {
             func.switchToSetKey(event.currentTarget);
         },
         setKeyLegend: function(key, action) {
-            var legend = actionName[action];
-            if(!legend)
-                legend = action;
+            if(action) {
+                var legend = actionName[action];
+                if(!legend)
+                    legend = action;
 
-            var legenddiv = key.firstElementChild;
-            if(!legenddiv) {
-                legenddiv = key.ownerDocument.createElement('div');
-                key.appendChild(legenddiv);
+                var legenddiv = key.firstElementChild;
+                if(!legenddiv) {
+                    legenddiv = key.ownerDocument.createElement('div');
+                    key.appendChild(legenddiv);
+                }
+
+                legenddiv.textContent = legend;
             }
-
-            legenddiv.textContent = legend;
+            else {
+                var legenddiv = key.firstElementChild;
+                if(legenddiv)
+                    key.removeChild(legenddiv);
+            }
         },
         setKeySelectChangeHandler: function() {
             var opts = e.setkey_select.options;
@@ -208,6 +232,7 @@ SGPvPUI.prototype.setUIElement = function(div) {
             e.close.addEventListener('click', func.closeHandler, false);
             e.setkey_done.addEventListener('click', func.switchToKeybindings, false);
             e.setkey_select.addEventListener('change', func.setKeySelectChangeHandler, false);
+            e.default_keymap.addEventListener('click', func.restoreDefaultKeyBindings, false);
 
             // We fetch the human names for actions from #sg-setkey-select.
             // Hey they're needed there anyway, and this saves code.

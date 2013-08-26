@@ -17,10 +17,5 @@
   "81": "flyClose",
   "87": "exitFlyClose",
   "79": "undock",
-  "80": "dock",
-  "49": "target",
-  "50": "engage",
-  "51": "nav",
-  "52": "disengage",
-  "53": "bots"
+  "80": "dock"
 }
