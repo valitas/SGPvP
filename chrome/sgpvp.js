@@ -2,7 +2,7 @@
 // Google Chrome - no Greasemonkey calls and no chrome.extension stuff
 // here.  localStorage should not be accessed from here either.
 
-// V31
+// V31.2
 
 function SGPvP() {
     this.url = window.location.href;
@@ -63,7 +63,8 @@ function SGPvP() {
                             false);
     var script = document.createElement('script');
     script.type = 'text/javascript';
-    script.textContent = '(function() {var fn=function(){window.postMessage({sgpvp:1,loc:userloc},window.location.origin);};if(typeof(addUserFunction)=="function")addUserFunction(fn);fn();})();';
+    // window.location.origin is only available on FF 20
+    script.textContent = "(function() {var fn=function(){window.postMessage({sgpvp:1,loc:userloc},window.location.protocol+'//'+window.location.host);};if(typeof(addUserFunction)=='function')addUserFunction(fn);fn();})();";
     document.body.appendChild(script);
 }
 
