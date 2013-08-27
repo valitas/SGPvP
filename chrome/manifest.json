@@ -22,6 +22,6 @@
     "permissions": [ "storage" ],
     "update_url": "https://dl.dropboxusercontent.com/u/28969566/sgpvp-dev/updates.xml",
     "web_accessible_resources": [ "ui.js", "ui.html", "ui.css",
-                                  "default-keymap.json" ],
+                                  "default-keymap.json", "illarion-keymap.json" ],
     "version": "31.4"
 }

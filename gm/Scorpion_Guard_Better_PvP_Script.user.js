@@ -13,6 +13,7 @@
 // @resource    ui_html ui.html
 // @resource    ui_style ui.css
 // @resource    default_keymap default-keymap.json
+// @resource    illarion_keymap illarion-keymap.json
 // @author      Val
 // @version     31.4
 // @updateURL   https://dl.dropboxusercontent.com/u/28969566/sgpvp-dev/Scorpion_Guard_Better_PvP_Script.meta.js

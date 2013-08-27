@@ -88,7 +88,8 @@ SGPvP.prototype.RESOURCE = {
     ui_js: 'ui.js',
     ui_html: 'ui.html',
     ui_style: 'ui.css',
-    default_keymap: 'default-keymap.json'
+    default_keymap: 'default-keymap.json',
+    illarion_keymap: 'illarion-keymap.json'
 };
 
 SGPvP.prototype.getResourceURL = function(resource_id) {

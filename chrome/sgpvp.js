@@ -165,7 +165,10 @@ SGPvP.prototype.keyPressHandler = function(event) {
         return;
 
     if(event.keyCode == 27) {
-        this.closeUi();
+        if(this.sgpvpui)
+            this.sgpvpui.toggle();
+        else
+            this.configure();
         return;
     }
 

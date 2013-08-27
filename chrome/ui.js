@@ -49,6 +49,7 @@ SGPvPUI.prototype.UI_ELEMENT_IDS =
       'sg-close',
       'sg-default-keymap',
       'sg-exc',
+      'sg-illarion-keymap',
       'sg-inc',
       'sg-keybindings',
       'sg-keyboard',
@@ -86,11 +87,13 @@ SGPvPUI.prototype.setUIElement = function(div) {
     // handlers
     var self = this, actionName = new Object(), timer, keymap, setKey, setKeyId;
     var func = {
-        restoreDefaultKeyBindings: function() {
+        restoreDefaultKeyBindings: function() { func.resetKeyMap('default_keymap'); },
+        restoreIllarionKeyBindings: function() { func.resetKeyMap('illarion_keymap'); },
+        resetKeyMap: function(resid) {
             var r = confirm('This will remove all custom key bindings you '
                             + 'may have defined. You OK with this?');
             if(r) {
-                keymap = JSON.parse(sgpvp.getResourceText('default_keymap'));
+                keymap = JSON.parse(sgpvp.getResourceText(resid));
                 self.saveKeyMap(keymap);
                 // XXX this code is almost duplicated below, reuse
                 var xpr = doc.evaluate('div', e.keyboard, null,
@@ -247,6 +250,8 @@ SGPvPUI.prototype.setUIElement = function(div) {
             ('change', func.setKeySelectChangeHandler, false);
             e.default_keymap.addEventListener
             ('click', func.restoreDefaultKeyBindings, false);
+            e.illarion_keymap.addEventListener
+            ('click', func.restoreIllarionKeyBindings, false);
             e.raidmiss.addEventListener
             ('click', func.targetingControlChangeHandler, false);
 
@@ -279,6 +284,13 @@ SGPvPUI.prototype.setUIElement = function(div) {
     // load settings and configure
     sgpvp.loadSettings(['keymap', 'ql', 'targeting', 'rtid', 'armour', 'rmsl'],
                        func.configure);
+};
+
+SGPvPUI.prototype.toggle = function() {
+    if(this.ui_element)
+        this.close();
+    else
+        this.open();
 };
 
 SGPvPUI.prototype.close = function() {
