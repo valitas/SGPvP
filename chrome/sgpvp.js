@@ -412,8 +412,10 @@ SGPvP.prototype.useBots = function(thisMany) {
         botRepair = Math.floor(180 / this.armour.level);
     else {
         var bots = this.computeBotsNeeded();
-        if(!bots)
+        if(!bots) {
+            this.nav();
             return;
+        }
 
         botRepair = bots.botRepair;
         thisMany = bots.available;
