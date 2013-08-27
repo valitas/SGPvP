@@ -849,6 +849,14 @@ SGPvP.prototype.target = function() {
     this.nav();
 };
 
+SGPvP.prototype.jumpWH = function() {
+    var warp = document.getElementById('aCmdWarp');
+    if(warp)
+        warp.click();
+    else
+        this.nav();
+};
+
 SGPvP.prototype.configure = function() {
     if(typeof(SGPvPUI) != 'function')
         // load the UI code
