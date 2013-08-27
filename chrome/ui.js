@@ -7,6 +7,8 @@
 // calls and no chrome.* APIs here.  localStorage should not be
 // accessed from here either.
 
+// V 31.5
+
 function SGPvPUI(sgpvp, doc) {
     this.sgpvp = sgpvp;
     this.doc = doc;
