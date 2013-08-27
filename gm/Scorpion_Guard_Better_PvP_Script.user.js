@@ -2,6 +2,7 @@
 // @name        Scorpion Guard Better PvP Script
 // @namespace   tag:dssrzs.org,2012-07-16:PvP
 // @description Keyboard commands for Pardus combat
+// @icon        32.png
 // @match       *://*.pardus.at/main.php*
 // @match       *://*.pardus.at/ship2ship_combat.php*
 // @match       *://*.pardus.at/ship2opponent_combat.php*

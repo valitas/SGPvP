@@ -10,6 +10,11 @@
     } ],
     "content_security_policy": "script-src 'self'; object-src 'self'",
     "description": "Keyboard commands for Pardus PvP - development release",
+    "icons": {
+        "16": "16.png",
+        "48": "48.png",
+        "128": "128.png"
+    },
     "key": "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCnUG1bRyKxo6bpQ1NNRE91fojHUxqX3CmTdtr5lywscuALtJffk+SvgI/19AjXTPexMQFQCfssz+mqjDA23+nsiKR4ug86YLuaXHTk7XVUSYR6FhsekXVvoXx/o879ThHRIYa9h4LIUQ8b84AfXFqRaGV/uHHSYoWdJTMocCegJQIDAQAB",
     "manifest_version": 2,
     "minimum_chrome_version": "20",

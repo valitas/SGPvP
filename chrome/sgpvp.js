@@ -1,6 +1,5 @@
-// SGPvP object and a few functions. This code must run in Firefox and
-// Google Chrome - no Greasemonkey calls and no chrome.extension stuff
-// here.  localStorage should not be accessed from here either.
+// SGPvP object. This code must run on Firefox and Google Chrome - no
+// Greasemonkey calls and no chrome.* stuff here.
 
 // V31.4
 
@@ -14,6 +13,7 @@ function SGPvP() {
     this.universe = m[1];
     this.page = m[2];
 
+    var self = this;
     switch(this.page) {
     case 'main':
         this.setupPageSpecific = this.setupNavPage;
@@ -35,8 +35,7 @@ function SGPvP() {
         this.setupPageSpecific = function() {}; // nop
     }
 
-    var self = this,
-    keyHandler = function(event) { self.keyPressHandler(event); },
+    var keyHandler = function(event) { self.keyPressHandler(event); },
     setupHandler = function(event) { self.setupPage(event); },
     finishConfig = function() {
         if(!self.keymap)
@@ -86,9 +85,9 @@ SGPvP.prototype.SHIPS = [
     'wasp', 'ficon', 'rustclaw', 'sabre'
 ];
 
-// A specification of the stuff we keep in persistent storage. 'u' is
-// true for parameters that are not dependent on the universe. 'd' is
-// the default value.
+// A specification of the stuff we keep in persistent storage.
+// 'u' is true for parameters set once for all universes.
+// 'd' is the default value.
 SGPvP.prototype.CFGDEF = {
     keymap: { u:true, d:null },
     rtid: { u:false, d:null }, // retreat tile id
@@ -110,7 +109,7 @@ SGPvP.prototype.CFGDEF = {
     armour: { u:false, d:{ points: null, level: 5 } }
 };
 
-// Load the supplied keys from persistent storage into object properties.
+// Load the specified keys from persistent storage into object properties.
 SGPvP.prototype.loadSettings = function(keys, callback) {
     var self = this, skeys = new Object(), defs = this.CFGDEF,
         prefix = this.universe + '-';
@@ -141,10 +140,9 @@ SGPvP.prototype.saveSettings = function(settings) {
     this.setValues(o);
 };
 
-// This is a handler for DOM messages coming from the game page.  It's
-// called once after the page loads, and again when a partial refresh
-// occurs.  It contains the value of the userloc variable, set by the
-// page on its javascript context.
+// This is a handler for DOM messages coming from the game page.
+// Arrival of a message means the page contents were updated. The
+// message contains the value of the userloc variable, too.
 //
 // Doing things this way may seem a bit awkward to Firefox userscript
 // writers, but it is the proper (only?) way to do it in Chrome.
@@ -356,7 +354,7 @@ SGPvP.prototype.setupNavPage = function() {
     this.saveSettings(settings);
 };
 
-// This if called every time the ship2ship and building page is
+// This if called every time the ship2ship or building pages are
 // loaded. It should run fast and report no errors.
 SGPvP.prototype.setupCombatPage = function() {
     var settings = new Object(), elt;
@@ -531,9 +529,10 @@ SGPvP.prototype.getShipsNav = function() {
     var ships = [];
     var sbox = document.getElementById('otherships_content');
     if(sbox) {
-        var xpr = document.evaluate('table/tbody/tr/td[position() = 2]/a', sbox, null,
-                                    XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
-        var a;
+        var a,
+        xpr = document.evaluate('table/tbody/tr/td[position() = 2]/a', sbox,
+                                null, XPathResult.UNORDERED_NODE_ITERATOR_TYPE,
+                                null);
         while((a = xpr.iterateNext())) {
             var m = this.SCANID_RX.exec(a.getAttribute('href'));
             if(m) {
@@ -545,9 +544,10 @@ SGPvP.prototype.getShipsNav = function() {
                     id: parseInt(r),
                     name: a.textContent
                 };
-                var xpr2 = document.evaluate("font/b/a", td, null,
-                                             XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
-                var a2;
+                var a2,
+                xpr2 = document.evaluate("font/b/a", td, null,
+                                         XPathResult.UNORDERED_NODE_ITERATOR_TYPE,
+                                         null);
                 while((a2 = xpr2.iterateNext())) {
                     m = this.ALLYID_RX.exec(a2.getAttribute('href'));
                     if(m)
@@ -679,8 +679,8 @@ SGPvP.prototype.engage = function() { this.doEngage(1000, false); };
 SGPvP.prototype.engage15 = function() { this.doEngage(15, false); };
 SGPvP.prototype.engage10 = function() { this.doEngage(10, false); };
 SGPvP.prototype.raid = function() { this.doEngage(1000, true); };
-SGPvP.prototype.raid10 = function() { this.doEngage(10, true); };
 SGPvP.prototype.raid15 = function() { this.doEngage(15, true); };
+SGPvP.prototype.raid10 = function() { this.doEngage(10, true); };
 
 SGPvP.prototype.disengage = function() {
     var elt = document.evaluate('//input[@name="retreat" and @type="submit"]',
@@ -739,7 +739,8 @@ SGPvP.prototype.testBots = function() {
 
 SGPvP.prototype.damageBuilding = function() {
     var elt = document.evaluate('//input[@name="destroy" and @type="submit"]',
-                                document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                                document, null,
+                                XPathResult.ANY_UNORDERED_NODE_TYPE,
                                 null).singleNodeValue;
     if(elt && elt.click) {
         elt.click();
