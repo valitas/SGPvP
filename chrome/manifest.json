@@ -8,12 +8,14 @@
                      "*://*.pardus.at/ship2opponent_combat.php*",
                      "*://*.pardus.at/logout.php" ]
     } ],
-    "description": "Keyboard commands for Pardus PvP - beta release",
-    // "key": "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCnUG1bRyKxo6bpQ1NNRE91fojHUxqX3CmTdtr5lywscuALtJffk+SvgI/19AjXTPexMQFQCfssz+mqjDA23+nsiKR4ug86YLuaXHTk7XVUSYR6FhsekXVvoXx/o879ThHRIYa9h4LIUQ8b84AfXFqRaGV/uHHSYoWdJTMocCegJQIDAQAB",
+    "content_security_policy": "script-src 'self'; object-src 'self'",
+    "description": "Keyboard commands for Pardus PvP - development release",
+    "key": "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCnUG1bRyKxo6bpQ1NNRE91fojHUxqX3CmTdtr5lywscuALtJffk+SvgI/19AjXTPexMQFQCfssz+mqjDA23+nsiKR4ug86YLuaXHTk7XVUSYR6FhsekXVvoXx/o879ThHRIYa9h4LIUQ8b84AfXFqRaGV/uHHSYoWdJTMocCegJQIDAQAB",
     "manifest_version": 2,
     "minimum_chrome_version": "20",
     "name": "Scorpion Guard's Better PvP Pardus Extension",
     "permissions": [ "storage" ],
+    "update_url": "https://dl.dropboxusercontent.com/u/28969566/sgpvp-dev/updates.xml",
     "web_accessible_resources": [ "ui.js", "ui.html", "ui.css",
                                   "default-keymap.json" ],
     "version": "31.3"

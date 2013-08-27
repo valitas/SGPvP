@@ -14,6 +14,8 @@
 // @resource    default_keymap default-keymap.json
 // @author      Val
 // @version     31.3
+// @updateURL   https://dl.dropboxusercontent.com/u/28969566/sgpvp-dev/Scorpion_Guard_Better_PvP_Script.meta.js
+// @downloadURL https://dl.dropboxusercontent.com/u/28969566/sgpvp-dev/Scorpion_Guard_Better_PvP_Script.user.js
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @grant       GM_deleteValue
@@ -21,9 +23,6 @@
 // @grant       GM_getResourceText
 // @grant       GM_info
 // ==/UserScript==
-
-// updateURL   https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.meta.js
-// downloadURL https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.user.js
 
 // Firefox implementation of non-portable bits
 
