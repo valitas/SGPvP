@@ -115,7 +115,7 @@ SGPvP.prototype.loadSettings = function(keys, callback) {
     var self = this, skeys = new Object(), defs = this.CFGDEF,
         prefix = this.universe + '-';
     var act = function(r) {
-        for(var skey in r) {
+        for(var skey in skeys) {
             var key = skeys[skey], def = defs[key], val = r[skey];
             if(typeof(val) == 'undefined')
                 val = def.d;
