@@ -13,7 +13,7 @@
 // @resource    ui_style ui.css
 // @resource    default_keymap default-keymap.json
 // @author      Val
-// @version     31.3
+// @version     31.4
 // @updateURL   https://dl.dropboxusercontent.com/u/28969566/sgpvp-dev/Scorpion_Guard_Better_PvP_Script.meta.js
 // @downloadURL https://dl.dropboxusercontent.com/u/28969566/sgpvp-dev/Scorpion_Guard_Better_PvP_Script.user.js
 // @grant       GM_getValue

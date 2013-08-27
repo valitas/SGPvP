@@ -18,5 +18,5 @@
     "update_url": "https://dl.dropboxusercontent.com/u/28969566/sgpvp-dev/updates.xml",
     "web_accessible_resources": [ "ui.js", "ui.html", "ui.css",
                                   "default-keymap.json" ],
-    "version": "31.3"
+    "version": "31.4"
 }

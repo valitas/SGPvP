@@ -2,7 +2,7 @@
 // Google Chrome - no Greasemonkey calls and no chrome.extension stuff
 // here.  localStorage should not be accessed from here either.
 
-// V31.3
+// V31.4
 
 function SGPvP() {
     this.url = window.location.href;
