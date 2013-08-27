@@ -2,7 +2,7 @@
 // Google Chrome - no Greasemonkey calls and no chrome.extension stuff
 // here.  localStorage should not be accessed from here either.
 
-// V31.2
+// V31.3
 
 function SGPvP() {
     this.url = window.location.href;
@@ -35,29 +35,28 @@ function SGPvP() {
         this.setupPageSpecific = function() {}; // nop
     }
 
-    var self = this;
-    var setkeys = function(r) {
-        if(r.keymap)
-            self.keymap = r.keymap;
-        else
+    var self = this,
+    keyHandler = function(event) { self.keyPressHandler(event); },
+    setupHandler = function(event) { self.setupPage(event); },
+    finishConfig = function() {
+        if(!self.keymap)
             // load default keymap
-            self.setKeyMap(JSON.parse(self.getResourceText('default_keymap')));
-    };
-    this.getValues(['keymap'], setkeys);
-    document.addEventListener('keydown',
-                              function(event) { self.keyPressHandler(event); },
-                              false);
+            self.saveSettings({keymap: JSON.parse(self.getResourceText('default_keymap'))});
+        document.addEventListener('keydown', keyHandler, false);
 
-    // Insert a bit of script to execute in the page's context and
-    // send us what we need. And add a listener to receive the call.
-    window.addEventListener('message',
-                            function(event) { self.setupPage(event); },
-                            false);
-    var script = document.createElement('script');
-    script.type = 'text/javascript';
-    // window.location.origin is only available on FF 20
-    script.textContent = "(function() {var fn=function(){window.postMessage({sgpvp:1,loc:userloc},window.location.protocol+'//'+window.location.host);};if(typeof(addUserFunction)=='function')addUserFunction(fn);fn();})();";
-    document.body.appendChild(script);
+        // Insert a bit of script to execute in the page's context and
+        // send us what we need. And add a listener to receive the call.
+        window.addEventListener('message', setupHandler, false);
+        var script = document.createElement('script');
+        script.type = 'text/javascript';
+        // window.location.origin is only available on FF 20
+        script.textContent = "(function() {var fn=function(){window.postMessage({sgpvp:1,loc:userloc},window.location.protocol+'//'+window.location.host);};if(typeof(addUserFunction)=='function')addUserFunction(fn);fn();})();";
+        document.body.appendChild(script);
+    };
+
+    this.loadSettings(['keymap', 'targeting', 'armour',
+                       'lkap', 'lkba', 'rtid', 'rmsl'],
+                      finishConfig);
 }
 
 SGPvP.prototype.LOCATION_RX = /^https?:\/\/([^.]+)\.pardus\.at\/([^.]+)\.php/;
@@ -87,11 +86,65 @@ SGPvP.prototype.SHIPS = [
     'wasp', 'ficon', 'rustclaw', 'sabre'
 ];
 
+// A specification of the stuff we keep in persistent storage. 'u' is
+// true for parameters that are not dependent on the universe. 'd' is
+// the default value.
+SGPvP.prototype.CFGDEF = {
+    keymap: { u:true, d:null },
+    rtid: { u:false, d:null }, // retreat tile id
+    lkap: { u:false, d:null }, // last known armour points
+    lkba: { u:false, d:null }, // last known bots available
+    rmsl: { u:false, d:null }, // raid with missiles
+    ql: { u:false, d:'' },
+    targeting: { u:false,
+                 d:{ ql:{includeFactions:{},
+                         excludeFactions:{},
+                         includeAlliances:{},
+                         excludeAlliances:{},
+                         includeCharacters:{},
+                         excludeCharacters:{}},
+                     include:{ids:{},names:{}},
+                     exclude:{ids:{},names:{}},
+                     prioritiseTraders:false,
+                     retreatTile:null } },
+    armour: { u:false, d:{ points: null, level: 5 } }
+};
+
+// Load the supplied keys from persistent storage into object properties.
+SGPvP.prototype.loadSettings = function(keys, callback) {
+    var self = this, skeys = new Object(), defs = this.CFGDEF,
+        prefix = this.universe + '-';
+    var act = function(r) {
+        for(var skey in r) {
+            var key = skeys[skey], def = defs[key], val = r[skey];
+            if(typeof(val) == 'undefined')
+                val = def.d;
+            self[key] = val;
+        }
+        callback();
+    };
+
+    for(var i in keys) {
+        var key = keys[i], def = defs[key], skey = def.u ? key : prefix + key;
+        skeys[skey] = key;
+    }
+
+    this.getValues(Object.keys(skeys), act);
+};
+
+SGPvP.prototype.saveSettings = function(settings) {
+    var o = new Object(), defs = this.CFGDEF, prefix = this.universe + '-';
+    for(var key in settings) {
+        var skey = defs[key].u ? key : prefix + key;
+        this[key] = o[skey] = settings[key];
+    }
+    this.setValues(o);
+};
+
 // This is a handler for DOM messages coming from the game page.  It's
-// called once after the page loads, and again every time a partial
-// refresh occurs (latter in the nav screen only, so far).  It
-// contains the value of the userloc variable, set by the page on its
-// javascript context.
+// called once after the page loads, and again when a partial refresh
+// occurs.  It contains the value of the userloc variable, set by the
+// page on its javascript context.
 //
 // Doing things this way may seem a bit awkward to Firefox userscript
 // writers, but it is the proper (only?) way to do it in Chrome.
@@ -102,25 +155,6 @@ SGPvP.prototype.setupPage = function(event) {
         return;
     this.userloc = parseInt(event.data.loc);
     this.setupPageSpecific();
-};
-
-SGPvP.prototype.DEFAULT_TARGETING = {
-    ql:{includeFactions:{},
-        excludeFactions:{},
-        includeAlliances:{},
-        excludeAlliances:{},
-        includeCharacters:{},
-        excludeCharacters:{}},
-    include:{ids:{},names:{}},
-    exclude:{ids:{},names:{}},
-    prioritiseTraders:false,
-    retreatTile:null
-};
-SGPvP.prototype.DEFAULT_ARMOUR = { points: null, level: 5 };
-
-SGPvP.prototype.setKeyMap = function(keymap) {
-    this.keymap = keymap;
-    this.setValues({ 'keymap': keymap });
 };
 
 SGPvP.prototype.closeUi = function() {
@@ -177,8 +211,9 @@ SGPvP.prototype.hideNotification = function() {
     this.notification = null;
 };
 
-SGPvP.prototype.createElement = function(tag, style, attributes, text_content, parent) {
-    var e = document.createElement(tag);
+SGPvP.prototype.createElement = function(tag, style, attributes,
+                                         text_content, parent) {
+    var e = document.createElement(tag), property;
     if(attributes)
         for(property in attributes)
             e[property] = attributes[property];
@@ -193,27 +228,23 @@ SGPvP.prototype.createElement = function(tag, style, attributes, text_content, p
 };
 
 SGPvP.prototype.scanForTargets = function(targeting_data, ships) {
-    var exc = new Array();
-    var inc = new Array();
-    var ql = targeting_data.ql;
-    var include = targeting_data.include;
-    var exclude = targeting_data.exclude;
+    var exc = new Array(), inc = new Array(),
+    ql = targeting_data.ql,
+    include = targeting_data.include,
+    exclude = targeting_data.exclude;
 
-    for(var i = 0, end = ships.length; i < end; i++) {
-        var ship = ships[i];
-        var name = ship.name.toLowerCase();
-        var n;
+    for(var i in ships) {
+        var ship = ships[i], name = ship.name.toLowerCase(), n;
 
-        if(exclude.ids[ship.id] || exclude.names[name]) {
+        if(exclude.ids[ship.id] || exclude.names[name])
             exc.push(ship);
-        }
         else if((n = include.ids[ship.id]) || (n = include.names[name])) {
             ship.includePriority = n;
             inc.push(ship);
         }
         else if(ql.excludeFactions[ship.faction] ||
-           ql.excludeAlliances[ship.ally_id] ||
-           ql.excludeCharacters[ship.id])
+                ql.excludeAlliances[ship.ally_id] ||
+                ql.excludeCharacters[ship.id])
             exc.push(ship);
         else if(ql.includeFactions[ship.faction] ||
                 ql.includeAlliances[ship.ally_id] ||
@@ -221,22 +252,20 @@ SGPvP.prototype.scanForTargets = function(targeting_data, ships) {
             inc.push(ship);
     }
 
-    return {
-        excluded: exc,
-        included: inc
-    };
+    return { excluded: exc, included: inc };
 };
 
 SGPvP.prototype.chooseTarget = function(ships, ship_pri) {
-    var best;
+    var best, i;
 
-    for(var i = 0, end = ships.length; i < end; i++) {
+    for(i in ships) {
         var ship = ships[i];
         if(!best)
             best = ship;
         else {
             if(best.includePriority) {
-                if(ship.includePriority && (ship.includePriority < best.includePriority))
+                if(ship.includePriority &&
+                   (ship.includePriority < best.includePriority))
                     best = ship;
             }
             else {
@@ -244,8 +273,8 @@ SGPvP.prototype.chooseTarget = function(ships, ship_pri) {
                     best = ship;
                 else {
                     if(ship_pri) {
-                        var sm = ship_pri[ship.shipModel];
-                        var bm = ship_pri[best.shipModel];
+                        var sm = ship_pri[ship.shipModel],
+                        bm = ship_pri[best.shipModel];
 
                         if(sm < bm)
                             best = ship;
@@ -267,8 +296,8 @@ SGPvP.prototype.chooseTarget = function(ships, ship_pri) {
 };
 
 SGPvP.prototype.getShipModelPriorities = function() {
-    var a = this.SHIPS, o = new Object();
-    for(var i = 0, end = a.length; i < end; i++)
+    var a = this.SHIPS, o = new Object(), i;
+    for(i in a)
         o[a[i]] = i + 1;
     return o;
 };
@@ -280,15 +309,14 @@ SGPvP.prototype.setupNavPage = function() {
     this.useBotsAmountField = null;
     this.useBotsButton = null;
 
-    var settings = new Object(), u = this.universe;
+    var settings = new Object(), n = NaN, elt;
 
     // Get the current ship armour. It's in a properly ID'd span.
-    var n = NaN;
-    var elt = document.getElementById('spanShipArmor');
+    elt = document.getElementById('spanShipArmor');
     if(elt)
         n = parseInt(elt.textContent);
     if(!isNaN(n))
-        settings[u+'-lkap'] = n;
+        settings.lkap = n;
 
     // Get amount of bots in the cargo hold, from the Nav screen. This
     // information is always available, except when the user clicked
@@ -323,27 +351,28 @@ SGPvP.prototype.setupNavPage = function() {
         }
     }
     if(!isNaN(n))
-        settings[u+'-lkba'] = n;
+        settings.lkba = n;
 
-    this.setValues(settings);
+    this.saveSettings(settings);
 };
 
 // This if called every time the ship2ship and building page is
 // loaded. It should run fast and report no errors.
 SGPvP.prototype.setupCombatPage = function() {
-    var settings = new Object(), u = this.universe, elt;
+    var settings = new Object(), elt;
 
     elt = document.evaluate("//td/input[@name = 'resid' and @value = '8']",
                             document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
                             null).singleNodeValue;
     if(elt) {
-        // Found the resid hidden element for bots. It is contained in a
-        // td. The previous td contains the amount available; the next
-        // input in the current td should be the amount to use field, and
-        // the next input, the submit button.
-        var available = parseInt(elt.parentNode.previousElementSibling.textContent);
+        // Found the resid hidden element for bots. It is contained in
+        // a td. The previous td contains the amount available; the
+        // next input in the current td should be the amount to use
+        // field, and the next input, the submit button.
+        var available =
+            parseInt(elt.parentNode.previousElementSibling.textContent);
         if(!isNaN(available))
-            settings[u+'-lkba'] = available;
+            settings.lkba = available;
 
         var amountField = elt.nextElementSibling;
         if(amountField && amountField.name == 'amount') {
@@ -360,39 +389,31 @@ SGPvP.prototype.setupCombatPage = function() {
         // how many bots we have (e.g. if the building isn't blocking)
         // so in that case we let the script use the last known value.
         if(this.page != 'building')
-            settings[u+'-lkba'] = 0;
+            settings.lkba = 0;
     }
 
-    elt = document.evaluate("//font[starts-with(text(), 'Armor points:')]",
+    elt = document.evaluate("//font[contains(text(), 'Armor points:')]",
                             document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
                             null).singleNodeValue;
     if(elt) {
         var armour = parseInt(elt.textContent.substring(13));
         if(!isNaN(armour))
-            settings[u+'-lkap'] = armour;
+            settings.lkap = armour;
     }
 
-    this.setValues(settings);
-};
-
-SGPvP.prototype.useBots = function(thisMany) {
-    var self = this, u = this.universe;
-    self.getValues([u+'-armour', u+'-lkap', u+'-lkba'],
-                   function(results) { self.useBots2(results, thisMany); });
+    this.saveSettings(settings);
 };
 
 // If thisMany is not supplied, compute the amount needed to the best
 // of our knowledge.
-SGPvP.prototype.useBots2 = function(cfg, thisMany) {
-    var botRepair, u = this.universe;
-    var armour = cfg[u+'-armour'] || this.DEFAULT_ARMOUR;
-    var lkap = cfg[u+'-lkap'], lkba = cfg[u+'-lkba'];
+SGPvP.prototype.useBots = function(thisMany) {
+    var botRepair;
 
     if(thisMany)
         // dont bother trying to compute armour, use what we're told exactly
-        botRepair = Math.floor(180 / armour.level);
+        botRepair = Math.floor(180 / this.armour.level);
     else {
-        var bots = this.computeBotsNeeded(armour, lkap, lkba);
+        var bots = this.computeBotsNeeded();
         if(!bots)
             return;
 
@@ -402,10 +423,11 @@ SGPvP.prototype.useBots2 = function(cfg, thisMany) {
 
     // Compute how much armour the bots will repair, and how many
     // we'll have left, and update last known values.
-    var newSettings = new Object();
-    newSettings[u+'-lkap'] =
-        typeof(lkap) == 'number' ? lkap + thisMany * botRepair : null;
-    newSettings[u+'-lkba'] = lkba > thisMany ? lkba - thisMany : 0;
+    var newSettings = {
+        lkap: typeof(this.lkap) == 'number' ?
+            this.lkap + thisMany * botRepair : null,
+        lkba: this.lkba > thisMany ? this.lkba - thisMany : 0
+    };
 
     var amount, submit;
     if(this.useBotsAmountField) {
@@ -420,7 +442,7 @@ SGPvP.prototype.useBots2 = function(cfg, thisMany) {
         submit = form.elements['useres'];
     }
 
-    this.setValues(newSettings);
+    this.saveSettings(newSettings);
     amount.value = thisMany;
     submit.click();
 };
@@ -441,10 +463,13 @@ SGPvP.prototype.getMadeUpBotsForm = function() {
     }
 
     form = this.createElement('form', {display: 'none'},
-                              {id: 'sgpvp-useform', action: action, method: method},
+                              {id: 'sgpvp-useform', action: action,
+                               method: method},
                               null, null);
-    this.createElement('input', null, {type: 'text', name: 'resid', value: 8}, null, form);
-    this.createElement('input', null, {type: 'text', name: 'amount'}, null, form);
+    this.createElement('input', null,
+                       {type: 'text', name: 'resid', value: 8}, null, form);
+    this.createElement('input', null,
+                       {type: 'text', name: 'amount'}, null, form);
     this.createElement('input', null,
                        {type: 'submit', name: 'useres', value: 'Use',
                         onclick: 'useRes(document.getElementById("sgpvp-useform").elements["resid"].value, document.getElementById("sgpvp-useform").elements["amount"].value);return false;'},
@@ -453,26 +478,10 @@ SGPvP.prototype.getMadeUpBotsForm = function() {
     return form;
 };
 
-SGPvP.prototype.showBotsNeeded = function(cfg) {
-    var u = this.universe;
-    var bots =
-        this.computeBotsNeeded(cfg[u+'-armour'] || this.DEFAULT_ARMOUR,
-                               cfg[u+'-lkap'], cfg[u+'-lkba']);
-    if(!bots)
-        return;
-
-    if(this.useBotsAmountField)
-        this.useBotsAmountField.value = bots.available;
-
-    if(bots.needed == 1)
-        this.showNotification('Need ' + bots.needed + ' robot, would use ' + bots.available, 1000);
-    else
-        this.showNotification('Need ' + bots.needed + ' robots, would use ' + bots.available, 1000);
-};
-
 // This function shows notifications. If it returns null, bots are not
 // needed or can't be used, and the user already knows.
-SGPvP.prototype.computeBotsNeeded = function(armour, lkap, lkba) {
+SGPvP.prototype.computeBotsNeeded = function() {
+    var armour = this.armour, lkap = this.lkap, lkba = this.lkba;
     if(!(armour.points > 0 && armour.level > 0)) {
         this.showNotification('Ship armour not configured', 1500);
         return null;
@@ -555,21 +564,17 @@ SGPvP.prototype.getShipsNav = function() {
 };
 
 SGPvP.prototype.parseOtherShipsTable = function(tbody, link_rx) {
-    var a, ships = [];
-    var xpr = document.evaluate("tr/td/a", tbody, null,
-                               XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
+    var a, ships = [],
+    xpr = document.evaluate("tr/td/a", tbody, null,
+                            XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
     while((a = xpr.iterateNext())) {
         var m = link_rx.exec(a.getAttribute('href'));
         if(m) {
-            var td = a.parentNode;
-            var entry = {
-                td: td,
-                id: parseInt(m[1]),
-                name: a.textContent
-            };
-            var xpr2 = document.evaluate("font/b/a", td, null,
-                                         XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
-            var a2;
+            var a2, td = a.parentNode,
+            entry = { td: td, id: parseInt(m[1]), name: a.textContent },
+            xpr2 = document.evaluate("font/b/a", td, null,
+                                     XPathResult.UNORDERED_NODE_ITERATOR_TYPE,
+                                     null);
             while((a2 = xpr2.iterateNext())) {
                 m = this.ALLYID_RX.exec(a2.getAttribute('href'));
                 if(m)
@@ -586,13 +591,13 @@ SGPvP.prototype.parseOtherShipsTable = function(tbody, link_rx) {
 
 SGPvP.prototype.setMissiles = function(fire) {
     // ends-with() would be better, but not supported on FF
-    var xpr = document.evaluate("//input[@type='checkbox' and contains(@name,'_missile')]",
-                                document, null,
-                                XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
-    var ck;
+    var ck,
+    xpr = document.evaluate("//input[@type='checkbox' and contains(@name,'_missile')]",
+                            document, null,
+                            XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
     while((ck = xpr.iterateNext()))
         ck.checked = fire;
-}
+};
 
 // Find in the given select element the option with the largest
 // numeric value that is less than or equal to limit, and select it.
@@ -610,11 +615,12 @@ SGPvP.prototype.selectMaxValue = function(select, limit) {
 };
 
 SGPvP.prototype.setRounds = function(limit) {
-    var xpr = document.evaluate('//select[@name = "rounds"]', document, null,
-                                XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
-    var sel;
+    var sel,
+    xpr = document.evaluate('//select[@name = "rounds"]', document, null,
+                            XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
     while((sel = xpr.iterateNext())) {
-        if(sel.style.display == 'none' && sel.nextElementSibling.tagName == 'SELECT') {
+        if(sel.style.display == 'none' &&
+           sel.nextElementSibling.tagName == 'SELECT') {
             // for some reason, Pardus now hides the rounds select,
             // and instead adds a second, visible select element, with
             // a gibberish name.
@@ -625,15 +631,45 @@ SGPvP.prototype.setRounds = function(limit) {
     }
 };
 
+SGPvP.prototype.doEngage = function(rounds, raid) {
+    var elt = document.evaluate('//input[@name="ok" and @type="submit" and @value="Attack"]',
+                                document, null,
+                                XPathResult.ANY_UNORDERED_NODE_TYPE,
+                                null).singleNodeValue;
+    if(elt && elt.click) {
+        var missiles;
+        if(this.page == 'ship2opponent_combat')
+            missiles = false;
+        else if(raid) {
+            var surr = document.getElementById('letsurrender'); 
+            if(surr) {
+                surr.checked = true;
+                missiles = this.rmsl ? true : false;
+            }
+            else
+                missiles = true;
+        }
+        else
+            missiles = true;
+        this.setRounds(rounds);
+        this.setMissiles(missiles);
+        elt.click();
+        return;
+    }
+
+    // no attack button?
+    this.target();
+};
+
+
 // Methods below are the actual actions we perform in response to key presses.
 // Keep the method names in sync with the UI.
 
+
 SGPvP.prototype.setRetreatPoint = function() {
     if(this.userloc) {
-        var sett = new Object();
-        sett[this.universe+'-rtid'] = this.userloc;
-        this.setValues(sett);
-        this.showNotification('Retreat tile set: ' + this.userloc, 500);
+        this.saveSettings({rtid: this.userloc});
+        this.showNotification('Retreat tile set: ' + this.rtid, 500);
     }
     else
         this.showNotification('Can not set retreat tile', 500);
@@ -642,45 +678,14 @@ SGPvP.prototype.setRetreatPoint = function() {
 SGPvP.prototype.engage = function() { this.doEngage(1000, false); };
 SGPvP.prototype.engage15 = function() { this.doEngage(15, false); };
 SGPvP.prototype.engage10 = function() { this.doEngage(10, false); };
-
 SGPvP.prototype.raid = function() { this.doEngage(1000, true); };
 SGPvP.prototype.raid10 = function() { this.doEngage(10, true); };
 SGPvP.prototype.raid15 = function() { this.doEngage(15, true); };
 
-SGPvP.prototype.doEngage = function(rounds, raid) {
-    var elt = document.evaluate('//input[@name="ok" and @type="submit" and @value="Attack"]',
-                                document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
-                                null).singleNodeValue;
-    if(elt && elt.click) {
-        this.setRounds(rounds);
-        if(this.page == 'ship2opponent_combat')
-            this.setMissiles(false);
-        else {
-            var surr = document.getElementById('letsurrender');
-            if(surr && raid) {
-                // load rmsl... maybe we should just load all config from the start, hm.
-                surr.checked = true;
-                var self = this, u = this.universe;
-                this.getValues([u+'-rmsl'],
-                              function(r) {
-                                  self.setMissiles(r[u+'-rmsl'] ? true : false);
-                                  elt.click();
-                              });
-                return;
-            }
-            // else...
-            this.setMissiles(true);
-        }
-        elt.click();
-        return;
-    }
-    // else no attack button..
-    this.target();
-};
-
 SGPvP.prototype.disengage = function() {
     var elt = document.evaluate('//input[@name="retreat" and @type="submit"]',
-                                document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                                document, null,
+                                XPathResult.ANY_UNORDERED_NODE_TYPE,
                                 null).singleNodeValue;
     if(elt && elt.click) {
         elt.click();
@@ -695,37 +700,41 @@ SGPvP.prototype.disengage = function() {
         return;
     }
 
-    var self = this, u = this.universe;
-    var act = function(results) {
-        var tile_id = results[u+'-rtid'];
-        if(tile_id) {
-            var form = document.getElementById('navForm');
-            if(form) {
-                var destination = form.elements.destination;
-                if(destination) {
-                    destination.value = tile_id;
-                    form.submit();
-                    return;
-                }
+    if(this.rtid) {
+        var form = document.getElementById('navForm');
+        if(form) {
+            var destination = form.elements.destination;
+            if(destination) {
+                destination.value = this.rtid;
+                form.submit();
+                return;
             }
         }
-        else
-            self.showNotification('NO RETREAT TILE SET', 500);
-        self.nav();
-    };
+        // still here? report...
+        this.showNotification("SGPvP error 5002: cannot retreat, USE MOUSE and REPORT THIS", 1500);
+    }
+    else
+        this.showNotification('NO RETREAT TILE SET', 500);
 
-    this.getValues([u+'-rtid'], act);
+    this.nav();
 };
 
 SGPvP.prototype.nav = function() { document.location = 'main.php'; };
 SGPvP.prototype.bots = function() { this.useBots(null); };
 
 SGPvP.prototype.testBots = function() {
-    var self = this, u = this.universe;
-    this.getValues([u+'-armour', u+'-lkap', u+'-lkba'],
-                   function(results) {
-                       self.showBotsNeeded(results);
-                   });
+    var msg, bots = this.computeBotsNeeded();
+    if(!bots)
+        return;
+
+    if(this.useBotsAmountField)
+        this.useBotsAmountField.value = bots.available;
+
+    if(bots.needed == 1)
+        msg = 'Need ' + bots.needed + ' robot, would use ' + bots.available;
+    else
+        msg = 'Need ' + bots.needed + ' robots, would use ' + bots.available;
+    this.showNotification(msg, 1000);
 };
 
 SGPvP.prototype.damageBuilding = function() {
@@ -747,16 +756,25 @@ SGPvP.prototype.bots4 = function() { this.useBots(4); };
 SGPvP.prototype.bots5 = function() { this.useBots(5); };
 SGPvP.prototype.bots8 = function() { this.useBots(8); };
 SGPvP.prototype.bots12 = function() { this.useBots(12); };
-SGPvP.prototype.fillTank = function() { document.location = 'main.php?fillup=1'; };
-SGPvP.prototype.enterBuilding = function() { document.location = 'building.php'; };
-SGPvP.prototype.flyClose = function() { document.location = 'main.php?entersb=1'; };
-SGPvP.prototype.exitFlyClose = function() { document.location = 'main.php?exitsb=1'; };
+SGPvP.prototype.fillTank = function() {
+    document.location = 'main.php?fillup=1';
+};
+SGPvP.prototype.enterBuilding = function() {
+    document.location = 'building.php';
+};
+SGPvP.prototype.flyClose = function() {
+    document.location = 'main.php?entersb=1';
+};
+SGPvP.prototype.exitFlyClose = function() {
+    document.location = 'main.php?exitsb=1';
+};
 SGPvP.prototype.dockUndock = function() { this.undock() || this.dock(); };
 SGPvP.prototype.dock = function() { top.location = 'game.php?logout=1'; };
 
 SGPvP.prototype.undock = function() {
     var elt = document.evaluate('//input[@value="Launch Ship" and @type="submit"]',
-                                document, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                                document, null,
+                                XPathResult.ANY_UNORDERED_NODE_TYPE,
                                 null).singleNodeValue;
     if(elt && elt.click) {
         elt.click();
@@ -786,33 +804,30 @@ SGPvP.prototype.testTargeting = function() {
     if(!ships)
         return;
 
-    var self = this, u = this.universe;
-    var highlight_target = function(td, colour) {
+    var i,
+    highlight_target = function(td, colour) {
         td.style.backgroundColor = colour;
         td.previousElementSibling.style.backgroundColor = colour;
     };
-    var act = function(results) {
-        var targeting_data = results[u+'-targeting'] || self.DEFAULT_TARGETING;
-        var targets = self.scanForTargets(targeting_data, ships);
-        // turn the excluded ships green
-        for(var i = 0, end = targets.excluded.length; i < end; i++)
-            highlight_target(targets.excluded[i].td, '#050');
-        if(targets.included.length > 0) {
-            // turn the included ships red
-            for(var i2 = 0, end2 = targets.included.length; i2 < end2; i2++)
-                highlight_target(targets.included[i2].td, '#500');
-            // highlight the chosen target
-            var ship_pri = (self.page == 'main') ?
-                self.getShipModelPriorities() : null;
-            var best = self.chooseTarget(targets.included, ship_pri);
-            highlight_target(best.td, '#900');
-        }
-    };
 
-    for(var i = 0, end = ships.length; i < end; i++)
+    for(i in ships)
         highlight_target(ships[i].td, 'inherit');
 
-    this.getValues([u+'-targeting'], act);
+    // XXX this.targeting not needed for scan...
+    var targets = this.scanForTargets(this.targeting, ships);
+    // turn the excluded ships green
+    for(i in targets.excluded)
+        highlight_target(targets.excluded[i].td, '#050');
+    if(targets.included.length > 0) {
+        // turn the included ships red
+        for(i in targets.included)
+            highlight_target(targets.included[i].td, '#500');
+        // highlight the chosen target
+        var ship_pri = (this.page == 'main') ?
+            this.getShipModelPriorities() : null;
+        var best = this.chooseTarget(targets.included, ship_pri);
+        highlight_target(best.td, '#900');
+    }
 };
 
 SGPvP.prototype.target = function() {
@@ -820,21 +835,17 @@ SGPvP.prototype.target = function() {
     if(!ships)
         return;
 
-    var self = this, u = this.universe;
-    var act = function(results) {
-        var targeting_data = results[u+'-targeting'] || this.DEFAULT_TARGETING;
-        var targets = self.scanForTargets(targeting_data, ships);
-        if(targets.included.length > 0) {
-            var ship_pri = (self.page == 'main') ?
-                self.getShipModelPriorities() : null;
-            var best = self.chooseTarget(targets.included, ship_pri);
-            document.location = 'ship2ship_combat.php?playerid=' + best.id;
-            return;
-        }
-        self.nav();
-    };
+    var targets = this.scanForTargets(this.targeting, ships);
+    if(targets.included.length > 0) {
+        var ship_pri = (this.page == 'main') ?
+            this.getShipModelPriorities() : null;
+        var best = this.chooseTarget(targets.included, ship_pri);
+        document.location = 'ship2ship_combat.php?playerid=' + best.id;
+        return;
+    }
 
-    this.getValues([u+'-targeting'], act);
+    // no target?
+    this.nav();
 };
 
 SGPvP.prototype.configure = function() {

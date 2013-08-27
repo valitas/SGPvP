@@ -13,7 +13,7 @@
 // @resource    ui_style ui.css
 // @resource    default_keymap default-keymap.json
 // @author      Val
-// @version     31.2
+// @version     31.3
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @grant       GM_deleteValue

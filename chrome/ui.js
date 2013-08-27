@@ -68,7 +68,7 @@ SGPvPUI.prototype.UI_ELEMENT_IDS =
 
 SGPvPUI.prototype.setUIElement = function(div) {
     this.ui_element = div;
-    var doc  = this.doc;
+    var doc = this.doc, sgpvp = this.sgpvp;
 
     // Centre it
     //var screen_width = doc.body.offsetWidth;
@@ -81,19 +81,17 @@ SGPvPUI.prototype.setUIElement = function(div) {
         e[id.substr(3).replace('-','_')] = doc.getElementById(id);
     }
 
-    e.version.textContent = this.sgpvp.getVersion();
+    e.version.textContent = sgpvp.getVersion();
 
     // handlers
-    var self = this, u = this.sgpvp.universe;
-    var timer, keymap, setKey, setKeyId;
-    var actionName = new Object();
+    var self = this, actionName = new Object(), timer, keymap, setKey, setKeyId;
     var func = {
         restoreDefaultKeyBindings: function() {
-            var r = confirm('This will remove all custom key bindings you may have defined. '
-                            + 'You OK with this?');
+            var r = confirm('This will remove all custom key bindings you '
+                            + 'may have defined. You OK with this?');
             if(r) {
-                keymap = JSON.parse(self.sgpvp.getResourceText('default_keymap'));
-                self.sgpvp.setKeyMap(keymap);
+                keymap = JSON.parse(sgpvp.getResourceText('default_keymap'));
+                self.saveKeyMap(keymap);
                 // XXX this code is almost duplicated below, reuse
                 var xpr = doc.evaluate('div', e.keyboard, null,
                                        XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE,
@@ -212,37 +210,51 @@ SGPvPUI.prototype.setUIElement = function(div) {
             timer = window.setTimeout(func.saveTargetingData, 500);
         },
         closeHandler: function() { self.close(); },
-        configure: function(cfg) {
-            keymap = cfg.keymap;
-            e.ql.value = cfg[u+'-ql'] || '';
-            var targetingData = cfg[u+'-targeting'] || self.sgpvp.DEFAULT_TARGETING;
+        configure: function() {
+            keymap = sgpvp.keymap;
+            e.ql.value = sgpvp.ql;
+            var targetingData = sgpvp.targeting;
             e.inc.value = self.stringifyOverrideList(targetingData.include);
             e.exc.value = self.stringifyOverrideList(targetingData.exclude);
-            e.rid.value = cfg[u+'-rtid'] || '';
-            var armourData = cfg[u+'-armour'] || self.sgpvp.DEFAULT_ARMOUR;
+            e.rid.value = sgpvp.rtid;
+            var armourData = sgpvp.armour;
             e.arm.value = armourData.points;
             e.lvl.value = armourData.level;
-            if(cfg[u+'-rmsl'])
+            if(sgpvp.rmsl)
                 e.raidmiss.checked = true;
 
-            e.switch_targeting.addEventListener('click', func.switchToTargeting, false);
-            e.switch_keys.addEventListener('click', func.switchToKeybindings, false);
-            e.ql.addEventListener('keyup', func.targetingControlChangeHandler, false);
-            e.inc.addEventListener('keyup', func.targetingControlChangeHandler, false);
-            e.exc.addEventListener('keyup', func.targetingControlChangeHandler, false);
-            e.rid.addEventListener('keyup', func.targetingControlChangeHandler, false);
-            e.arm.addEventListener('keyup', func.targetingControlChangeHandler, false);
-            e.lvl.addEventListener('keyup', func.targetingControlChangeHandler, false);
-            e.close.addEventListener('click', func.closeHandler, false);
-            e.setkey_done.addEventListener('click', func.switchToKeybindings, false);
-            e.setkey_select.addEventListener('change', func.setKeySelectChangeHandler, false);
-            e.default_keymap.addEventListener('click', func.restoreDefaultKeyBindings, false);
-            e.raidmiss.addEventListener('click', func.targetingControlChangeHandler, false);
+            e.switch_targeting.addEventListener
+            ('click', func.switchToTargeting, false);
+            e.switch_keys.addEventListener
+            ('click', func.switchToKeybindings, false);
+            e.ql.addEventListener
+            ('keyup', func.targetingControlChangeHandler, false);
+            e.inc.addEventListener
+            ('keyup', func.targetingControlChangeHandler, false);
+            e.exc.addEventListener
+            ('keyup', func.targetingControlChangeHandler, false);
+            e.rid.addEventListener
+            ('keyup', func.targetingControlChangeHandler, false);
+            e.arm.addEventListener
+            ('keyup', func.targetingControlChangeHandler, false);
+            e.lvl.addEventListener
+            ('keyup', func.targetingControlChangeHandler, false);
+            e.close.addEventListener
+            ('click', func.closeHandler, false);
+            e.setkey_done.addEventListener
+            ('click', func.switchToKeybindings, false);
+            e.setkey_select.addEventListener
+            ('change', func.setKeySelectChangeHandler, false);
+            e.default_keymap.addEventListener
+            ('click', func.restoreDefaultKeyBindings, false);
+            e.raidmiss.addEventListener
+            ('click', func.targetingControlChangeHandler, false);
 
             // We fetch the human names for actions from #sg-setkey-select.
             // Hey they're needed there anyway, and this saves code.
             var xpr = doc.evaluate('.//option', e.setkey_select, null,
-                                   XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
+                                   XPathResult.UNORDERED_NODE_ITERATOR_TYPE,
+                                   null);
             var kopt;
             while((kopt = xpr.iterateNext())) {
                 var val = kopt.value;
@@ -265,9 +277,8 @@ SGPvPUI.prototype.setUIElement = function(div) {
     };
 
     // load settings and configure
-    this.sgpvp.getValues(['keymap', u+'-ql', u+'-targeting',
-                          u+'-rtid', u+'-armour', u+'-rmsl'],
-                         func.configure);
+    sgpvp.loadSettings(['keymap', 'ql', 'targeting', 'rtid', 'armour', 'rmsl'],
+                       func.configure);
 };
 
 SGPvPUI.prototype.close = function() {
@@ -278,7 +289,7 @@ SGPvPUI.prototype.close = function() {
 };
 
 SGPvPUI.prototype.saveKeyMap = function(keymap) {
-    this.sgpvp.setKeyMap(keymap);
+    this.sgpvp.saveSettings({keymap: keymap});
 };
 
 SGPvPUI.prototype.DIGITS_RX = /^\s*[0-9]*\s*$/;
@@ -306,19 +317,19 @@ SGPvPUI.prototype.saveTargetingData = function(ql,
     if(!qo)
         return false;
 
-    var sett = new Object(), u = this.sgpvp.universe;
-    sett[u+'-ql'] = qo.ql;
-    sett[u+'-targeting'] = {
-        ql: qo.parsed,
-        include: this.parseOverrideList(include_overrides),
-        exclude: this.parseOverrideList(exclude_overrides)
+    var settings = {
+        ql: qo.ql,
+        targeting: {
+            ql: qo.parsed,
+            include: this.parseOverrideList(include_overrides),
+            exclude: this.parseOverrideList(exclude_overrides)
+        },
+        armour: { points: armour_points, level: armour_level },
+        rmsl: raidmiss ? 1 : 0
     };
     if(retreat_tile)
-        sett[u+'-rtid'] = retreat_tile;
-    sett[u+'-armour'] = { points: armour_points,
-                          level: armour_level };
-    sett[u+'-rmsl'] = raidmiss ? 1 : 0;
-    this.sgpvp.setValues(sett);
+        settings.rtid = retreat_tile;
+    this.sgpvp.saveSettings(settings);
     return true;
 };
 
