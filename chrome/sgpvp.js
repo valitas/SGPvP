@@ -765,9 +765,6 @@ SGPvP.prototype.bots12 = function() { this.useBots(12); };
 SGPvP.prototype.fillTank = function() {
     document.location = 'main.php?fillup=1';
 };
-SGPvP.prototype.enterBuilding = function() {
-    document.location = 'building.php';
-};
 SGPvP.prototype.flyClose = function() {
     document.location = 'main.php?entersb=1';
 };
