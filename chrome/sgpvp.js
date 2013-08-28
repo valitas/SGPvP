@@ -1,7 +1,7 @@
 // SGPvP object. This code must run on Firefox and Google Chrome - no
 // Greasemonkey calls and no chrome.* stuff here.
 
-// V31.6
+// V31.7
 
 function SGPvP() {
     this.url = window.location.href;
@@ -49,7 +49,7 @@ function SGPvP() {
         var script = document.createElement('script');
         script.type = 'text/javascript';
         // window.location.origin is only available on FF 20
-        script.textContent = "(function() {var fn=function(){window.postMessage({sgpvp:1,loc:userloc,ajax:ajax},window.location.protocol+'//'+window.location.host);};if(typeof(addUserFunction)=='function')addUserFunction(fn);fn();})();";
+        script.textContent = "(function() {var fn=function(){window.postMessage({sgpvp:1,loc:userloc,ajax:typeof(ajax)=='undefined'?null:ajax},window.location.protocol+'//'+window.location.host);};if(typeof(addUserFunction)=='function')addUserFunction(fn);fn();})();";
         document.body.appendChild(script);
     };
 
