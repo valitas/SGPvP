@@ -49,7 +49,7 @@ function SGPvP() {
         var script = document.createElement('script');
         script.type = 'text/javascript';
         // window.location.origin is only available on FF 20
-        script.textContent = "(function() {var fn=function(){window.postMessage({sgpvp:1,loc:userloc},window.location.protocol+'//'+window.location.host);};if(typeof(addUserFunction)=='function')addUserFunction(fn);fn();})();";
+        script.textContent = "(function() {var fn=function(){window.postMessage({sgpvp:1,loc:userloc,ajax:ajax},window.location.protocol+'//'+window.location.host);};if(typeof(addUserFunction)=='function')addUserFunction(fn);fn();})();";
         document.body.appendChild(script);
     };
 
@@ -152,6 +152,7 @@ SGPvP.prototype.setupPage = function(event) {
     if(!event.data || event.data.sgpvp != 1)
         return;
     this.userloc = parseInt(event.data.loc);
+    this.ajax = event.data.ajax;
     this.setupPageSpecific();
 };
 
@@ -699,29 +700,42 @@ SGPvP.prototype.disengage = function() {
 
     // no retreat button?
     if(this.page != 'main') {
-        // XXX - we probably could skip this nav, by inserting an
+        // XXX - we may be able to skip this nav, by inserting an
         // invisible form and submitting it...
         this.nav();
         return;
     }
 
-    if(this.rtid) {
-        var form = document.getElementById('navForm');
-        if(form) {
-            var destination = form.elements.destination;
-            if(destination) {
-                destination.value = this.rtid;
-                form.submit();
-                return;
-            }
-        }
-        // still here? report...
-        this.showNotification("SGPvP error 5002: cannot retreat, USE MOUSE and REPORT THIS", 1500);
-    }
-    else
+    if(!this.rtid) {
         this.showNotification('NO RETREAT TILE SET', 500);
+        this.nav();
+    }
 
-    this.nav();
+    if(this.ajax) {
+        var xpath = "//table[@id='navareatransition']/tbody/tr/td/a[@onclick='navAjax(" +
+            this.rtid + ")']";
+        var tile = document.evaluate(xpath,
+                                     document, null,
+                                     XPathResult.ANY_UNORDERED_NODE_TYPE,
+                                     null).singleNodeValue;
+        if(tile) {
+            tile.click();
+            return;
+        }
+    }
+
+    var form = document.getElementById('navForm');
+    if(form) {
+        var destination = form.elements.destination;
+        if(destination) {
+            destination.value = this.rtid;
+            form.submit();
+            return;
+        }
+    }
+
+    // still here? report...
+    this.showNotification("Error 5002 cannot retreat, USE MOUSE and REPORT THIS", 1500);
 };
 
 SGPvP.prototype.nav = function() { document.location = 'main.php'; };
