@@ -45,6 +45,218 @@ SGPvPUI.prototype.open = function() {
     this.setUIElement(div);
 };
 
+SGPvPUI.prototype.close = function() {
+    if(this.ui_element) {
+        this.ui_element.parentNode.removeChild(this.ui_element);
+        delete this.ui_element;
+    }
+};
+
+SGPvPUI.prototype.enableClose = function(enabled) {
+    var close = this.elements.close;
+    if(enabled) {
+        close.disabled = false;
+        close.style.borderColor = null;
+        close.style.color = null;
+    }
+    else {
+        close.disabled = true;
+        close.style.borderColor = 'rgb(0,0,28)';
+        close.style.color = 'rgb(56,56,84)';
+    }
+};
+
+SGPvPUI.prototype.enableCloseIfProper = function() {
+    var enabled = this.targetingValid && this.armourValid && this.rtidValid;
+    this.enableClose(enabled);
+};
+
+// Parse QL and include/exclude lists. Store if they are valid,
+// inhibit close if they are not.
+SGPvPUI.prototype.targetingDataInputHandler = function() {
+    this.targetingValid = false;
+
+    var qo = this.parseQL(this.elements.ql.value);
+    if(qo) {
+        this.targetingValid = true;
+        this.elements.ql.style.removeProperty('color');
+        var settings = {
+            ql: qo.ql,
+            targeting: {
+                ql: qo.parsed,
+                include: this.parseOverrideList(this.elements.inc.value),
+                exclude: this.parseOverrideList(this.elements.exc.value)
+            }
+        };
+        this.sgpvp.saveSettings(settings);
+    }
+    else
+        this.elements.ql.style.color = 'red';
+    this.enableCloseIfProper();
+};
+
+SGPvPUI.prototype.DIGITS_RX = /^\s*[0-9]+\s*$/;
+SGPvPUI.prototype.EMPTY_RX = /^\s*$/;
+
+// Gets the value of the given element. If it's a positive integer,
+// return it. If it isn't, turn the element red and return null. If
+// max is supplied, then value also must be <= max.  If allowEmpty is
+// true, then an empty string will return -1 and the element
+// won't turn red.
+SGPvPUI.prototype.getPositiveIntegerValue = function(element, max, allowEmpty) {
+    var value = element.value;
+    if(this.DIGITS_RX.test(value)) {
+        var nvalue = parseInt(value);
+        if(nvalue > 0 && (!max || nvalue <= max)) {
+            element.style.color = null;
+            return nvalue;
+        }
+    }
+    else if(allowEmpty && this.EMPTY_RX.test(value)) {
+        element.style.color = null;
+        return -1;
+    }
+
+    // Still here? Problem.
+    element.style.color = 'red';
+    return null;
+};
+
+SGPvPUI.prototype.armourInputHandler = function() {
+    var points = this.getPositiveIntegerValue(this.elements.arm),
+    level = this.getPositiveIntegerValue(this.elements.lvl, 6);
+    if(points && level) {
+        this.armourValid = true;
+        this.sgpvp.saveSettings({ armour: {points:points, level:level} });
+    }
+    else
+        this.armourValid = false;
+    this.enableCloseIfProper();
+};
+
+SGPvPUI.prototype.rtidInputHandler = function() {
+    var rtid = this.getPositiveIntegerValue(this.elements.rid, null, true);
+    if(rtid) {
+        this.rtidValid = true;
+        if(rtid > 0)
+            this.sgpvp.saveSettings({ rtid: rtid });
+        // else XXX - we should have a deleteSettings method...
+    }
+    else
+        this.rtidValid = false;
+    this.enableCloseIfProper();
+};
+
+SGPvPUI.prototype.rmslClickHandler = function() {
+    var rmsl = this.elements.rmsl.checked ? 1 : 0;
+    this.sgpvp.saveSettings({ rmsl: rmsl });
+};
+
+SGPvPUI.prototype.switchToPanel = function(panel) {
+    var e = this.elements;
+    switch(panel) {
+    case 'targeting':
+        e.s2targeting.className = 'active';
+        e.s2keys.className = '';
+        e.targeting.style.display = 'block';
+        e.keybindings.style.display = 'none';
+        e.setkey.style.display = 'none';
+        this.enableCloseIfProper();
+        break;
+    case 'bindings':
+        e.s2targeting.className = '';
+        e.s2keys.className = 'active';
+        e.targeting.style.display = 'none';
+        e.keybindings.style.display = 'block';
+        e.setkey.style.display = 'none';
+        this.enableClose(true);
+    }
+};
+
+SGPvPUI.prototype.switchToSetKey = function(keydiv) {
+    var e = this.elements;
+    this.setkey_div = keydiv;
+    this.setkey_id = parseInt(keydiv.id.substr(4));
+    var cap = keydiv.firstChild.textContent; // bit flaky but succinct
+    var action = this.keymap[this.setkey_id];
+
+    e.keybindings.style.display = 'none';
+    e.setkey.style.display = 'block';
+    e.setkey_code.textContent = this.setkey_id;
+    e.setkey_key.textContent = cap;
+    this.setSelectedAction(action);
+    this.enableClose(false);
+};
+
+SGPvPUI.prototype.setSelectedAction = function(action) {
+    if(!action)
+        action = '';
+    var e = this.elements, opts = e.setkey_select.options;
+    for(var i = 0, end = opts.length; i < end; i++) {
+        var opt = opts.item(i);
+        if(action == opt.value) {
+            e.setkey_select.selectedIndex = i;
+            this.setKeyLegend(e.setkey_key, action);
+            break;
+        }
+    }
+};
+
+SGPvPUI.prototype.setKeySelectChangeHandler = function() {
+    var e = this.elements,
+    opts = e.setkey_select.options,
+    action = opts[e.setkey_select.selectedIndex].value;
+
+    this.setKeyLegend(e.setkey_key, action);
+    this.setKeyLegend(this.setkey_div, action);
+    if(action)
+        this.keymap[this.setkey_id] = action;
+    else
+        delete this.keymap[this.setkey_id];
+    this.saveKeyMap();
+};
+
+SGPvPUI.prototype.setKeyLegend = function(key, action) {
+    if(action) {
+        var legend = this.actionNames[action];
+        if(!legend)
+            legend = action;
+
+        var legenddiv = key.firstElementChild;
+        if(!legenddiv) {
+            legenddiv = key.ownerDocument.createElement('div');
+            key.appendChild(legenddiv);
+        }
+
+        legenddiv.textContent = legend;
+    }
+    else {
+        var legenddiv = key.firstElementChild;
+        if(legenddiv)
+            key.removeChild(legenddiv);
+    }
+};
+
+SGPvPUI.prototype.resetKeyMap = function(resid) {
+    var r = confirm('This will remove all custom key bindings you '
+                    + 'may have defined. You OK with this?');
+    if(r) {
+        this.keymap = JSON.parse(sgpvp.getResourceText(resid));
+        this.saveKeyMap();
+        // XXX this code is almost duplicated below, reuse
+        var e = this.elements;
+        var xpr = this.doc.evaluate('div', e.keyboard, null,
+                                    XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE,
+                                    null);
+        for(var i = 0, end = xpr.snapshotLength; i < end; i++) {
+            var kdiv = xpr.snapshotItem(i);
+            var code = parseInt(kdiv.id.substr(4));
+            var action = this.keymap[code];
+            this.setKeyLegend(kdiv, action);
+        }
+    }
+};
+
 // We use all these elements in the UI DOM.
 SGPvPUI.prototype.UI_ELEMENT_IDS =
     [ 'sg-arm',
@@ -57,15 +269,15 @@ SGPvPUI.prototype.UI_ELEMENT_IDS =
       'sg-keyboard',
       'sg-lvl',
       'sg-ql',
-      'sg-raidmiss',
+      'sg-rmsl',
       'sg-rid',
+      'sg-s2keys',
+      'sg-s2targeting',
       'sg-setkey',
       'sg-setkey-code',
       'sg-setkey-done',
       'sg-setkey-key',
       'sg-setkey-select',
-      'sg-switch-keys',
-      'sg-switch-targeting',
       'sg-targeting',
       'sg-version' ];
 
@@ -79,6 +291,7 @@ SGPvPUI.prototype.setUIElement = function(div) {
 
     // Get the elements we use for controlling the UI
     var e = new Object();
+    this.elements = e;
     for(var i in this.UI_ELEMENT_IDS) {
         var id = this.UI_ELEMENT_IDS[i];
         e[id.substr(3).replace('-','_')] = doc.getElementById(id);
@@ -86,206 +299,81 @@ SGPvPUI.prototype.setUIElement = function(div) {
 
     e.version.textContent = sgpvp.getVersion();
 
+    this.actionNames = new Object();
+
     // handlers
-    var self = this, actionName = new Object(), timer, keymap, setKey, setKeyId;
-    var func = {
-        restoreDefaultKeyBindings: function() { func.resetKeyMap('default_keymap'); },
-        restoreIllarionKeyBindings: function() { func.resetKeyMap('illarion_keymap'); },
-        resetKeyMap: function(resid) {
-            var r = confirm('This will remove all custom key bindings you '
-                            + 'may have defined. You OK with this?');
-            if(r) {
-                keymap = JSON.parse(sgpvp.getResourceText(resid));
-                self.saveKeyMap(keymap);
-                // XXX this code is almost duplicated below, reuse
-                var xpr = doc.evaluate('div', e.keyboard, null,
-                                       XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE,
-                                       null);
-                for(var i = 0, end = xpr.snapshotLength; i < end; i++) {
-                    var kdiv = xpr.snapshotItem(i);
-                    var code = parseInt(kdiv.id.substr(4));
-                    var action = keymap[code];
-                    func.setKeyLegend(kdiv, action);
-                }
-            }
-        },
-        switchToTargeting: function() {
-            e.switch_targeting.className = 'active';
-            e.switch_keys.className = '';
-            e.targeting.style.display = 'block';
-            e.keybindings.style.display = 'none';
-            e.setkey.style.display = 'none';
-            // Flaky, should validate targeting contents...
-            func.setCloseButtonEnabled(true);
-        },
-        switchToKeybindings: function() {
-            e.switch_targeting.className = '';
-            e.switch_keys.className = 'active';
-            e.targeting.style.display = 'none';
-            e.keybindings.style.display = 'block';
-            e.setkey.style.display = 'none';
-            // Flaky, should validate targeting contents...
-            func.setCloseButtonEnabled(true);
-        },
-        switchToSetKey: function(keydiv) {
-            // Switch to setkeys
-            setKey = keydiv;
-            setKeyId = parseInt(keydiv.id.substr(4));
-            var cap = keydiv.firstChild.textContent; // bit flaky but succinct
-            var action = keymap[setKeyId];
+    var self = this,
+    switchToTargeting = function() { self.switchToPanel('targeting'); },
+    switchToKeys = function() { self.switchToPanel('bindings'); },
+    targetingInput = function() { self.targetingDataInputHandler(); },
+    armourInput = function() { self.armourInputHandler(); },
+    rtidInput = function() { self.rtidInputHandler(); },
+    rmslClick = function() { self.rmslClickHandler(); },
+    close = function() { self.close(); },
+    keyClick = function(event) { self.switchToSetKey(event.currentTarget); },
+    setKeySelect = function() { self.setKeySelectChangeHandler(); },
+    defaultKeys = function() { self.resetKeyMap('default_keymap'); },
+    illarionKeys = function() { self.resetKeyMap('illarion_keymap'); },
+    configure = function() {
+        self.keymap = sgpvp.keymap;
+        e.ql.value = sgpvp.ql;
+        var targetingData = sgpvp.targeting;
+        e.inc.value = self.stringifyOverrideList(targetingData.include);
+        e.exc.value = self.stringifyOverrideList(targetingData.exclude);
+        e.rid.value = sgpvp.rtid;
+        var armourData = sgpvp.armour;
+        e.arm.value = armourData.points;
+        e.lvl.value = armourData.level;
+        if(sgpvp.rmsl)
+            e.rmsl.checked = true;
 
-            e.keybindings.style.display = 'none';
-            e.setkey.style.display = 'block';
-            e.setkey_code.textContent = setKeyId;
-            e.setkey_key.textContent = cap;
-            func.setSelectedAction(action);
-            // Flaky, should validate targeting contents...
-            func.setCloseButtonEnabled(false);
-        },
-        setSelectedAction: function(action) {
-            if(!action)
-                action = '';
-            var opts = e.setkey_select.options;
-            for(var i = 0, end = opts.length; i < end; i++) {
-                var opt = opts.item(i);
-                if(action == opt.value) {
-                    e.setkey_select.selectedIndex = i;
-                    func.setKeyLegend(e.setkey_key, action);
-                    break;
-                }
-            }
-        },
-        keyClickHandler: function(event) {
-            func.switchToSetKey(event.currentTarget);
-        },
-        setKeyLegend: function(key, action) {
-            if(action) {
-                var legend = actionName[action];
-                if(!legend)
-                    legend = action;
+        self.targetingValid = true;
+        self.armourValid = true;
+        self.rtidValid = true;
 
-                var legenddiv = key.firstElementChild;
-                if(!legenddiv) {
-                    legenddiv = key.ownerDocument.createElement('div');
-                    key.appendChild(legenddiv);
-                }
+        e.s2targeting.addEventListener('click', switchToTargeting, false);
+        e.s2keys.addEventListener('click', switchToKeys, false);
+        e.ql.addEventListener('input', targetingInput, false);
+        e.inc.addEventListener('input', targetingInput, false);
+        e.exc.addEventListener('input', targetingInput, false);
+        e.rid.addEventListener('input', rtidInput, false);
+        e.arm.addEventListener('input', armourInput, false);
+        e.lvl.addEventListener('input', armourInput, false);
+        e.rmsl.addEventListener('click', rmslClick, false);
+        e.close.addEventListener('click', close, false);
+        e.setkey_done.addEventListener('click', switchToKeys, false);
+        e.setkey_select.addEventListener('change', setKeySelect, false);
+        e.default_keymap.addEventListener('click', defaultKeys, false);
+        e.illarion_keymap.addEventListener('click', illarionKeys, false);
 
-                legenddiv.textContent = legend;
-            }
-            else {
-                var legenddiv = key.firstElementChild;
-                if(legenddiv)
-                    key.removeChild(legenddiv);
-            }
-        },
-        setKeySelectChangeHandler: function() {
-            var opts = e.setkey_select.options;
-            var action = opts[e.setkey_select.selectedIndex].value;
-            func.setKeyLegend(e.setkey_key, action);
-            func.setKeyLegend(setKey, action);
+        // We fetch the human names for actions from #sg-setkey-select.
+        // Hey they're needed there anyway, and this saves code.
+        var xpr = doc.evaluate('.//option', e.setkey_select, null,
+                               XPathResult.UNORDERED_NODE_ITERATOR_TYPE,
+                               null);
+        var kopt;
+        while((kopt = xpr.iterateNext())) {
+            var val = kopt.value;
+            if(val)
+                self.actionNames[val] = kopt.textContent;
+        }
+
+        // Bind the keys
+        xpr = doc.evaluate('div', e.keyboard, null,
+                           XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
+        for(var i = 0, end = xpr.snapshotLength; i < end; i++) {
+            var kdiv = xpr.snapshotItem(i);
+            var code = parseInt(kdiv.id.substr(4));
+            var action = self.keymap[code];
             if(action)
-                keymap[setKeyId] = action;
-            else
-                delete keymap[setKeyId];
-            self.saveKeyMap(keymap);
-        },
-        setCloseButtonEnabled: function(enabled) {
-            if(enabled) {
-                e.close.disabled = false;
-                e.close.style.borderColor = '';
-                e.close.style.color = '';
-            }
-            else {
-                e.close.disabled = true;
-                e.close.style.borderColor = 'rgb(0,0,28)';
-                e.close.style.color = 'rgb(56,56,84)';
-            }
-        },
-        saveTargetingData: function() {
-            if(self.saveTargetingData(e.ql.value, e.inc.value, e.exc.value,
-                                      e.rid.value, e.arm.value, e.lvl.value,
-                                      e.raidmiss.checked))
-                func.setCloseButtonEnabled(true);
-            timer = null;
-        },
-        targetingControlChangeHandler: function() {
-            func.setCloseButtonEnabled(false);
-            if(timer)
-                window.clearTimeout(timer);
-            timer = window.setTimeout(func.saveTargetingData, 500);
-        },
-        closeHandler: function() { self.close(); },
-        configure: function() {
-            keymap = sgpvp.keymap;
-            e.ql.value = sgpvp.ql;
-            var targetingData = sgpvp.targeting;
-            e.inc.value = self.stringifyOverrideList(targetingData.include);
-            e.exc.value = self.stringifyOverrideList(targetingData.exclude);
-            e.rid.value = sgpvp.rtid;
-            var armourData = sgpvp.armour;
-            e.arm.value = armourData.points;
-            e.lvl.value = armourData.level;
-            if(sgpvp.rmsl)
-                e.raidmiss.checked = true;
-
-            e.switch_targeting.addEventListener
-            ('click', func.switchToTargeting, false);
-            e.switch_keys.addEventListener
-            ('click', func.switchToKeybindings, false);
-            e.ql.addEventListener
-            ('keyup', func.targetingControlChangeHandler, false);
-            e.inc.addEventListener
-            ('keyup', func.targetingControlChangeHandler, false);
-            e.exc.addEventListener
-            ('keyup', func.targetingControlChangeHandler, false);
-            e.rid.addEventListener
-            ('keyup', func.targetingControlChangeHandler, false);
-            e.arm.addEventListener
-            ('keyup', func.targetingControlChangeHandler, false);
-            e.lvl.addEventListener
-            ('keyup', func.targetingControlChangeHandler, false);
-            e.close.addEventListener
-            ('click', func.closeHandler, false);
-            e.setkey_done.addEventListener
-            ('click', func.switchToKeybindings, false);
-            e.setkey_select.addEventListener
-            ('change', func.setKeySelectChangeHandler, false);
-            e.default_keymap.addEventListener
-            ('click', func.restoreDefaultKeyBindings, false);
-            e.illarion_keymap.addEventListener
-            ('click', func.restoreIllarionKeyBindings, false);
-            e.raidmiss.addEventListener
-            ('click', func.targetingControlChangeHandler, false);
-
-            // We fetch the human names for actions from #sg-setkey-select.
-            // Hey they're needed there anyway, and this saves code.
-            var xpr = doc.evaluate('.//option', e.setkey_select, null,
-                                   XPathResult.UNORDERED_NODE_ITERATOR_TYPE,
-                                   null);
-            var kopt;
-            while((kopt = xpr.iterateNext())) {
-                var val = kopt.value;
-                if(val)
-                    actionName[val] = kopt.textContent;
-            }
-
-            // Bind the keys
-            xpr = doc.evaluate('div', e.keyboard, null,
-                               XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
-            for(var i = 0, end = xpr.snapshotLength; i < end; i++) {
-                var kdiv = xpr.snapshotItem(i);
-                var code = parseInt(kdiv.id.substr(4));
-                var action = keymap[code];
-                if(action)
-                    func.setKeyLegend(kdiv, action);
-                kdiv.addEventListener('click', func.keyClickHandler, false);
-            }
+                self.setKeyLegend(kdiv, action);
+            kdiv.addEventListener('click', keyClick, false);
         }
     };
 
     // load settings and configure
     sgpvp.loadSettings(['keymap', 'ql', 'targeting', 'rtid', 'armour', 'rmsl'],
-                       func.configure);
+                       configure);
 };
 
 SGPvPUI.prototype.toggle = function() {
@@ -295,56 +383,8 @@ SGPvPUI.prototype.toggle = function() {
         this.open();
 };
 
-SGPvPUI.prototype.close = function() {
-    if(this.ui_element) {
-        this.ui_element.parentNode.removeChild(this.ui_element);
-        delete this.ui_element;
-    }
-};
-
-SGPvPUI.prototype.saveKeyMap = function(keymap) {
-    this.sgpvp.saveSettings({keymap: keymap});
-};
-
-SGPvPUI.prototype.DIGITS_RX = /^\s*[0-9]*\s*$/;
-SGPvPUI.prototype.saveTargetingData = function(ql,
-                                               include_overrides,
-                                               exclude_overrides,
-                                               retreat_tile,
-                                               armour_points, armour_level,
-                                               raidmiss) {
-    var drx = this.DIGITS_RX;
-    if(!drx.test(retreat_tile) ||
-       !drx.test(armour_points) || !drx.test(armour_level))
-        return false;
-
-    armour_points = parseInt(armour_points);
-    armour_level = parseInt(armour_level);
-    if(!(armour_points > 0 && armour_level > 0 && armour_level <= 6))
-        return false;
-
-    retreat_tile = parseInt(retreat_tile);
-    if(!(retreat_tile > 0))
-        retreat_tile = false;
-
-    var qo = this.parseQL(ql);
-    if(!qo)
-        return false;
-
-    var settings = {
-        ql: qo.ql,
-        targeting: {
-            ql: qo.parsed,
-            include: this.parseOverrideList(include_overrides),
-            exclude: this.parseOverrideList(exclude_overrides)
-        },
-        armour: { points: armour_points, level: armour_level },
-        rmsl: raidmiss ? 1 : 0
-    };
-    if(retreat_tile)
-        settings.rtid = retreat_tile;
-    this.sgpvp.saveSettings(settings);
-    return true;
+SGPvPUI.prototype.saveKeyMap = function() {
+    this.sgpvp.saveSettings({keymap: this.keymap});
 };
 
 SGPvPUI.prototype.parseOverrideList = function(list) {
