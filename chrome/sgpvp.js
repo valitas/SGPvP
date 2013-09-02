@@ -1,7 +1,7 @@
 // SGPvP object. This code must run on Firefox and Google Chrome - no
 // Greasemonkey calls and no chrome.* stuff here.
 
-// V31.7
+// V31.8
 
 function SGPvP() {
     this.url = window.location.href;

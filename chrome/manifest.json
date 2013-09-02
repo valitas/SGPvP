@@ -23,5 +23,5 @@
     "update_url": "https://dl.dropboxusercontent.com/u/28969566/sgpvp-dev/updates.xml",
     "web_accessible_resources": [ "ui.js", "ui.html", "ui.css",
                                   "default-keymap.json", "illarion-keymap.json" ],
-    "version": "31.7"
+    "version": "31.8"
 }
