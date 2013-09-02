@@ -33,17 +33,19 @@ div.index-bar {
   font-size: 90%;
   text-align: center;
 }
+span {
+  font-family: monospace;
+}
   </style>
  </head>
  <body>
   <div id="content">
 
-    <h1>The Scorpion Guard's Better PvP Script V31 User's Manual</h1>
+    <h1>The Scorpion Guard's Better PvP Script V32 User's Manual</h1>
 
     <div class="index-bar">
      <a href="#quickstart">Quick start</a> ·
-     <a href="#configuration">Configuration</a> ·
-     <a href="#keymap">Keymap</a>
+     <a href="#configuration">Configuration</a>
     </div>
 
     <h2><a name="quickstart">Quick start</a></h2>
@@ -55,14 +57,17 @@ div.index-bar {
      <li>
       <p><strong>Configure the script.</strong></p>
 
-      <p>Press the info key, I, to bring up the configuration dialogue
-      and specify which pilots are to be targeted.</p>
+      <p>Press the <em>Configure</em> key (<span>I</span> in the
+      default keymap) to bring up the configuration dialogue, and
+      specify there which pilots are to be targeted, as well as your
+      ship's armour and any custom key bindings you'd like.</p>
      </li>
 
      <li>
       <p><strong>Set a retreat tile.</strong></p>
 
-      <p>Move to your retreat tile and press the key Z to have the
+      <p>Move to your retreat tile and press the <em>Set retreat
+      tile</em> key (<span>Z</span> in the default keymap) to have the
       script "remember" it. The retreat tile can be a planet,
       wormhole, whatever, but it has to be in sight and reachable from
       the tile where PvP will occur.</p>
@@ -71,23 +76,24 @@ div.index-bar {
      <li>
       <p><strong>Engage.</strong></p>
 
-      <p>Move to the tile where PvP will occur and press the engage
-      key, X, repeatedly. As soon as a target appears, you will be
-      taken to the combat screen. Pressing the engage key X again will
-      shoot 20 rounds against the target, with missiles if
-      available.</p>
+      <p>Move to the tile where PvP will occur and press the
+      <em>Engage</em> key (<span>X</span> in the default keymap)
+      repeatedly. As soon as a target appears, you will be taken to
+      the combat screen. Pressing the <em>Engage</em> key again will
+      fire against the target.</p>
      </li>
 
      <li>
       <p><strong>Disengage.</strong></p>
 
-      <p>When you have to retreat, press the disengage key, C,
-      repeatedly if needed, until you are back at your retreat
-      tile.</p>
+      <p>When you have to retreat, press the <em>Disengage</em> key
+      (<span>C</span> in the default keymap) repeatedly if needed,
+      until you are back at your retreat tile.</p>
      </li>
     </ol>
 
-    <p>A number of other keys are defined for convenience; see below.</p>
+    <p>There are many additional functions that you can use; see
+    below.</p>
 
     <h2><a name="configuration">Configuration</a></h2>
 
@@ -104,18 +110,31 @@ div.index-bar {
     ignored.</p>
 
     <p>On top of the QL, the script provides for include and exclude
-    override lists. You can specify only pilot names in these lists,
-    not alliances or factions. Pilots excluded this way won't be
-    engaged no matter what. Pilots included in this way will not only
-    be engaged, but will also be prioritised: of all the ships on your
-    tile, the one listed first in your include override list will be
-    targeted.</p>
+    override lists. You can specify only pilot names or IDs in these
+    lists, not alliances or factions. Pilots excluded this way won't
+    be engaged no matter what. Pilots included in this way will not
+    only be engaged, but will also be prioritised: of all the ships on
+    your tile, the one listed first on your include override list will
+    be targeted.</p>
 
     <p>When no priority targets are present on the tile, then a target
-    is selected based on ship type - the script attempts to engage
-    traders and battleships first, breakers last.  As a last resort,
-    all else being the same, the pilot with the lowest ID will be
-    engaged.</p>
+    is selected based on ship type &#8212; the script attempts to
+    engage traders and battleships first, breakers last.  As a last
+    resort, all else being the same, the pilot with the lowest ID will
+    be engaged.</p>
+
+    <h3>Keymap</h3>
+
+    <p>In the configuration dialogue, click on <em>Key bindings</em>
+    to view and edit the keymap.  You may click on any key to
+    customise its behaviour.  Do note that there many available
+    functions not bound to a key by default, so explore and suit
+    yourself.</p>
+
+    <p>If you remove the <em>Configure</em> key, or change its binding
+    and later forget what you chose, remember that you can always
+    press <span>Esc</span> to open the configuration dialogue
+    again.</p>
 
     <h3>Robots</h3>
 
@@ -134,42 +153,10 @@ div.index-bar {
     <p>There are rare situations in which the script cannot ascertain
     how many robots are available, or the state of the ship's armour;
     the script will then guess, based on last known values, but it may
-    get it wrong.  For such cases, use the specific keys for 1, 4, or
-    8 robots: the script will attempt to use that many bots regardless
-    of what it "thinks" you have or are needed.</p>
-
-    <h2><a name="keymap">Keymap</a></h2>
-
-    <pre>Z - Set retreat tile.
-X - Engage.
-C - Disengage.
-V - Nav.
-B - Use as many bots as needed to repair you to full armour.
-
-M - Engage MO or building.
-
-A - Force use of one bot.
-S - Force use of four bots.
-D - Force use of eight bots.
-F - Refill your fuel tank.
-K - Cloak.
-L - Uncloak.
-Q - Enter inner starbase ("fly close").
-W - Exit inner starbase.
-O - Undock.
-P - Dock.
-
-I - Configure.
-T - Test configuration (highlight targets without engaging)
-N - Test bots (shows how many would be used to repair your ship)
-
-Additionally, the traditional 12345 keys are bound, for ease of transition:
-
-1 - Target.
-2 - Attack.
-3 - Nav.
-4 - Jump to retreat tile.
-5 - Use five bots.</pre>
+    get it wrong.  For such cases, you may want to define and use
+    <em>Force use robots</em> keys: the script will attempt to use as
+    many bots as you specify for those, regardless of what it "thinks"
+    you have or are needed.</p>
 
   </div>
  </body>
