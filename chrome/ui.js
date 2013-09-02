@@ -7,7 +7,7 @@
 // calls and no chrome.* APIs here.  localStorage should not be
 // accessed from here either.
 
-// V 31.8
+// V 32
 
 function SGPvPAction() { }
 SGPvPAction.prototype.serialise = function() { return this.id; };
