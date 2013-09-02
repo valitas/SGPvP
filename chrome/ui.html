@@ -48,9 +48,6 @@
    </span>
   </div>
 
-  <div>
-   <input id="sg-rmsl" type="checkbox" /><label for="sg-rmsl"> Fire missiles when engaging for raid</label>
-  </div>
  </div>
 
  <div id="sg-keybindings" style="display:none">
@@ -124,24 +121,15 @@
      <option value="testTargeting">Test targeting</option>
      <option value="disengage">Disengage</option>
      <option value="engage">Engage</option>
-     <option value="engage10">Engage 10 rounds</option>
-     <option value="engage15">Engage 15 rounds</option>
      <option value="raid">Raid</option>
-     <option value="raid10">Raid 10 rounds</option>
-     <option value="raid15">Raid 15 rounds</option>
      <option value="target">Target</option>
      <option value="damageBuilding">Damage building</option>
+     <option value="raidBuilding">Raid building</option>
     </optgroup>
     <optgroup label="Robots">
      <option value="testBots">Test robots</option>
      <option value="bots">Use robots</option>
-     <option value="bots1">Use 1 robot</option>
-     <option value="bots2">Use 2 robots</option>
-     <option value="bots3">Use 3 robots</option>
-     <option value="bots4">Use 4 robots</option>
-     <option value="bots5">Use 5 robots</option>
-     <option value="bots8">Use 8 robots</option>
-     <option value="bots12">Use 12 robots</option>
+     <option value="forceBots">Force use robots</option>
     </optgroup>
     <optgroup label="Various">
      <option value="cloak">Cloak</option>
@@ -157,11 +145,16 @@
    </select>
    <input id="sg-setkey-done" type="button" value="Done" />
   </p>
-  <p id="sg-setkey-roundsrow">
-   <label for="sg-setkey-rounds">Rounds</label><input id="sg-setkey-rounds" type="text" />
-   <input id="sg-setkey-missiles" type="checkbox" /><label for="sg-setkey-missiles">with missiles</label>
-  </p>
-  <div id="sg-setkey-key">A</div>
+  <div id="sg-skarg-rounds">
+   <input id="sg-setkey-rounds" type="text" size="2" /><label for="sg-setkey-rounds"> rounds</label>
+  </div>
+  <div id="sg-skarg-missiles">
+   <input id="sg-setkey-missiles" type="checkbox" /><label for="sg-setkey-missiles"> with missiles</label>
+  </div>
+  <div id="sg-skarg-bots">
+   <input id="sg-setkey-bots" type="text" size="2" /><label for="sg-setkey-bots"> robots</label>
+  </div>
+  <div id="sg-setkey-key"></div>
  </div>
 
  <div id="sg-footer">

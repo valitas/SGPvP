@@ -153,7 +153,7 @@
 
 #sg-keyboard > div > div, #sg-setkey-key > div {
   font-size: 9px;
-  line-height: 10px;
+  line-height: 9px;
 }
 
 #sg-k49 { top: 4px; left: 38px }
@@ -207,7 +207,7 @@
 /* The setkey panel */
 
 #sg-setkey {
-    padding: 80px 32px;
+    padding: 40px 32px;
 }
 
 #sg-setkey h4 {
@@ -221,6 +221,6 @@
 
 #sg-setkey > #sg-setkey-key {
     position: absolute;
-    top: 66px; left: 516px;
+    top: 40px; left: 516px;
     cursor: default;
 }

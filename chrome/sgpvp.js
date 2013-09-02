@@ -54,7 +54,7 @@ function SGPvP() {
     };
 
     this.loadSettings(['keymap', 'targeting', 'armour',
-                       'lkap', 'lkba', 'rtid', 'rmsl'],
+                       'lkap', 'lkba', 'rtid' ],
                       finishConfig);
 }
 
@@ -93,7 +93,6 @@ SGPvP.prototype.CFGDEF = {
     rtid: { u:false, d:null }, // retreat tile id
     lkap: { u:false, d:null }, // last known armour points
     lkba: { u:false, d:null }, // last known bots available
-    rmsl: { u:false, d:null }, // raid with missiles
     ql: { u:false, d:'' },
     targeting: { u:false,
                  d:{ ql:{includeFactions:{},
@@ -161,6 +160,28 @@ SGPvP.prototype.closeUi = function() {
         this.sgpvpui.close();
 };
 
+// XXX - this will be removed in a few versions
+SGPvP.prototype.OLD_KEYMAP_ACTIONS = {
+    bots1: 'forceBots,1',
+    bots2: 'forceBots,2',
+    bots3: 'forceBots,3',
+    bots4: 'forceBots,4',
+    bots5: 'forceBots,5',
+    bots8: 'forceBots,8',
+    bots12: 'forceBots,12',
+    engage: 'engage,20,m',
+    engage10: 'engage,10,m',
+    engage15: 'engage,15,m',
+    raid: 'raid,20,n',
+    raid10: 'raid,10,n',
+    raid15: 'raid,15,n',
+    damageBuilding: 'damageBuilding,m'
+};
+SGPvP.prototype.fixActionString = function(str) {
+    var newstr = this.OLD_KEYMAP_ACTIONS[str];
+    return newstr || str;
+};
+
 SGPvP.prototype.keyPressHandler = function(event) {
     if(event.ctrlKey || event.altKey || event.metaKey)
         return;
@@ -177,11 +198,13 @@ SGPvP.prototype.keyPressHandler = function(event) {
        (event.target.nodeName == 'INPUT' || event.target.nodeName == 'TEXTAREA'))
         return;
 
-    var method_name = this.keymap[event.keyCode];
-    if(method_name) {
+    var astr = this.fixActionString(this.keymap[event.keyCode]);
+    if(astr) {
+        var args = astr.split(','),
+        methodname = args.shift();
         event.preventDefault();
         event.stopPropagation();
-        this[method_name].call(this);
+        this[methodname].apply(this, args);
     }
 };
 
@@ -637,34 +660,37 @@ SGPvP.prototype.setRounds = function(limit) {
     }
 };
 
-SGPvP.prototype.doEngage = function(rounds, raid) {
+SGPvP.prototype.doEngage = function(rounds, missiles, raid) {
     var elt = document.evaluate('//input[@name="ok" and @type="submit" and @value="Attack"]',
                                 document, null,
                                 XPathResult.ANY_UNORDERED_NODE_TYPE,
                                 null).singleNodeValue;
     if(elt && elt.click) {
-        var missiles;
-        if(this.page == 'ship2opponent_combat')
-            missiles = false;
-        else if(raid) {
-            var surr = document.getElementById('letsurrender'); 
-            if(surr) {
-                surr.checked = true;
-                missiles = this.rmsl ? true : false;
-            }
-            else
-                missiles = true;
-        }
-        else
-            missiles = true;
-        this.setRounds(rounds);
-        this.setMissiles(missiles);
+        var surr = document.getElementById('letsurrender');
+        if(surr)
+            surr.checked = raid;
+        this.setMissiles(missiles != 'n');
+        this.setRounds(rounds ? parseInt(rounds) : 20);
         elt.click();
         return;
     }
 
     // no attack button?
     this.target();
+};
+
+SGPvP.prototype.doAttackBuilding = function(mode, missiles) {
+    var xpath='//input[@name="' + mode + '" and @type="submit"]',
+    elt = document.evaluate(xpath, document, null,
+                            XPathResult.ANY_UNORDERED_NODE_TYPE,
+                            null).singleNodeValue;
+    if(elt && elt.click) {
+        this.setMissiles(missiles != 'n');
+        elt.click();
+        return;
+    }
+    // no destroy/raid button?
+    document.location = 'building.php';
 };
 
 
@@ -681,12 +707,13 @@ SGPvP.prototype.setRetreatPoint = function() {
         this.showNotification('Can not set retreat tile', 500);
 };
 
-SGPvP.prototype.engage = function() { this.doEngage(1000, false); };
-SGPvP.prototype.engage15 = function() { this.doEngage(15, false); };
-SGPvP.prototype.engage10 = function() { this.doEngage(10, false); };
-SGPvP.prototype.raid = function() { this.doEngage(1000, true); };
-SGPvP.prototype.raid15 = function() { this.doEngage(15, true); };
-SGPvP.prototype.raid10 = function() { this.doEngage(10, true); };
+SGPvP.prototype.engage = function(rounds, missiles) {
+    this.doEngage(rounds, missiles, false);
+};
+
+SGPvP.prototype.raid = function(rounds, missiles) {
+    this.doEngage(rounds, missiles, true);
+};
 
 SGPvP.prototype.disengage = function() {
     var elt = document.evaluate('//input[@name="retreat" and @type="submit"]',
@@ -740,7 +767,7 @@ SGPvP.prototype.disengage = function() {
 
 SGPvP.prototype.nav = function() { document.location = 'main.php'; };
 SGPvP.prototype.bots = function() { this.useBots(null); };
-
+SGPvP.prototype.forceBots = function(n) { this.useBots(n); };
 SGPvP.prototype.testBots = function() {
     var msg, bots = this.computeBotsNeeded();
     if(!bots)
@@ -756,26 +783,12 @@ SGPvP.prototype.testBots = function() {
     this.showNotification(msg, 1000);
 };
 
-SGPvP.prototype.damageBuilding = function() {
-    var elt = document.evaluate('//input[@name="destroy" and @type="submit"]',
-                                document, null,
-                                XPathResult.ANY_UNORDERED_NODE_TYPE,
-                                null).singleNodeValue;
-    if(elt && elt.click) {
-        elt.click();
-        return;
-    }
-    // no destroy button?
-    document.location = 'building.php';
+SGPvP.prototype.damageBuilding = function(missiles) {
+    this.doAttackBuilding('destroy', missiles);
 };
-
-SGPvP.prototype.bots1 = function() { this.useBots(1); };
-SGPvP.prototype.bots2 = function() { this.useBots(2); };
-SGPvP.prototype.bots3 = function() { this.useBots(3); };
-SGPvP.prototype.bots4 = function() { this.useBots(4); };
-SGPvP.prototype.bots5 = function() { this.useBots(5); };
-SGPvP.prototype.bots8 = function() { this.useBots(8); };
-SGPvP.prototype.bots12 = function() { this.useBots(12); };
+SGPvP.prototype.raidBuilding = function(missiles) {
+    this.doAttackBuilding('raid', missiles);
+};
 SGPvP.prototype.fillTank = function() {
     document.location = 'main.php?fillup=1';
 };
@@ -787,7 +800,6 @@ SGPvP.prototype.exitFlyClose = function() {
 };
 SGPvP.prototype.dockUndock = function() { this.undock() || this.dock(); };
 SGPvP.prototype.dock = function() { top.location = 'game.php?logout=1'; };
-
 SGPvP.prototype.undock = function() {
     var elt = document.evaluate('//input[@value="Launch Ship" and @type="submit"]',
                                 document, null,
@@ -807,7 +819,6 @@ SGPvP.prototype.cloak = function() {
     else
         this.nav();
 };
-
 SGPvP.prototype.uncloak = function() {
     var elt = document.getElementById('inputShipUncloak');
     if(elt && elt.click)
