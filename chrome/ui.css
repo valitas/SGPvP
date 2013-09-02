@@ -37,7 +37,7 @@
 }
 
 #sg-switch span,
-#sg-default-keymap, #sg-illarion-keymap {
+#sg-default-keymap, #sg-illarion-keymap, #sg-impexp-keymap {
     color: rgb(208, 209, 217);
     cursor: pointer;
 }
@@ -223,4 +223,8 @@
     position: absolute;
     top: 40px; left: 516px;
     cursor: default;
+}
+
+#sg-setkey-rounds, #sg-setkey-bots {
+    text-align: right;
 }

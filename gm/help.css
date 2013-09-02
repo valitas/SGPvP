@@ -1,0 +1,33 @@
+body {
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  font-size: 90%;
+  margin: 0.5in;
+}
+h1 {
+  /* color: #666; */
+  font-size: 160%;
+  margin: 4ex 0 2ex 0;
+}
+h2 {
+  color: #666;
+  font-size: 130%;
+  margin: 4ex 0 2ex 0;
+}
+h3 {
+  font-size: 100%;
+}
+li {
+  margin: 1ex 0
+}
+div#content {
+  margin-left: auto;
+  margin-right: auto;
+  width: 50em;
+}
+div.index-bar {
+  font-size: 90%;
+  text-align: center;
+}
+span {
+  font-family: monospace;
+}

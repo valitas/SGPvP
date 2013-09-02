@@ -422,6 +422,29 @@ SGPvPUI.prototype.resetKeyMap = function(resid) {
     }
 };
 
+SGPvPUI.prototype.importKeyMap = function() {
+    var text = JSON.stringify(this.keymap), k,
+    r = prompt('Copy this text to export the keymap. ' +
+               'Edit or replace it, and press OK, to import the keymap.',
+               text);
+    if(r) {
+        try {
+            k = JSON.parse(r);
+        } catch (x) {
+            k = null;
+        }
+
+        if(k && typeof(k) == 'object') {
+            this.keymap = k;
+            this.saveKeyMap();
+            this.labelAllKeys();
+        }
+        else {
+            alert('The keymap has errors and could not be imported.');
+        }
+    }
+};
+
 // We use all these elements in the UI DOM.
 SGPvPUI.prototype.UI_ELEMENT_IDS =
     [ 'sg-arm',
@@ -429,6 +452,7 @@ SGPvPUI.prototype.UI_ELEMENT_IDS =
       'sg-default-keymap',
       'sg-exc',
       'sg-illarion-keymap',
+      'sg-impexp-keymap',
       'sg-inc',
       'sg-keybindings',
       'sg-keyboard',
@@ -482,6 +506,7 @@ SGPvPUI.prototype.setUIElement = function(div) {
     setKeyArgInput = function() { self.setKeyArgInputHandler(); },
     defaultKeys = function() { self.resetKeyMap('default_keymap'); },
     illarionKeys = function() { self.resetKeyMap('illarion_keymap'); },
+    importKeys = function() { self.importKeyMap(); },
     configure = function() {
         self.keymap = sgpvp.keymap;
         e.ql.value = sgpvp.ql;
@@ -515,6 +540,7 @@ SGPvPUI.prototype.setUIElement = function(div) {
         e.setkey_missiles.addEventListener('click', setKeyArgInput, false);
         e.default_keymap.addEventListener('click', defaultKeys, false);
         e.illarion_keymap.addEventListener('click', illarionKeys, false);
+        e.impexp_keymap.addEventListener('click', importKeys, false);
 
         self.labelAllKeys();
 
