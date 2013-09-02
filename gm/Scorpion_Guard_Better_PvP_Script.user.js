@@ -7,6 +7,7 @@
 // @match       *://*.pardus.at/ship2ship_combat.php*
 // @match       *://*.pardus.at/ship2opponent_combat.php*
 // @match       *://*.pardus.at/building.php*
+// @match       *://*.pardus.at/ambush.php*
 // @match       *://*.pardus.at/logout.php
 // @require     sgpvp.js
 // @resource    ui_js ui.js

@@ -31,7 +31,7 @@ function SGPvP() {
         this.setupPageSpecific = function() { this.setupCombatPage(); };
         break;
     default:
-        // logout
+        // ambush, logout
         this.setupPageSpecific = function() {}; // nop
     }
 
@@ -693,6 +693,14 @@ SGPvP.prototype.doAttackBuilding = function(mode, missiles) {
     document.location = 'building.php';
 };
 
+SGPvP.prototype.clickById = function(id) {
+    var elt = document.getElementById(id);
+    if(elt && elt.click)
+        elt.click();
+    else
+        this.nav();
+};
+
 
 // Methods below are the actual actions we perform in response to key presses.
 // Keep the method names in sync with the UI.
@@ -789,9 +797,6 @@ SGPvP.prototype.damageBuilding = function(missiles) {
 SGPvP.prototype.raidBuilding = function(missiles) {
     this.doAttackBuilding('raid', missiles);
 };
-SGPvP.prototype.fillTank = function() {
-    document.location = 'main.php?fillup=1';
-};
 SGPvP.prototype.flyClose = function() {
     document.location = 'main.php?entersb=1';
 };
@@ -812,21 +817,6 @@ SGPvP.prototype.undock = function() {
     return false;
 };
 
-SGPvP.prototype.cloak = function() {
-    var elt = document.getElementById('inputShipCloak');
-    if(elt && elt.click)
-        elt.click();
-    else
-        this.nav();
-};
-SGPvP.prototype.uncloak = function() {
-    var elt = document.getElementById('inputShipUncloak');
-    if(elt && elt.click)
-        elt.click();
-    else
-        this.nav();
-};
-
 SGPvP.prototype.testTargeting = function() {
     var ships = this.getShips();
     if(!ships)
@@ -841,7 +831,7 @@ SGPvP.prototype.testTargeting = function() {
     for(i in ships)
         highlight_target(ships[i].td, 'inherit');
 
-    // XXX this.targeting not needed for scan...
+    // XXX this.targeting should not be needed for scan...
     var targets = this.scanForTargets(this.targeting, ships);
     // turn the excluded ships green
     for(i in targets.excluded)
@@ -876,12 +866,67 @@ SGPvP.prototype.target = function() {
     this.nav();
 };
 
-SGPvP.prototype.jumpWH = function() {
-    var warp = document.getElementById('aCmdWarp');
-    if(warp)
-        warp.click();
-    else
-        this.nav();
+SGPvP.prototype.cloak = function() { this.clickById('inputShipCloak'); };
+SGPvP.prototype.uncloak = function() { this.clickById('inputShipUncloak'); };
+SGPvP.prototype.fillTank = function() { this.clickById('aCmdTank'); };
+SGPvP.prototype.jumpWH = function() { this.clickById('aCmdWarp'); };
+
+SGPvP.prototype.setAmbushRP = function() {
+    var elt = document.evaluate('//div[@id="emsg"]//input[@name="retreat_point_set" and @type="submit"]',
+                                document, null,
+                                XPathResult.ANY_UNORDERED_NODE_TYPE,
+                                null).singleNodeValue;
+    if(elt) { elt.click(); return; }
+
+    elt = document.getElementById('aCmdRetreatInfo');
+    if(elt) { elt.click(); return; }
+
+    this.nav();
+};
+
+SGPvP.prototype.ambush = function() {
+    if(this.page != 'ambush') {
+        this.clickById('aCmdAmbush');
+        return;
+    }
+
+    // Below we assume some elements are always found.  There's
+    // nothing sensible to do here if they aren't.
+    var elt = document.evaluate('//b[contains(text(), "Quicklist parsed and applied")]',
+                                document, null,
+                                XPathResult.ANY_UNORDERED_NODE_TYPE,
+                                null).singleNodeValue;
+    if(elt) {
+        // just parsed a QL - set!
+        document.evaluate('//input[@name="confirm" and @type="submit"]',
+                          document, null,
+                          XPathResult.ANY_UNORDERED_NODE_TYPE,
+                          null).singleNodeValue.click();
+        return;
+    }
+
+    elt = document.getElementById('readlist');
+    var ta = document.evaluate('//textarea[@name="readlist"]',
+                               elt, null,
+                               XPathResult.ANY_UNORDERED_NODE_TYPE,
+                               null).singleNodeValue,
+    apply = document.evaluate('//input[@name="apply_ql"]',
+                              elt, null,
+                              XPathResult.ANY_UNORDERED_NODE_TYPE,
+                              null).singleNodeValue;
+    if(ta.value == '') {
+        // load the configured QL and apply
+        var self = this,
+        act = function() {
+            ta.value = self.ql;
+            apply.click();
+        };
+        this.loadSettings(['ql'], act);
+        return;
+    }
+
+    // ta.value already has a QL, just apply
+    apply.click();
 };
 
 SGPvP.prototype.configure = function() {

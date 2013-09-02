@@ -6,6 +6,7 @@
                      "*://*.pardus.at/building.php*",
                      "*://*.pardus.at/ship2ship_combat.php*",
                      "*://*.pardus.at/ship2opponent_combat.php*",
+                     "*://*.pardus.at/ambush.php*",
                      "*://*.pardus.at/logout.php" ]
     } ],
     "content_security_policy": "script-src 'self'; object-src 'self'",
