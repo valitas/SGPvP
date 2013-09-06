@@ -905,9 +905,9 @@ SGMain.prototype.ambush = function() {
                          null).singleNodeValue;
     if(ta.value == '') {
         // load the configured QL and apply
-        var ql = this.ql,
+        var self = this,
         act = function() {
-            ta.value = ql;
+            ta.value = this.ql;
             apply.click();
         };
         this.loadSettings(['ql'], act);
