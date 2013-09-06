@@ -1,7 +1,7 @@
 {
     "content_scripts": [
         { "all_frames": false,
-          "js": [ "sgpvp.js", "chrome.js", "ui.js", "game.js" ],
+          "js": [ "sgpvp.js", "main.js", "ui.js", "chrome.js", "game.js" ],
           "matches": [ "*://*.pardus.at/game.php" ],
           "run_at": "document_start" },
         { "all_frames": true,
