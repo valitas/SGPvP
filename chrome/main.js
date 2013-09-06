@@ -907,7 +907,7 @@ SGMain.prototype.ambush = function() {
         // load the configured QL and apply
         var self = this,
         act = function() {
-            ta.value = this.ql;
+            ta.value = self.ql;
             apply.click();
         };
         this.loadSettings(['ql'], act);
