@@ -6,7 +6,7 @@
 // @match       *://*.pardus.at/game.php
 // @run-at      document-start
 // @require     sgpvp.js
-// @resource    ui_js ui.js
+// @require     ui.js
 // @resource    ui_html ui.html
 // @resource    ui_style ui.css
 // @resource    default_keymap default-keymap.json

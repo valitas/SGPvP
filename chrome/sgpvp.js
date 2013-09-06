@@ -966,9 +966,6 @@ SGMain.prototype.ambush = function() {
 };
 
 SGMain.prototype.configure = function() {
-    if(typeof(SGPvPUI) != 'function')
-        // load the UI code
-        eval(this.getResourceText('ui_js'));
     if(!this.sgpvpui)
         this.sgpvpui = new SGPvPUI(this, this.doc);
     this.sgpvpui.open();

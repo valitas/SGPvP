@@ -98,7 +98,6 @@ SGMain.prototype.getShipEntryExtras = function(entry) {
 // these in Chrome to fetch resources included with the extension.
 
 SGMain.prototype.RESOURCE = {
-    ui_js: 'ui.js',
     ui_html: 'ui.html',
     ui_style: 'ui.css',
     default_keymap: 'default-keymap.json',
