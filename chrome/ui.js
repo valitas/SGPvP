@@ -1,13 +1,9 @@
-// SGPvP object - user interface methods.
+// SGPvPUI and related objects - user interface implementation.
 // 
-// This code is not loaded unless the user interface has to be shown,
-// to keep things fast.
-// 
-// This code must run in Firefox and Google Chrome - no Greasemonkey
+// This code must run on Firefox and Google Chrome - no Greasemonkey
 // calls and no chrome.* APIs here.  localStorage should not be
 // accessed from here either.
 
-// V 32
 
 function SGPvPAction() { }
 SGPvPAction.prototype.serialise = function() { return this.id; };
@@ -111,6 +107,7 @@ SGPvPUI.prototype.ACTION_TYPES = {
     forceBots: SGPvPActionB
 };
 
+
 function SGPvPUI(sgpvp, doc) {
     this.sgpvp = sgpvp;
     this.doc = doc;
@@ -133,18 +130,134 @@ SGPvPUI.prototype.injectStyle = function() {
     head.appendChild(link);
 };
 
+// We use all these elements from the UI DOM.
+SGPvPUI.prototype.UI_ELEMENT_IDS =
+    [ 'sg-arm',
+      'sg-close',
+      'sg-default-keymap',
+      'sg-exc',
+      'sg-illarion-keymap',
+      'sg-impexp-keymap',
+      'sg-inc',
+      'sg-keybindings',
+      'sg-keyboard',
+      'sg-lvl',
+      'sg-ql',
+      'sg-rid',
+      'sg-s2keys',
+      'sg-s2targeting',
+      'sg-setkey',
+      'sg-setkey-bots',
+      'sg-setkey-code',
+      'sg-setkey-done',
+      'sg-setkey-key',
+      'sg-setkey-missiles',
+      'sg-setkey-rounds',
+      'sg-setkey-select',
+      'sg-skarg-bots',
+      'sg-skarg-missiles',
+      'sg-skarg-rounds',
+      'sg-targeting',
+      'sg-version' ];
+
 SGPvPUI.prototype.open = function() {
     if(this.ui_element)
         return;
 
     this.injectStyle();
 
-    var doc = this.doc;
-    var dummy = doc.createElement('div');
+    var doc = this.doc, sgpvp = this.sgpvp, dummy = doc.createElement('div');
     dummy.innerHTML = this.sgpvp.getResourceText('ui_html');
-    var div = dummy.removeChild(dummy.firstChild);
+    var div = dummy.removeChild(dummy.firstChild), e = new Object();
     doc.body.appendChild(div);
-    this.setUIElement(div);
+
+    this.ui_element = div;
+    this.elements = e;
+
+    // Centre it
+    div.style.left = ((doc.body.clientWidth - 600) / 2) + 'px';
+
+    // Get the elements we use for controlling the UI
+    for(var i in this.UI_ELEMENT_IDS) {
+        var id = this.UI_ELEMENT_IDS[i];
+        e[id.substr(3).replace('-','_')] = doc.getElementById(id);
+    }
+
+    e.version.textContent = sgpvp.getVersion();
+
+    // load settings and configure
+    sgpvp.loadSettings(['keymap', 'ql', 'targeting', 'rtid', 'armour' ],
+                       this.configure.bind(this));
+};
+
+// This is called once we know sgpvp has loaded its parameters.
+SGPvPUI.prototype.configure = function() {
+    var sgpvp = this.sgpvp, e = this.elements;
+
+    this.keymap = sgpvp.keymap;
+    e.ql.value = sgpvp.ql;
+    var targeting = sgpvp.targeting;
+    e.inc.value = this.stringifyOverrideList(targeting.include);
+    e.exc.value = this.stringifyOverrideList(targeting.exclude);
+    e.rid.value = sgpvp.rtid;
+    var armour = sgpvp.armour;
+    e.arm.value = armour.points;
+    e.lvl.value = armour.level;
+
+    this.targetingValid = true;
+    this.armourValid = true;
+    this.rtidValid = true;
+
+    this.initActionCatalogue();
+
+    // Make handlers
+    var onS2TargetingClick = this.switchToPanel.bind(this, 'targeting'),
+    onS2KeysClick = this.switchToPanel.bind(this, 'bindings'),
+    onTargetingInput = this.onTargetingInput.bind(this),
+    onArmInput = this.onArmInput.bind(this),
+    onRtIdInput = this.onRtIdInput.bind(this),
+    onCloseClick = this.close.bind(this),
+    onKeyClick = this.onKeyClick.bind(this),
+    onSetKeySelectChange = this.onSetKeySelectChange.bind(this),
+    onSetKeyArgInput = this.onSetKeyArgInput.bind(this),
+    onDefaultKeymapClick = this.resetKeyMap.bind(this, 'default_keymap'),
+    onIllarionKeymapClick = this.resetKeyMap.bind(this, 'illarion_keymap'),
+    onImpExpKeymapClick = this.importKeyMap.bind(this);
+
+    // Install handlers
+    e.s2targeting.addEventListener('click', onS2TargetingClick, false);
+    e.s2keys.addEventListener('click', onS2KeysClick, false);
+    e.ql.addEventListener('input', onTargetingInput, false);
+    e.inc.addEventListener('input', onTargetingInput, false);
+    e.exc.addEventListener('input', onTargetingInput, false);
+    e.rid.addEventListener('input', onRtIdInput, false);
+    e.arm.addEventListener('input', onArmInput, false);
+    e.lvl.addEventListener('input', onArmInput, false);
+    e.close.addEventListener('click', onCloseClick, false);
+    e.setkey_done.addEventListener('click', onS2KeysClick, false);
+    e.setkey_select.addEventListener('change', onSetKeySelectChange, false);
+    e.setkey_bots.addEventListener('input', onSetKeyArgInput, false);
+    e.setkey_rounds.addEventListener('input', onSetKeyArgInput, false);
+    e.setkey_missiles.addEventListener('click', onSetKeyArgInput, false);
+    e.default_keymap.addEventListener('click', onDefaultKeymapClick, false);
+    e.illarion_keymap.addEventListener('click', onIllarionKeymapClick, false);
+    e.impexp_keymap.addEventListener('click', onImpExpKeymapClick, false);
+
+    this.labelAllKeys();
+
+    // Bind the keys
+    var kdiv,
+    xpr = this.doc.evaluate('div', e.keyboard, null,
+                            XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
+    while((kdiv = xpr.iterateNext()))
+        kdiv.addEventListener('click', onKeyClick, false);
+};
+
+SGPvPUI.prototype.toggle = function() {
+    if(this.ui_element)
+        this.close();
+    else
+        this.open();
 };
 
 SGPvPUI.prototype.close = function() {
@@ -175,7 +288,7 @@ SGPvPUI.prototype.enableCloseIfProper = function() {
 
 // Parse QL and include/exclude lists. Store if they are valid,
 // inhibit close if they are not.
-SGPvPUI.prototype.targetingDataInputHandler = function() {
+SGPvPUI.prototype.onTargetingInput = function() {
     this.targetingValid = false;
 
     var qo = this.parseQL(this.elements.ql.value);
@@ -224,7 +337,7 @@ SGPvPUI.prototype.getPositiveIntegerValue = function(element, max, allowEmpty) {
     return null;
 };
 
-SGPvPUI.prototype.armourInputHandler = function() {
+SGPvPUI.prototype.onArmInput = function() {
     var points = this.getPositiveIntegerValue(this.elements.arm),
     level = this.getPositiveIntegerValue(this.elements.lvl, 6);
     if(points && level) {
@@ -236,7 +349,7 @@ SGPvPUI.prototype.armourInputHandler = function() {
     this.enableCloseIfProper();
 };
 
-SGPvPUI.prototype.rtidInputHandler = function() {
+SGPvPUI.prototype.onRtIdInput = function() {
     var rtid = this.getPositiveIntegerValue(this.elements.rid, null, true);
     if(rtid) {
         this.rtidValid = true;
@@ -318,7 +431,8 @@ SGPvPUI.prototype.parseAction = function(action_str) {
     return { action: action, args: args };
 };
 
-SGPvPUI.prototype.switchToSetKey = function(keydiv) {
+SGPvPUI.prototype.onKeyClick = function(event) {
+    var keydiv = event.currentTarget;
     this.setkey_div = keydiv;
     this.setkey_code = parseInt(keydiv.id.substr(4));
 
@@ -344,7 +458,7 @@ SGPvPUI.prototype.switchToSetKey = function(keydiv) {
     }
 };
 
-SGPvPUI.prototype.setKeyArgInputHandler = function() {
+SGPvPUI.prototype.onSetKeyArgInput = function() {
     var e = this.elements,
     opts = e.setkey_select.options,
     action_id = opts[e.setkey_select.selectedIndex].value,
@@ -364,7 +478,7 @@ SGPvPUI.prototype.setKeyArgInputHandler = function() {
     this.saveKeyMap();
 };
 
-SGPvPUI.prototype.setKeySelectChangeHandler = function() {
+SGPvPUI.prototype.onSetKeySelectChange = function() {
     var e = this.elements,
     opts = e.setkey_select.options,
     a = this.parseAction(opts[e.setkey_select.selectedIndex].value),
@@ -443,125 +557,6 @@ SGPvPUI.prototype.importKeyMap = function() {
             alert('The keymap has errors and could not be imported.');
         }
     }
-};
-
-// We use all these elements in the UI DOM.
-SGPvPUI.prototype.UI_ELEMENT_IDS =
-    [ 'sg-arm',
-      'sg-close',
-      'sg-default-keymap',
-      'sg-exc',
-      'sg-illarion-keymap',
-      'sg-impexp-keymap',
-      'sg-inc',
-      'sg-keybindings',
-      'sg-keyboard',
-      'sg-lvl',
-      'sg-ql',
-      'sg-rid',
-      'sg-s2keys',
-      'sg-s2targeting',
-      'sg-setkey',
-      'sg-setkey-bots',
-      'sg-setkey-code',
-      'sg-setkey-done',
-      'sg-setkey-key',
-      'sg-setkey-missiles',
-      'sg-setkey-rounds',
-      'sg-setkey-select',
-      'sg-skarg-bots',
-      'sg-skarg-missiles',
-      'sg-skarg-rounds',
-      'sg-targeting',
-      'sg-version' ];
-
-SGPvPUI.prototype.setUIElement = function(div) {
-    this.ui_element = div;
-    var doc = this.doc, sgpvp = this.sgpvp;
-
-    // Centre it
-    //var screen_width = doc.body.offsetWidth;
-    div.style.left = ((doc.body.clientWidth - 600) / 2) + 'px';
-
-    // Get the elements we use for controlling the UI
-    var e = new Object();
-    this.elements = e;
-    for(var i in this.UI_ELEMENT_IDS) {
-        var id = this.UI_ELEMENT_IDS[i];
-        e[id.substr(3).replace('-','_')] = doc.getElementById(id);
-    }
-
-    e.version.textContent = sgpvp.getVersion();
-
-    // handlers
-    var self = this,
-    switchToTargeting = function() { self.switchToPanel('targeting'); },
-    switchToKeys = function() { self.switchToPanel('bindings'); },
-    targetingInput = function() { self.targetingDataInputHandler(); },
-    armourInput = function() { self.armourInputHandler(); },
-    rtidInput = function() { self.rtidInputHandler(); },
-    close = function() { self.close(); },
-    keyClick = function(event) { self.switchToSetKey(event.currentTarget); },
-    setKeySelect = function() { self.setKeySelectChangeHandler(); },
-    setKeyArgInput = function() { self.setKeyArgInputHandler(); },
-    defaultKeys = function() { self.resetKeyMap('default_keymap'); },
-    illarionKeys = function() { self.resetKeyMap('illarion_keymap'); },
-    importKeys = function() { self.importKeyMap(); },
-    configure = function() {
-        self.keymap = sgpvp.keymap;
-        e.ql.value = sgpvp.ql;
-        var targetingData = sgpvp.targeting;
-        e.inc.value = self.stringifyOverrideList(targetingData.include);
-        e.exc.value = self.stringifyOverrideList(targetingData.exclude);
-        e.rid.value = sgpvp.rtid;
-        var armourData = sgpvp.armour;
-        e.arm.value = armourData.points;
-        e.lvl.value = armourData.level;
-
-        self.targetingValid = true;
-        self.armourValid = true;
-        self.rtidValid = true;
-
-        self.initActionCatalogue();
-
-        e.s2targeting.addEventListener('click', switchToTargeting, false);
-        e.s2keys.addEventListener('click', switchToKeys, false);
-        e.ql.addEventListener('input', targetingInput, false);
-        e.inc.addEventListener('input', targetingInput, false);
-        e.exc.addEventListener('input', targetingInput, false);
-        e.rid.addEventListener('input', rtidInput, false);
-        e.arm.addEventListener('input', armourInput, false);
-        e.lvl.addEventListener('input', armourInput, false);
-        e.close.addEventListener('click', close, false);
-        e.setkey_done.addEventListener('click', switchToKeys, false);
-        e.setkey_select.addEventListener('change', setKeySelect, false);
-        e.setkey_bots.addEventListener('input', setKeyArgInput, false);
-        e.setkey_rounds.addEventListener('input', setKeyArgInput, false);
-        e.setkey_missiles.addEventListener('click', setKeyArgInput, false);
-        e.default_keymap.addEventListener('click', defaultKeys, false);
-        e.illarion_keymap.addEventListener('click', illarionKeys, false);
-        e.impexp_keymap.addEventListener('click', importKeys, false);
-
-        self.labelAllKeys();
-
-        // Bind the keys
-        var kdiv,
-        xpr = doc.evaluate('div', e.keyboard, null,
-                           XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
-        while((kdiv = xpr.iterateNext()))
-            kdiv.addEventListener('click', keyClick, false);
-    };
-
-    // load settings and configure
-    sgpvp.loadSettings(['keymap', 'ql', 'targeting', 'rtid', 'armour' ],
-                       configure);
-};
-
-SGPvPUI.prototype.toggle = function() {
-    if(this.ui_element)
-        this.close();
-    else
-        this.open();
 };
 
 SGPvPUI.prototype.saveKeyMap = function() {

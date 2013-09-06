@@ -206,6 +206,7 @@ SGMain.prototype.NOTIFICATION_STYLE = {
     position: 'fixed', textAlign: 'center', top: '50%', width: '8em',
     zIndex: '15'
 };
+
 SGMain.prototype.showNotification = function(text, delay) {
     if(this.notification_timer)
         clearTimeout(this.notification_timer);
@@ -904,9 +905,9 @@ SGMain.prototype.ambush = function() {
                          null).singleNodeValue;
     if(ta.value == '') {
         // load the configured QL and apply
-        var self = this,
+        var ql = this.ql,
         act = function() {
-            ta.value = self.ql;
+            ta.value = ql;
             apply.click();
         };
         this.loadSettings(['ql'], act);
