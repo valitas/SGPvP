@@ -1,14 +1,25 @@
 // Include sgpvp.js before this.
 
-SGPvP.prototype.getVersion = function() {
+// DOM is ready now.
+SGPvP.prototype.platformInit = function() {
+    this.top.addEventListener('message', this.onMessage.bind(this), false);
+};
+
+SGPvP.prototype.onMessage = function(event) {
+    var data = event.data;
+    if(data && data.sgpvp == 2)
+        this.onFrameReady(data.frame);
+};
+
+SGMain.prototype.getVersion = function() {
     return chrome.runtime.getManifest().version;
 };
 
-SGPvP.prototype.getValues = function(keys, callback) {
+SGMain.prototype.getValues = function(keys, callback) {
     chrome.storage.local.get(keys, callback);
 };
 
-SGPvP.prototype.setValues = function(entries) {
+SGMain.prototype.setValues = function(entries) {
     chrome.storage.local.set(entries);
 };
 
@@ -16,11 +27,12 @@ SGPvP.prototype.setValues = function(entries) {
 // deal with oddities introduced by "Mr Xyzzy's Pardus Helper".
 // There's no such thing on Chrome, so we can simplify here.
 
-SGPvP.prototype.BUILDING_PLAYER_DETAIL_RX = /^building\.php\?detail_type=player&detail_id=(\d+)/;
-SGPvP.prototype.getShipsBuilding = function() {
-    var xpr = document.evaluate("//table[@class='messagestyle']/tbody/tr/th",
-                                document, null,
-                                XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
+SGMain.prototype.BUILDING_PLAYER_DETAIL_RX = /^building\.php\?detail_type=player&detail_id=(\d+)/;
+SGMain.prototype.getShipsBuilding = function() {
+    var doc = this.doc,
+    xpr = doc.evaluate("//table[@class='messagestyle']/tbody/tr/th",
+                       doc, null, XPathResult.UNORDERED_NODE_ITERATOR_TYPE,
+                       null);
     var th;
     while((th = xpr.iterateNext())) {
         var heading = th.textContent;
@@ -34,11 +46,12 @@ SGPvP.prototype.getShipsBuilding = function() {
 };
 
 // XXX - untested!!
-SGPvP.prototype.SHIP2SHIP_RX = /^ship2ship_combat\.php\?playerid=(\d+)/;
-SGPvP.prototype.getShipsCombat = function() {
-    var xpr = document.evaluate("//table[@class='messagestyle']/tbody/tr/th",
-                                document, null,
-                                XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
+SGMain.prototype.SHIP2SHIP_RX = /^ship2ship_combat\.php\?playerid=(\d+)/;
+SGMain.prototype.getShipsCombat = function() {
+    var doc = this.doc,
+    xpr = doc.evaluate("//table[@class='messagestyle']/tbody/tr/th",
+                       doc, null, XPathResult.UNORDERED_NODE_ITERATOR_TYPE,
+                       null);
     var th;
     while((th = xpr.iterateNext())) {
         var heading = th.textContent;
@@ -53,10 +66,10 @@ SGPvP.prototype.getShipsCombat = function() {
 
 // This gets the faction and ship type from a ship entry. It's a
 // separate method to reuse it - we do it the same in all pages.
-SGPvP.prototype.SHIPBGIMAGE_RX = /^url\("[^"]+\/ships\/([^/.]+)(?:_paint\d+|xmas)?\.png"\)$/;
-SGPvP.prototype.SHIPIMSRC_RX = /ships\/([^/.]+)(?:_paint\d+|xmas)?\.png$/;
-SGPvP.prototype.FACTIONSIGN_RX = /factions\/sign_(fed|emp|uni)/;
-SGPvP.prototype.getShipEntryExtras = function(entry) {
+SGMain.prototype.SHIPBGIMAGE_RX = /^url\("[^"]+\/ships\/([^/.]+)(?:_paint\d+|xmas)?\.png"\)$/;
+SGMain.prototype.SHIPIMSRC_RX = /ships\/([^/.]+)(?:_paint\d+|xmas)?\.png$/;
+SGMain.prototype.FACTIONSIGN_RX = /factions\/sign_(fed|emp|uni)/;
+SGMain.prototype.getShipEntryExtras = function(entry) {
     // find the ship type
     var itd = entry.td.previousElementSibling;
     if(itd) {
@@ -65,7 +78,7 @@ SGPvP.prototype.getShipEntryExtras = function(entry) {
             entry.shipModel = m[1];
 
         // see if we find a faction
-        var xpr = document.evaluate("img", itd, null,
+        var xpr = this.doc.evaluate("img", itd, null,
                                     XPathResult.UNORDERED_NODE_ITERATOR_TYPE,
                                     null);
         var img;
@@ -84,7 +97,7 @@ SGPvP.prototype.getShipEntryExtras = function(entry) {
 // Our versions of GM_getResourceURL and GM_getResourceText. We use
 // these in Chrome to fetch resources included with the extension.
 
-SGPvP.prototype.RESOURCE = {
+SGMain.prototype.RESOURCE = {
     ui_js: 'ui.js',
     ui_html: 'ui.html',
     ui_style: 'ui.css',
@@ -92,11 +105,11 @@ SGPvP.prototype.RESOURCE = {
     illarion_keymap: 'illarion-keymap.json'
 };
 
-SGPvP.prototype.getResourceURL = function(resource_id) {
+SGMain.prototype.getResourceURL = function(resource_id) {
     return chrome.extension.getURL(this.RESOURCE[resource_id]);
 };
 
-SGPvP.prototype.getResourceText = function(resource_id) {
+SGMain.prototype.getResourceText = function(resource_id) {
     var rq = new XMLHttpRequest();
     rq.open('GET', this.getResourceURL(resource_id), false);
     rq.send();

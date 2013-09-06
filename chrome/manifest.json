@@ -1,14 +1,14 @@
 {
-    "content_scripts": [ {
-        "all_frames": true,
-        "js": [ "sgpvp.js", "chrome.js", "nav.js" ],
-        "matches": [ "*://*.pardus.at/main.php*",
-                     "*://*.pardus.at/building.php*",
-                     "*://*.pardus.at/ship2ship_combat.php*",
-                     "*://*.pardus.at/ship2opponent_combat.php*",
-                     "*://*.pardus.at/ambush.php*",
-                     "*://*.pardus.at/logout.php" ]
-    } ],
+    "content_scripts": [
+        { "all_frames": false,
+          "js": [ "sgpvp.js", "chrome.js", "game.js" ],
+          "matches": [ "*://*.pardus.at/game.php" ],
+          "run_at": "document_start" },
+        { "all_frames": true,
+          "js": [ "all.js" ],
+          "matches": [ "*://*.pardus.at/*" ],
+          "run_at": "document_start" }
+    ],
     "content_security_policy": "script-src 'self'; object-src 'self'",
     "description": "Keyboard commands for Pardus PvP - development release",
     "icons": {
@@ -24,5 +24,5 @@
     "update_url": "https://dl.dropboxusercontent.com/u/28969566/sgpvp/updates.xml",
     "web_accessible_resources": [ "ui.js", "ui.html", "ui.css",
                                   "default-keymap.json", "illarion-keymap.json" ],
-    "version": "32"
+    "version": "32.1"
 }
