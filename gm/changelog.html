@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>SGPvP Custom Keys</title>
+  <link rel="stylesheet" type="text/css" href="help.css" />
+ </head>
+ <body>
+  <div id="content">
+
+    <h1>SGPvP Change log</h1>
+
+    <h3>Version 33</h3>
+    <p>Released 10th Sept 2013. This release doesn't add many visible
+    new features, but there are major internal changes, hopefully for
+    the last time.</p>
+    <ul>
+     <li>The script runs now on the top Pardus frame, rather than the
+     main ("nav") frame.  This allows for catching key presses on all
+     frames. More importantly, this means the script is injected once
+     when you undock, and persists loaded for a long time, rather than
+     being parsed and evaluated every time you nav.  This is a big
+     performance improvement.</li>
+     <li>New import/export keymap feature.</li>
+     <li>Better documentation.</li>
+    </ul>
+
+    <h3>Version 32</h3>
+    <p>Released 2nd Sept 2013. This is a major update, featuring:</p>
+    <ul>
+     <li>Configurable key map with pretty user interface &#8212; no
+     mucking about in the source code.</li>
+     <li>New actions available: engage for fewer rounds, raid.</li>
+     <li>User interface code segregated from core and loaded on
+     demand, for faster loading (core script size below 30K).</li>
+     <li>Primary development moved to Google Chrome, now fully
+     functional, releases ported to Firefox from now on.</li>
+     <li>Verified working on Firefox 18 and later.</li>
+    </ul>
+
+    <p>We started keeping a change log document here. If it's ever
+    needed, earlier revision information is available to developers,
+    from the git log.</p>
+  </div>
+ </body>
+</html>
