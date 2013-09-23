@@ -642,30 +642,43 @@ SGMain.prototype.setRounds = function(limit) {
                        XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
     while((sel = xpr.iterateNext())) {
         if(sel.style.display == 'none' &&
-           sel.nextElementSibling.tagName == 'SELECT') {
+           sel.nextElementSibling.tagName == 'SELECT')
             // for some reason, Pardus now hides the rounds select,
             // and instead adds a second, visible select element, with
             // a gibberish name.
-            sel.selectedIndex = 0; // XXX - review
             sel = sel.nextElementSibling;
-        }
+
         this.selectMaxValue(sel, limit);
     }
 };
 
 SGMain.prototype.doEngage = function(rounds, missiles, raid) {
-    var doc = this.doc,
-    xpath = '//input[@name="ok" and @type="submit" and @value="Attack"]',
-    elt = doc.evaluate(xpath, doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
-                       null).singleNodeValue;
-    if(elt && elt.click) {
-        var surr = doc.getElementById('letsurrender');
-        if(surr)
-            surr.checked = raid;
-        this.setMissiles(missiles != 'n');
-        this.setRounds(rounds ? parseInt(rounds) : 20);
+    var doc = this.doc, elt, m, attack_button, premium_buttons = new Object(),
+    xpr = doc.evaluate('//input[@type="submit"]', doc, null,
+                       XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
+    while((elt = xpr.iterateNext())) {
+      console.log(elt.name, elt.value);
+      if(/^button\d+$/.test(elt.name) &&
+         (m = /^(\d+)\s+\(\d+ APs\)$/.exec(elt.value)))
+        premium_buttons[parseInt(m[1])] = elt;
+      else
+        if(elt.name == 'ok' && elt.value == 'Attack')
+          attack_button = elt;
+    }
+
+    if(attack_button) {
+      var surr = doc.getElementById('letsurrender');
+      if(surr)
+        surr.checked = raid;
+      this.setMissiles(missiles != 'n');
+      rounds = rounds ? parseInt(rounds) : 20;
+      if((elt = premium_buttons[rounds]))
         elt.click();
-        return;
+      else {
+        this.setRounds(rounds);
+        attack_button.click();
+      }
+      return;
     }
 
     // no attack button?
