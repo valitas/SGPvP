@@ -1,7 +1,7 @@
 // SGPvP object. This code must run on Firefox and Google Chrome - no
 // Greasemonkey calls and no chrome.* stuff here.
 
-// V34
+// V36
 
 function SGPvP(top) {
     this.top = top;
@@ -40,6 +40,7 @@ SGPvP.prototype.onFrameReady = function(frame_id) {
 SGPvP.prototype.onKeyDown = function(event) {
     if(!this.mainDriver || event.ctrlKey || event.altKey || event.metaKey ||
        (event.target && (event.target.nodeName == 'INPUT' ||
+                         event.target.nodeName == 'SELECT' ||
                          event.target.nodeName == 'TEXTAREA')))
         return;
 

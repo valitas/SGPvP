@@ -1,6 +1,8 @@
 // SGMain object. This code must run on Firefox and Google Chrome - no
 // Greasemonkey calls and no chrome.* stuff here.
 
+// V36
+
 function SGMain(doc) {
     this.doc = doc;
 
@@ -48,6 +50,7 @@ function SGMain(doc) {
         // window.location.origin is only available on FF 20
         script.textContent = "(function() {var fn=function(){window.postMessage({sgpvp:1,loc:typeof(userloc)=='undefined'?null:userloc,ajax:typeof(ajax)=='undefined'?null:ajax},window.location.protocol+'//'+window.location.host);};if(typeof(addUserFunction)=='function')addUserFunction(fn);fn();})();";
         self.doc.body.appendChild(script);
+        self.configured = true;
     };
 
     this.loadSettings(['keymap', 'targeting', 'armour',
@@ -181,6 +184,11 @@ SGMain.prototype.fixActionString = function(str) {
 };
 
 SGMain.prototype.keyPressHandler = function(keyCode) {
+    if(!this.configured)
+        // User is mashing too fast, we haven't even had time to load
+        // our settings. Ignore this, they'll try again, no doubt.
+        return;
+
     if(keyCode == 27) {
         if(this.sgpvpui)
             this.sgpvpui.toggle();
@@ -657,10 +665,9 @@ SGMain.prototype.doEngage = function(rounds, missiles, raid) {
     xpr = doc.evaluate('//input[@type="submit"]', doc, null,
                        XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
     while((elt = xpr.iterateNext())) {
-      console.log(elt.name, elt.value);
       if(!elt.classList.contains('disabled') &&
          /^button\d+$/.test(elt.name) &&
-		 (m = /^(\d+)\s+\(\d+ APs\)$/.exec(elt.value)))
+         (m = /^(\d+)\s+\(\d+ APs\)$/.exec(elt.value)))
         premium_buttons[parseInt(m[1])] = elt;
       else
         if(elt.name == 'ok' && elt.value == 'Attack')
@@ -679,6 +686,8 @@ SGMain.prototype.doEngage = function(rounds, missiles, raid) {
         this.setRounds(rounds);
         attack_button.click();
       }
+      // Prevent freeze by user mashing keys too fast
+      this.doEngage = this.nop;
       return;
     }
 
@@ -698,6 +707,7 @@ SGMain.prototype.doAttackBuilding = function(mode, missiles) {
     }
     // no destroy/raid button?
     doc.location = 'building.php';
+    this.doAttackBuilding = this.nop; // prevent freezes by user mashing key too fast
 };
 
 SGMain.prototype.clickById = function(id) {
@@ -737,6 +747,7 @@ SGMain.prototype.disengage = function() {
                        null).singleNodeValue;
     if(elt && elt.click) {
         elt.click();
+        this.disengage = this.nop;
         return;
     }
 
@@ -753,6 +764,14 @@ SGMain.prototype.disengage = function() {
         this.nav();
     }
 
+    /* Don't try to be clever.  This below would be the clean way to
+     jump to a tile when partial refresh is enabled.  However, it
+     seems that, when Pyro is mashing retreat, it won't always
+     work. It may be that the script that handles clicks for map tiles
+     isn't loaded yet, by the time this is invoked.  So, sod this,
+     skip to post the navForm instead, as we do for non partial
+     refresh.
+
     if(this.ajax) {
         var xpath = "//table[@id='navareatransition']/tbody/tr/td/a[@onclick='navAjax(" +
             this.rtid + ")']";
@@ -764,6 +783,7 @@ SGMain.prototype.disengage = function() {
             return;
         }
     }
+    */
 
     var form = doc.getElementById('navForm');
     if(form) {
@@ -779,7 +799,8 @@ SGMain.prototype.disengage = function() {
     this.showNotification("Error 5002 cannot retreat, USE MOUSE and REPORT THIS", 1500);
 };
 
-SGMain.prototype.nav = function() { this.doc.location = 'main.php'; };
+SGMain.prototype.nop = function() { };
+SGMain.prototype.nav = function() { this.doc.location = 'main.php'; this.nav = this.nop; };
 SGMain.prototype.bots = function() { this.useBots(null); };
 SGMain.prototype.forceBots = function(n) { this.useBots(n); };
 SGMain.prototype.testBots = function() {
@@ -805,9 +826,11 @@ SGMain.prototype.raidBuilding = function(missiles) {
 };
 SGMain.prototype.flyClose = function() {
     this.doc.location = 'main.php?entersb=1';
+    this.flyClose = this.nop;
 };
 SGMain.prototype.exitFlyClose = function() {
     this.doc.location = 'main.php?exitsb=1';
+    this.exitFlyClose = this.nop;
 };
 SGMain.prototype.dockUndock = function() { this.undock() || this.dock(); };
 SGMain.prototype.dock = function() { top.location = 'game.php?logout=1'; };
@@ -865,6 +888,7 @@ SGMain.prototype.target = function() {
             this.getShipModelPriorities() : null;
         var best = this.chooseTarget(targets.included, ship_pri);
         this.doc.location = 'ship2ship_combat.php?playerid=' + best.id;
+        this.target = this.nop; // prevent freezes by user mashing key too fast
         return;
     }
 
