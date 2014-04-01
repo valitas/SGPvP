@@ -25,5 +25,5 @@
     "web_accessible_resources": [ "ui.html", "ui.css",
                                   "default-keymap.json",
                                   "illarion-keymap.json" ],
-    "version": "34"
+    "version": "35"
 }

@@ -658,8 +658,9 @@ SGMain.prototype.doEngage = function(rounds, missiles, raid) {
                        XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
     while((elt = xpr.iterateNext())) {
       console.log(elt.name, elt.value);
-      if(/^button\d+$/.test(elt.name) &&
-         (m = /^(\d+)\s+\(\d+ APs\)$/.exec(elt.value)))
+      if(!elt.classList.contains('disabled') &&
+         /^button\d+$/.test(elt.name) &&
+		 (m = /^(\d+)\s+\(\d+ APs\)$/.exec(elt.value)))
         premium_buttons[parseInt(m[1])] = elt;
       else
         if(elt.name == 'ok' && elt.value == 'Attack')
