@@ -1,7 +1,7 @@
 // SGMain object. This code must run on Firefox and Google Chrome - no
 // Greasemonkey calls and no chrome.* stuff here.
 
-// V36
+// V37
 
 function SGMain(doc) {
     this.doc = doc;
@@ -712,7 +712,8 @@ SGMain.prototype.doAttackBuilding = function(mode, missiles) {
 
 SGMain.prototype.clickById = function(id) {
     var elt = this.doc.getElementById(id);
-    if(elt && elt.click)
+    if(elt && elt.click &&
+       !(elt.disabled || elt.classList.contains('disabled')) )
         elt.click();
     else
         this.nav();
@@ -741,62 +742,54 @@ SGMain.prototype.raid = function(rounds, missiles) {
 };
 
 SGMain.prototype.disengage = function() {
+    // no frantic keypressing.  but this means that, once we're in
+    // this function, we *have* to reload, so watch this.
+    this.disengage = this.nop;
+
     var doc = this.doc,
     elt = doc.evaluate('//input[@name="retreat" and @type="submit"]',
                        doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
                        null).singleNodeValue;
-    if(elt && elt.click) {
-        elt.click();
-        this.disengage = this.nop;
+    if( elt && elt.click &&
+        !(elt.disabled || elt.classList.contains('disabled')) ) {
+        elt.click(); // this reloads the page
         return;
     }
 
-    // no retreat button?
-    if(this.page != 'main') {
-        // XXX - we may be able to skip this nav, by inserting an
-        // invisible form and submitting it...
-        this.nav();
-        return;
-    }
+    // no retreat button...
 
     if(!this.rtid) {
         this.showNotification('NO RETREAT TILE SET', 500);
-        this.nav();
+        this.nav(); // this reloads the page
+        return;
     }
-
-    /* Don't try to be clever.  This below would be the clean way to
-     jump to a tile when partial refresh is enabled.  However, it
-     seems that, when Pyro is mashing retreat, it won't always
-     work. It may be that the script that handles clicks for map tiles
-     isn't loaded yet, by the time this is invoked.  So, sod this,
-     skip to post the navForm instead, as we do for non partial
-     refresh.
-
-    if(this.ajax) {
-        var xpath = "//table[@id='navareatransition']/tbody/tr/td/a[@onclick='navAjax(" +
-            this.rtid + ")']";
-        var tile = doc.evaluate(xpath, doc, null,
-                                XPathResult.ANY_UNORDERED_NODE_TYPE,
-                                null).singleNodeValue;
-        if(tile) {
-            tile.click();
-            return;
-        }
-    }
-    */
 
     var form = doc.getElementById('navForm');
-    if(form) {
+    if ( form ) {
         var destination = form.elements.destination;
-        if(destination) {
+        if( destination )
             destination.value = this.rtid;
-            form.submit();
-            return;
-        }
+    }
+    else {
+        // No form, add one.
+        form = doc.createElement( 'form' );
+        form.name = 'navForm';
+        form.method = 'post';
+        form.action = '/main.php';
+        form.style.display = 'none';
+        var input = doc.createElement( 'input' );
+        input.type = 'hidden';
+        input.name = 'destination';
+        input.value = this.rtid;
+        form.appendChild( input );
+        input = doc.createElement( 'input' );
+        input.type = 'hidden';
+        input.name = 'ts';
+        input.value = Date.now();
+        doc.body.appendChild( form );
     }
 
-    // still here? report...
-    this.showNotification("Error 5002 cannot retreat, USE MOUSE and REPORT THIS", 1500);
+    form.submit(); // this reloads the page
 };
 
 SGMain.prototype.nop = function() { };
@@ -915,6 +908,9 @@ SGMain.prototype.setAmbushRP = function() {
 };
 
 SGMain.prototype.ambush = function() {
+    // Throttle frantic keypresses.
+    this.ambush = this.nop;
+
     if(this.page != 'ambush') {
         this.clickById('aCmdAmbush');
         return;

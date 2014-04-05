@@ -1,7 +1,7 @@
 // SGPvP object. This code must run on Firefox and Google Chrome - no
 // Greasemonkey calls and no chrome.* stuff here.
 
-// V36
+// V37
 
 function SGPvP(top) {
     this.top = top;

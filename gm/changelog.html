@@ -9,6 +9,12 @@
 
     <h1>SGPvP Change log</h1>
 
+    <h3>Version 37</h3>
+    <p>Released 2 Apr 2014. Changes disengage so that, if not blocked,
+    only one server request is needed to jump to retreat tile.  Fixes
+    fast keypress choking for action "set ambush".  Deals with
+    disabled buttons (e.g. cloak when you have no AP) by navving.</p>
+
     <h3>Version 36</h3>
     <p>Released 1 Apr 2014. Fixes two issues: an apparent freeze when
     the user was hitting keys too fast, and retreat not working
@@ -21,9 +27,9 @@
     <h3>Version 34</h3>
     <p>Released 22nd Sept 2013. This only includes a minor fix to use
     the premium buttons when possible when selecting the number of
-    rounds to attack.  This works around a reported issue, where the
-    script occasionally fails to select the rounds correctly and fires
-    one round.  That issue hasn't been reproducible in development
+    rounds to attack.  This works around an issue where the script
+    occasionally fails to select the rounds correctly and fires one
+    round.  That issue hasn't been reproducible in development
     environments, so it may be there still, but Premium users should
     not be affected by it now.</p>
 
@@ -49,9 +55,7 @@
      mucking about in the source code.</li>
      <li>New actions available: engage for fewer rounds, raid.</li>
      <li>User interface code segregated from core and loaded on
-     demand, for faster loading (core script size below 30K).</li>
-     <li>Primary development moved to Google Chrome, now fully
-     functional, releases ported to Firefox from now on.</li>
+     demand, for faster loading (core script size below 30 KB).</li>
      <li>Verified working on Firefox 18 and later.</li>
     </ul>
 
