@@ -21,9 +21,9 @@
     "minimum_chrome_version": "20",
     "name": "Scorpion Guard's Better PvP Pardus Extension",
     "permissions": [ "storage" ],
-    "update_url": "https://dl.dropboxusercontent.com/u/28969566/sgpvp/updates.xml",
+    "update_url": "http://clients2.google.com/service/update2/crx",
     "web_accessible_resources": [ "ui.html", "ui.css",
                                   "default-keymap.json",
                                   "illarion-keymap.json" ],
-    "version": "37"
+    "version": "37.1"
 }
