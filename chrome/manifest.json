@@ -10,20 +10,19 @@
           "run_at": "document_start" }
     ],
     "content_security_policy": "script-src 'self'; object-src 'self'",
-    "description": "Keyboard commands for Pardus PvP - development release",
+    "description": "Keyboard actions for PvP in the online game Pardus",
     "icons": {
         "16": "16.png",
         "48": "48.png",
         "128": "128.png"
     },
-    "key": "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCnUG1bRyKxo6bpQ1NNRE91fojHUxqX3CmTdtr5lywscuALtJffk+SvgI/19AjXTPexMQFQCfssz+mqjDA23+nsiKR4ug86YLuaXHTk7XVUSYR6FhsekXVvoXx/o879ThHRIYa9h4LIUQ8b84AfXFqRaGV/uHHSYoWdJTMocCegJQIDAQAB",
     "manifest_version": 2,
     "minimum_chrome_version": "20",
     "name": "Scorpion Guard's Better PvP Pardus Extension",
     "permissions": [ "storage" ],
-    "update_url": "http://clients2.google.com/service/update2/crx",
+    "short_name": "SGPvP",
     "web_accessible_resources": [ "ui.html", "ui.css",
                                   "default-keymap.json",
                                   "illarion-keymap.json" ],
-    "version": "37.1"
+    "version": "38"
 }
