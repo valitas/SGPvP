@@ -1,10 +1,14 @@
 // SGPvPUI and related objects - user interface implementation.
-// 
+//
 // This code must run on Firefox and Google Chrome - no Greasemonkey
 // calls and no chrome.* APIs here.  localStorage should not be
 // accessed from here either.
 
 
+// XXX - The way we handle actions with arguments is a bit awkward now.  We
+// probably should be done with the hidden fields, and instead add and remove
+// action-specific HTML, but event handlers on the dynamic controls are a
+// problem...
 function SGPvPAction() { }
 SGPvPAction.prototype.serialise = function() { return this.id; };
 SGPvPAction.prototype.displayName = function() { return this.name; };
@@ -14,6 +18,7 @@ SGPvPAction.prototype.updateSetKeyPanelArgs = function() {
     e.skarg_bots.style.display = 'none';
     e.skarg_rounds.style.display = 'none';
     e.skarg_missiles.style.display = 'none';
+    e.skarg_armour.style.display = 'none';
 };
 
 function SGPvPNoAction() { }
@@ -34,6 +39,7 @@ SGPvPActionM.prototype.updateSetKeyPanelArgs = function(missiles) {
     var e = this.elements;
     e.skarg_bots.style.display = 'none';
     e.skarg_rounds.style.display = 'none';
+    e.skarg_armour.style.display = 'none';
     e.skarg_missiles.style.display = null; // default to block
     e.setkey_missiles.checked = (missiles != 'n');
 };
@@ -57,11 +63,13 @@ SGPvPActionRM.prototype.displayName = function(rounds, missiles) {
 SGPvPActionRM.prototype.updateSetKeyPanelArgs = function(rounds, missiles) {
     var e = this.elements;
     e.skarg_bots.style.display = 'none';
+    e.skarg_armour.style.display = 'none';
     e.skarg_rounds.style.display = null; // default to block
     e.setkey_rounds.style.color = null; // default
     e.setkey_rounds.value = (rounds || 20);
     e.skarg_missiles.style.display = null; // default to block
     e.setkey_missiles.checked = (missiles != 'n');
+
 };
 SGPvPActionRM.prototype.getArgsFromUI = function() {
     var e = this.elements,
@@ -85,6 +93,7 @@ SGPvPActionB.prototype.updateSetKeyPanelArgs = function(bots) {
     var e = this.elements;
     e.skarg_rounds.style.display = 'none';
     e.skarg_missiles.style.display = 'none';
+    e.skarg_armour.style.display = 'none';
     e.skarg_bots.style.display = null; // default to block
     e.setkey_bots.style.color = null; // default
     e.setkey_bots.value = (bots || 1);
@@ -97,14 +106,76 @@ SGPvPActionB.prototype.getArgsFromUI = function() {
     return null;
 };
 
+function SGPvPActionWin() { }
+SGPvPActionWin.prototype.serialise = function( threshold, rounds, missiles ) {
+  return this.id + ',' + (threshold || 0) + ',' + (rounds || 20) + ',' +
+    (missiles != 'n' ? 'm' : 'n');
+};
+SGPvPActionWin.prototype.displayName = function(threshold, rounds, missiles) {
+  if(!rounds)
+    rounds = 20;
+  return this.name + (rounds == 20 ? '' : ' '+rounds) +
+    (missiles != 'n' ? '' : ' no missiles');
+};
+SGPvPActionWin.prototype.updateSetKeyPanelArgs =
+  function(threshold, rounds, missiles) {
+  var e = this.elements;
+  e.skarg_bots.style.display = 'none';
+  e.skarg_armour.style.display = null; // default to block
+  e.setkey_armour.value = (threshold || 0);
+  e.skarg_rounds.style.display = null; // default to block
+  e.setkey_rounds.value = (rounds || 20);
+  e.skarg_missiles.style.display = null; // default to block
+  e.setkey_missiles.checked = (missiles != 'n');
+};
+SGPvPActionWin.prototype.getArgsFromUI = function() {
+  var e = this.elements,
+      rounds = this.getPositiveIntegerValue(e.setkey_rounds, 20),
+      armour = this.getPositiveIntegerValue(e.setkey_armour, 0);
+  if ( rounds && armour )
+    return [ armour, rounds,
+             e.setkey_missiles.checked ? 'm' : 'n' ];
+  return null;
+};
+
+function SGPvPActionWinB() { }
+SGPvPActionWinB.prototype.serialise = function( threshold, missiles ) {
+  return this.id + ',' + (threshold || 0) + ',' +
+    (missiles != 'n' ? 'm' : 'n');
+};
+SGPvPActionWinB.prototype.displayName = function(threshold, missiles) {
+  return this.name + (missiles != 'n' ? '' : ' no missiles');
+};
+SGPvPActionWinB.prototype.updateSetKeyPanelArgs = function(threshold, missiles) {
+  var e = this.elements;
+  e.skarg_bots.style.display = 'none';
+  e.skarg_rounds.style.display = 'none';
+  e.skarg_armour.style.display = null; // default to block
+  e.setkey_armour.value = (threshold || 0);
+  e.skarg_missiles.style.display = null; // default to block
+  e.setkey_missiles.checked = (missiles != 'n');
+};
+SGPvPActionWinB.prototype.getArgsFromUI = function() {
+  var e = this.elements,
+      armour = this.getPositiveIntegerValue(e.setkey_armour, 0);
+  if ( armour )
+    return [ armour, e.setkey_missiles.checked ? 'm' : 'n' ];
+  return null;
+};
+
+
 // Actions not listed here are regular SGPvPAction types.
 SGPvPUI.prototype.ACTION_TYPES = {
-    '': SGPvPNoAction,
-    damageBuilding: SGPvPActionM,
-    raidBuilding: SGPvPActionM,
-    engage: SGPvPActionRM,
-    raid: SGPvPActionRM,
-    forceBots: SGPvPActionB
+  '': SGPvPNoAction,
+  damageBuilding: SGPvPActionM,
+  raidBuilding: SGPvPActionM,
+  engage: SGPvPActionRM,
+  raid: SGPvPActionRM,
+  forceBots: SGPvPActionB,
+  win: SGPvPActionWin,
+  winRaid: SGPvPActionWin,
+  winB: SGPvPActionWinB,
+  winBRaid: SGPvPActionWinB
 };
 
 
@@ -154,9 +225,11 @@ SGPvPUI.prototype.UI_ELEMENT_IDS =
       'sg-setkey-missiles',
       'sg-setkey-rounds',
       'sg-setkey-select',
+      'sg-setkey-armour',
       'sg-skarg-bots',
       'sg-skarg-missiles',
       'sg-skarg-rounds',
+      'sg-skarg-armour',
       'sg-targeting',
       'sg-version' ];
 
@@ -238,6 +311,7 @@ SGPvPUI.prototype.configure = function() {
     e.setkey_select.addEventListener('change', onSetKeySelectChange, false);
     e.setkey_bots.addEventListener('input', onSetKeyArgInput, false);
     e.setkey_rounds.addEventListener('input', onSetKeyArgInput, false);
+    e.setkey_armour.addEventListener('input', onSetKeyArgInput, false);
     e.setkey_missiles.addEventListener('click', onSetKeyArgInput, false);
     e.default_keymap.addEventListener('click', onDefaultKeymapClick, false);
     e.illarion_keymap.addEventListener('click', onIllarionKeymapClick, false);

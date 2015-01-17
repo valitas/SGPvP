@@ -1,7 +1,7 @@
 // SGMain object. This code must run on Firefox and Google Chrome - no
 // Greasemonkey calls and no chrome.* stuff here.
 
-// V37
+// V39
 
 function SGMain(doc) {
     this.doc = doc;
@@ -187,14 +187,14 @@ SGMain.prototype.keyPressHandler = function(keyCode) {
     if(!this.configured)
         // User is mashing too fast, we haven't even had time to load
         // our settings. Ignore this, they'll try again, no doubt.
-        return;
+        return false;
 
     if(keyCode == 27) {
         if(this.sgpvpui)
             this.sgpvpui.toggle();
         else
             this.configure();
-        return;
+        return false;
     }
 
     var astr = this.fixActionString(this.keymap[keyCode]);
@@ -695,6 +695,33 @@ SGMain.prototype.doEngage = function(rounds, missiles, raid) {
     this.target();
 };
 
+SGMain.prototype.doWin = function( minArmour, rounds, missiles, raid ) {
+  var armour = this.armour,
+      lkap = this.lkap,
+      lkba = this.lkba;
+
+  if( minArmour > 0 && armour.points > 0 && armour.level > 0 &&
+      lkba && lkap < minArmour )
+    // Attack safety threshold, ship armour points and level are configured;
+    // we have bots available; and the last known armour points is below the
+    // threshold.  So use bots.
+    this.useBots( null );
+  else
+    this.doEngage( rounds, missiles, raid );
+};
+
+SGMain.prototype.doWinB = function( minArmour, mode, missiles ) {
+  var armour = this.armour,
+      lkap = this.lkap,
+      lkba = this.lkba;
+
+  if( minArmour > 0 && armour.points > 0 && armour.level > 0 &&
+      lkba && lkap < minArmour )
+    this.useBots( null );
+  else
+    this.doAttackBuilding( mode, missiles );
+};
+
 SGMain.prototype.doAttackBuilding = function(mode, missiles) {
     var doc = this.doc,
     xpath='//input[@name="' + mode + '" and @type="submit"]',
@@ -719,6 +746,95 @@ SGMain.prototype.clickById = function(id) {
         this.nav();
 };
 
+// Thank you Traxus :)
+// mode can be offensive, balanced or defensive (exactly)
+SGMain.prototype.switchCombatMode = function(newCombatMode) {
+  var _this = this;
+
+  switch(this.page) {
+  case 'main':
+	var url = "overview_advanced_skills.php",
+	    params = "action=switch_combat_mode&combat_mode=" + newCombatMode;
+	this.postRequest(url, params, callback);
+	break;
+
+  case 'ship2ship_combat':
+  case 'building':
+  case 'ship2opponent_combat':
+	// were are in PvP, PvNPC or PvB, find the button
+	var button =
+      this.doc.evaluate( "//input[@type='submit' and @name='combat_mode' and @value='" +
+                         capitalizeFirstLetter(newCombatMode) + "']",
+        	             this.doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+	                     null).singleNodeValue;
+	if ( button )
+	  button.click();
+  }
+
+  // function returns here.
+
+  function capitalizeFirstLetter( s ) {
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  function callback( status, responseText ) {
+	if (status != 200) {
+	  _this.showNotification("Can't switch combat mode", 1000);
+	} else {
+	  // now check what the response from the server was
+	  if (responseText.indexOf("<font color='red'>OFFENSIVE</font>") > -1) {
+		_this.showNotification("OFFENSIVE COMBAT", 1000);
+	  } else if (responseText.indexOf("<font color='gray'>BALANCED</font>") > -1) {
+		_this.showNotification("Balanced combat", 1000);
+	  } else if (responseText.indexOf("<font color='green'>DEFENSIVE</font>") > -1) {
+		_this.showNotification("Defensive combat", 1000);
+	  }
+	}
+  }
+};
+
+// XXX - can firefox handle this?
+SGMain.prototype.postRequest = function(url, params, callback) {
+  var http = new XMLHttpRequest();
+  http.open("POST", url, true);
+  http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+  http.onreadystatechange = function() {
+	if( http.readyState == 4 )
+      callback( http.status, http.responseText );
+  }
+  http.send(params);
+};
+
+SGMain.prototype.DEPLOYED_TB_RX = /Type (I|II) Tbomb active in<br>(.*?) \[(\d+),(\d+)\]<\/font>/;
+// type is 1 or 2
+SGMain.prototype.deployTimebomb = function( type ) {
+  var url = "overview_advanced_skills.php",
+      params = "action=deploy_timebomb&timebomb_type=type_" + type,
+      _this = this;
+
+  this.postRequest(url, params, callback);
+
+  // Function returns here.
+
+  function callback( status, responseText ) {
+	if (status != 200) {
+	  _this.showNotification("Error, can't deploy", 1000);
+	} else {
+	  // now check what the response from the server was
+	  // is TB deployed ?
+	  var deployed = _this.DEPLOYED_TB_RX.exec(responseText);
+	  if (deployed) {
+		_this.showNotification("TB " + deployed[1] + " deployed at " +
+                               deployed[2] + " [" +deployed[3]+ "," +
+                               deployed[4] + "]", 1000);
+	  } else if (responseText.indexOf("There is an object on your current position!") > -1)
+		_this.showNotification("Can't deploy here", 1000);
+	  else
+		_this.showNotification("Can't deploy", 1000);
+	}
+  }
+}
+
 
 // Methods below are the actual actions we perform in response to key presses.
 // Keep the method names in sync with the UI.
@@ -737,8 +853,16 @@ SGMain.prototype.engage = function(rounds, missiles) {
     this.doEngage(rounds, missiles, false);
 };
 
+SGMain.prototype.win = function( minArmour, rounds, missiles ) {
+    this.doWin( minArmour, rounds, missiles, false );
+};
+
 SGMain.prototype.raid = function(rounds, missiles) {
     this.doEngage(rounds, missiles, true);
+};
+
+SGMain.prototype.winRaid = function( minArmour, rounds, missiles ) {
+    this.doWin( minArmour, rounds, missiles, true );
 };
 
 SGMain.prototype.disengage = function() {
@@ -817,6 +941,14 @@ SGMain.prototype.damageBuilding = function(missiles) {
 SGMain.prototype.raidBuilding = function(missiles) {
     this.doAttackBuilding('raid', missiles);
 };
+SGMain.prototype.winB = function( minArmour, missiles ) {
+    this.doWinB( minArmour, 'destroy', missiles );
+};
+SGMain.prototype.winBRaid = function( minArmour, missiles ) {
+    this.doWinB( minArmour, 'raid', missiles );
+};
+
+
 SGMain.prototype.flyClose = function() {
     this.doc.location = 'main.php?entersb=1';
     this.flyClose = this.nop;
@@ -951,6 +1083,56 @@ SGMain.prototype.ambush = function() {
     // ta.value already has a QL, just apply
     apply.click();
 };
+
+SGMain.prototype.switchToDC = function() {
+  this.switchCombatMode("defensive");
+};
+SGMain.prototype.switchToBalanced = function() {
+  this.switchCombatMode("balanced");
+};
+SGMain.prototype.switchToOC = function() {
+  this.switchCombatMode("offensive");
+};
+
+SGMain.prototype.deployTB1 = function() {
+  this.deployTimebomb( 1 );
+};
+SGMain.prototype.deployTB2 = function() {
+  this.deployTimebomb( 2 );
+};
+
+// Thanks Traxus!
+SGMain.prototype.planetRepair = function() {
+  switch(this.page) {
+	case 'ship_equipment':
+	var openTab =
+      this.doc.evaluate("//td[contains(@style,'/tabactive.png')]/text()",
+                        this.doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                        null).singleNodeValue;
+	if(!openTab)
+	  return;
+
+	if (openTab.textContent != "Repair") {
+	  this.doc.location = 'ship_equipment.php?sort=repair';
+	  return;
+	}
+
+	var button =
+      this.doc.evaluate("//form[input[@name='action' and @value='regenerateall']]/input[@type='submit' and @value='Repair all']",
+                        this.doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                        null).singleNodeValue;
+
+	if (!button || button.disabled)
+	  this.doc.location = 'main.php';
+	else
+	  button.click();
+	break;
+
+	case 'main':
+	this.doc.location = 'ship_equipment.php?sort=repair';
+	return;
+  }
+}
 
 SGMain.prototype.configure = function() {
     if(!this.sgpvpui)
