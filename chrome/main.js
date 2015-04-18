@@ -58,6 +58,143 @@ function SGMain(doc) {
                       finishConfig);
 }
 
+
+SGMain.prototype.TILE_ID_RX = /^navAjax\((\d+)\)$/;
+SGMain.prototype.SHIP_TYPE_RX = /^https?:\/\/(.*)\/ships\/([^.]+)\.png$/;
+
+SGMain.prototype.snipe = function(minArmour, rounds, missiles) {
+
+	// grace, please fix this somehow :D
+	minArmour = 360;
+	rounds = 20;
+	missiles = true;
+	var raid = false;
+	var shipsToJump = ['behemoth', 'spectre'];
+
+	console.log("Snipe button pressed");
+
+	  switch(this.page) {
+		  case 'main':
+			var ships = this.getShips();
+			if(ships) {
+				var targets = this.scanForTargets(this.targeting, ships);
+		  	        if(targets.included.length > 0) {
+					console.log("Valid target found at current location, attacking!");
+					this.doWin( minArmour, rounds, missiles, raid );
+					return;
+				}
+			}
+
+			console.log("No valid target found at current location");
+			// no target at current tile ? then check the others
+
+
+
+			//var sbox = this.doc.getElementById('navarea');
+			if (typeof(this.navarea) == 'undefined') {
+				console.log("navarea was not set, setting it now");
+				this.navarea = this.doc.getElementById('navarea');
+				console.log(this.navarea);
+			}
+
+    			if(typeof(this.navarea) != 'undefined') {
+				console.log("Nav table found, we are really on the navscreen");
+	      		
+
+				var linksToTilesContainingShips = this.doc.evaluate("tbody/tr/td[@class='navShip']/a", this.navarea,null, XPathResult.UNORDERED_NODE_ITERATOR_TYPE,null);
+				while((a = linksToTilesContainingShips.iterateNext())) {
+					console.log(a);
+					// get tile id
+					tileID = this.TILE_ID_RX.exec(a.getAttribute("onclick"));
+					if (tileID && tileID.length == 2) {
+						tileID = tileID[1];
+						console.log("I am now on tile " + this.userloc);
+						if (tileID == this.userloc) {
+							console.log("not jumping to tile " + tileID + ", i'm already on that tile");
+						} else {
+							// get image of ship
+							var images = a.getElementsByTagName("img");
+							if (images.length != 1) {
+								console.log("Something went wrong here, more then 1 image found... is this possible ? no ?");
+							} else {
+								var ship = this.SHIP_TYPE_RX.exec(images[0].getAttribute("src"));
+								if (shipsToJump.indexOf(ship[2].toLowerCase()) > -1) {
+									console.log("Jumping ship spotted on navscreen: " + ship[2]);
+									console.log("jumping, from " + this.userloc + " to " + tileID);
+									a.click();
+									return;
+								} else {
+									console.log("Not jumping ship " + ship[2]);
+								}
+							}
+						}			
+					}
+				}
+
+			}
+
+		   	// no target at current tile and nothing to jump ?
+			console.log("navving");
+		    	this.nav();
+			break;
+
+		  case 'ship2ship_combat':
+		  //case 'building':
+		  case 'ship2opponent_combat':
+			// were are in PvP, PvNPC, wack this guy
+			console.log("We are in combat, go go go attack!");
+			this.doWin( minArmour, rounds, missiles, raid );
+	  }
+}
+
+
+
+// missile ids:
+// 	P80 Sidewinder   	33
+// 	KL760 Homing Missile 	25
+// 	LV111 Intelligent 	26
+// 	NN500 Fleet Missile  	27
+// 	NN550 Fleet Missile   	113
+
+
+SGMain.prototype.buyMissile = function() {
+
+    	switch(this.page) {
+	    case 'ship_equipment':
+		var openTab = this.doc.evaluate("//td[contains(@style,'standardhq/tabactive.png')]/text()",
+                       this.doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                       null).singleNodeValue;
+
+		if(!openTab)
+	        	return;
+		if (openTab.textContent != "Weapons") {
+			this.doc.location = 'ship_equipment.php?sort=weapon';
+			return;
+		}
+
+		var missileIDArray = [113,27,26,25,33];
+		for (var missileIDIndex in missileIDArray) {
+			var button = this.doc.evaluate("//form[input[@name='eq_id' and @value='"+missileIDArray[missileIDIndex]+"']]/input[@type='submit' and @value='Buy']",
+                       this.doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                       null).singleNodeValue;
+			if (!button) 
+				return;
+
+			if (!button.disabled) {
+				button.click();
+				return;
+			}
+			this.doc.location = 'main.php';
+		}
+
+	    break;
+
+	    case 'main':
+		this.doc.location = 'ship_equipment.php?sort=weapon';
+		return;
+    	}
+}
+
 SGMain.prototype.LOCATION_RX = /^https?:\/\/([^.]+)\.pardus\.at\/([^.]+)\.php/;
 
 // Ship priorities - all else being the same, first listed here are first shot
@@ -336,6 +473,9 @@ SGMain.prototype.setupNavPage = function() {
     this.useBotsButton = null;
 
     var doc = this.doc, settings = new Object(), n = NaN, elt;
+
+    // Get the new navarea table (for jumping ships)
+    this.navarea = this.doc.getElementById('navarea');
 
     // Get the current ship armour. It's in a properly ID'd span.
     elt = doc.getElementById('spanShipArmor');
