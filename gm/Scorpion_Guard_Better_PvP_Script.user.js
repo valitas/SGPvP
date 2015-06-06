@@ -58,6 +58,12 @@ SGMain.prototype.getValues = function(keys, callback) {
     for(var i in keys) {
         var key = keys[i];
         var val = GM_getValue(key);
+
+        // We have a problem in FF 38, GM 3.2
+        // https://github.com/greasemonkey/greasemonkey/issues/2156
+        if (val === null)
+          val = undefined;
+
         if(typeof(val) != 'undefined') {
             // This check is for smooth upgrading of installed
             // versions; we'll remove in the future.  Thing is, we
