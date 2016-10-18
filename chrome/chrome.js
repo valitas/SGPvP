@@ -15,13 +15,13 @@ SGMain.prototype.getVersion = function() {
     return chrome.runtime.getManifest().version;
 };
 
-SGMain.prototype.getValues = function(keys, callback) {
-    chrome.storage.local.get(keys, callback);
-};
+SGStorage.prototype.rawGet = function( keys, callback ) {
+    chrome.storage.local.get( keys, callback );
+}
 
-SGMain.prototype.setValues = function(entries) {
-    chrome.storage.local.set(entries);
-};
+SGStorage.prototype.rawSet = function( settings, callback ) {
+    chrome.storage.local.set( settings, callback );
+}
 
 // The following are here because the Firefox implementations have to
 // deal with oddities introduced by "Mr Xyzzy's Pardus Helper".
@@ -57,7 +57,7 @@ SGMain.prototype.getShipsCombat = function() {
         var heading = th.textContent;
         if(heading == 'Other Ships')
             return this.parseOtherShipsTable(th.parentNode.parentNode,
-                                             SHIP2SHIP_RX);
+                                             this.SHIP2SHIP_RX);
     }
 
     // Still here?
@@ -100,17 +100,19 @@ SGMain.prototype.getShipEntryExtras = function(entry) {
 SGMain.prototype.RESOURCE = {
     ui_html: 'ui.html',
     ui_style: 'ui.css',
-    default_keymap: 'default-keymap.json',
-    illarion_keymap: 'illarion-keymap.json'
+    default_keymap: 'default-keymap.json'
 };
 
 SGMain.prototype.getResourceURL = function(resource_id) {
     return chrome.extension.getURL(this.RESOURCE[resource_id]);
 };
 
-SGMain.prototype.getResourceText = function(resource_id) {
+SGMain.prototype.getResourceText = function(resource_id, callback) {
     var rq = new XMLHttpRequest();
-    rq.open('GET', this.getResourceURL(resource_id), false);
+    rq.open('GET', this.getResourceURL(resource_id));
+    rq.onreadystatechange = function() {
+        if (rq.readyState == XMLHttpRequest.DONE)
+            callback(rq.responseText);
+    };
     rq.send();
-    return rq.responseText;
 };

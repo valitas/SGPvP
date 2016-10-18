@@ -27,6 +27,7 @@ SGPvPNoAction.prototype.displayName = function() { return ''; };
 SGPvPNoAction.prototype.updateSetKeyPanelArgs =
     SGPvPAction.prototype.updateSetKeyPanelArgs;
 
+// Actions with just a "missiles" setting (e.g. damage building)
 function SGPvPActionM() { }
 SGPvPActionM.prototype.serialise = function(missiles) {
     return this.id + (missiles != 'n' ? ',m' : ',n');
@@ -48,6 +49,7 @@ SGPvPActionM.prototype.getArgsFromUI = function() {
     return [ e.setkey_missiles.checked ? 'm' : 'n' ];
 };
 
+// Actions with "rounds" and "missiles" settings (e.g. engage)
 function SGPvPActionRM() { }
 SGPvPActionRM.prototype.serialise = function(rounds, missiles) {
     return this.id + ',' + (rounds || 20) +
@@ -79,6 +81,7 @@ SGPvPActionRM.prototype.getArgsFromUI = function() {
     return null;
 };
 
+// Action with a "number of bots" setting. Currently just force use robots.
 function SGPvPActionB() { }
 SGPvPActionB.prototype.serialise = function(bots) {
     return this.id + ',' + (bots || 1);
@@ -106,10 +109,13 @@ SGPvPActionB.prototype.getArgsFromUI = function() {
     return null;
 };
 
+// Actions with "armour level", "rounds", and "missiles" settings (win, winRaid)
 function SGPvPActionWin() { }
-SGPvPActionWin.prototype.serialise = function( threshold, rounds, missiles ) {
-  return this.id + ',' + (threshold || 0) + ',' + (rounds || 20) + ',' +
-    (missiles != 'n' ? 'm' : 'n');
+SGPvPActionWin.prototype.serialise = function( armour, rounds, missiles ) {
+  return this.id + ',' +
+        (armour == 'm' ? 'm' : 's') + ',' +
+        (rounds || 20) + ',' +
+        (missiles != 'n' ? 'm' : 'n');
 };
 SGPvPActionWin.prototype.displayName = function(threshold, rounds, missiles) {
   if(!rounds)
@@ -118,11 +124,11 @@ SGPvPActionWin.prototype.displayName = function(threshold, rounds, missiles) {
     (missiles != 'n' ? '' : ' no missiles');
 };
 SGPvPActionWin.prototype.updateSetKeyPanelArgs =
-  function(threshold, rounds, missiles) {
+  function(armour, rounds, missiles) {
   var e = this.elements;
   e.skarg_bots.style.display = 'none';
   e.skarg_armour.style.display = null; // default to block
-  e.setkey_armour.value = (threshold || 0);
+  e.setkey_armour.value = (armour == 'm' ? 'm' : 's');
   e.skarg_rounds.style.display = null; // default to block
   e.setkey_rounds.value = (rounds || 20);
   e.skarg_missiles.style.display = null; // default to block
@@ -130,43 +136,78 @@ SGPvPActionWin.prototype.updateSetKeyPanelArgs =
 };
 SGPvPActionWin.prototype.getArgsFromUI = function() {
   var e = this.elements,
-      rounds = this.getPositiveIntegerValue(e.setkey_rounds, 20),
-      armour = this.getPositiveIntegerValue(e.setkey_armour, 0);
-  if ( rounds && armour )
-    return [ armour, rounds,
+      rounds = this.getPositiveIntegerValue(e.setkey_rounds, 20);
+  if ( rounds )
+    return [ e.setkey_armour.value == 'm' ? 'm' : 's',
+             rounds,
              e.setkey_missiles.checked ? 'm' : 'n' ];
   return null;
 };
 
+// Actions with "armour level" and "missiles" settings (winB, winBRaid)
 function SGPvPActionWinB() { }
-SGPvPActionWinB.prototype.serialise = function( threshold, missiles ) {
-  return this.id + ',' + (threshold || 0) + ',' +
-    (missiles != 'n' ? 'm' : 'n');
+SGPvPActionWinB.prototype.serialise = function( armour, missiles ) {
+    return this.id + ',' +
+        (armour == 'm' ? 'm' : 's') + ',' +
+        (missiles != 'n' ? 'm' : 'n');
 };
 SGPvPActionWinB.prototype.displayName = function(threshold, missiles) {
   return this.name + (missiles != 'n' ? '' : ' no missiles');
 };
-SGPvPActionWinB.prototype.updateSetKeyPanelArgs = function(threshold, missiles) {
+SGPvPActionWinB.prototype.updateSetKeyPanelArgs = function(armour, missiles) {
   var e = this.elements;
   e.skarg_bots.style.display = 'none';
   e.skarg_rounds.style.display = 'none';
   e.skarg_armour.style.display = null; // default to block
-  e.setkey_armour.value = (threshold || 0);
+  e.setkey_armour.value = (armour == 'm' ? 'm' : 's');
   e.skarg_missiles.style.display = null; // default to block
   e.setkey_missiles.checked = (missiles != 'n');
 };
 SGPvPActionWinB.prototype.getArgsFromUI = function() {
-  var e = this.elements,
-      armour = this.getPositiveIntegerValue(e.setkey_armour, 0);
-  if ( armour )
-    return [ armour, e.setkey_missiles.checked ? 'm' : 'n' ];
-  return null;
+  var e = this.elements;
+  return [ e.setkey_armour.value == 'm' ? 'm' : 's',
+           e.setkey_missiles.checked ? 'm' : 'n' ];
+};
+
+// Actions with just a "armour level" setting (bots, testBots)
+function SGPvPActionA() { }
+SGPvPActionA.prototype.serialise = function(armour) {
+    return this.id + (armour == 's' ? ',s' : ',m');
+};
+SGPvPActionA.prototype.displayName = function(armour) {
+    var name;
+    switch ( this.name ) {
+    case 'Use robots':
+        name = 'Bots';
+        break;
+    case 'Test robots':
+        name = 'Test bots';
+        break;
+    default:
+        name = this.name;
+    }
+    return name + ' to ' + (armour == 's' ? 'safe' : 'max') + ' level';
+};
+// Call these two from SGPvPUI context
+SGPvPActionA.prototype.updateSetKeyPanelArgs = function(armour) {
+    var e = this.elements;
+    e.skarg_bots.style.display = 'none';
+    e.skarg_rounds.style.display = 'none';
+    e.skarg_missiles.style.display = 'none';
+    e.skarg_armour.style.display = 'null'; // default to block
+    e.setkey_armour.value = (armour == 's' ? 's' : 'm');
+};
+SGPvPActionA.prototype.getArgsFromUI = function() {
+    var e = this.elements;
+    return [ e.setkey_armour.value == 's' ? 's' : 'm' ];
 };
 
 
 // Actions not listed here are regular SGPvPAction types.
 SGPvPUI.prototype.ACTION_TYPES = {
   '': SGPvPNoAction,
+  bots: SGPvPActionA,
+  testBots: SGPvPActionA,
   damageBuilding: SGPvPActionM,
   raidBuilding: SGPvPActionM,
   engage: SGPvPActionRM,
@@ -179,8 +220,9 @@ SGPvPUI.prototype.ACTION_TYPES = {
 };
 
 
-function SGPvPUI(sgpvp, doc) {
+function SGPvPUI(sgpvp, storage, doc) {
     this.sgpvp = sgpvp;
+    this.storage = storage;
     this.doc = doc;
 }
 
@@ -207,7 +249,6 @@ SGPvPUI.prototype.UI_ELEMENT_IDS =
       'sg-close',
       'sg-default-keymap',
       'sg-exc',
-      'sg-illarion-keymap',
       'sg-impexp-keymap',
       'sg-inc',
       'sg-keybindings',
@@ -226,6 +267,7 @@ SGPvPUI.prototype.UI_ELEMENT_IDS =
       'sg-setkey-rounds',
       'sg-setkey-select',
       'sg-setkey-armour',
+      'sg-sfarm',
       'sg-skarg-bots',
       'sg-skarg-missiles',
       'sg-skarg-rounds',
@@ -237,44 +279,55 @@ SGPvPUI.prototype.open = function() {
     if(this.ui_element)
         return;
 
-    this.injectStyle();
+    this.sgpvp.getResourceText('ui_html', finish.bind(this));
 
-    var doc = this.doc, sgpvp = this.sgpvp, dummy = doc.createElement('div');
-    dummy.innerHTML = this.sgpvp.getResourceText('ui_html');
-    var div = dummy.removeChild(dummy.firstChild), e = new Object();
-    doc.body.appendChild(div);
+    function finish( uihtml ) {
+        var doc = this.doc,
+            e = {},
+            dummy, div, i, id;
 
-    this.ui_element = div;
-    this.elements = e;
+        this.injectStyle();
 
-    // Centre it
-    div.style.left = ((doc.body.clientWidth - 600) / 2) + 'px';
+        dummy = doc.createElement('div');
+        dummy.innerHTML = uihtml;
+        div = dummy.removeChild(dummy.firstChild);
+        doc.body.appendChild(div);
 
-    // Get the elements we use for controlling the UI
-    for(var i in this.UI_ELEMENT_IDS) {
-        var id = this.UI_ELEMENT_IDS[i];
-        e[id.substr(3).replace('-','_')] = doc.getElementById(id);
+        this.ui_element = div;
+        this.elements = e;
+
+        // Centre it
+        div.style.left = ((doc.body.clientWidth - 600) / 2) + 'px';
+
+        // Get the elements we use for controlling the UI
+        for( i in this.UI_ELEMENT_IDS ) {
+            id = this.UI_ELEMENT_IDS[ i ];
+            e[id.substr(3).replace('-','_')] = doc.getElementById(id);
+        }
+
+        e.version.textContent = this.sgpvp.getVersion();
+
+        // load settings and configure
+        this.storage.get( [ 'keymap', 'ql', 'targeting', 'rtid', 'armour' ],
+                          this.configure.bind(this) );
     }
-
-    e.version.textContent = sgpvp.getVersion();
-
-    // load settings and configure
-    sgpvp.loadSettings(['keymap', 'ql', 'targeting', 'rtid', 'armour' ],
-                       this.configure.bind(this));
 };
 
 // This is called once we know sgpvp has loaded its parameters.
 SGPvPUI.prototype.configure = function() {
-    var sgpvp = this.sgpvp, e = this.elements;
+    var storage = this.storage,
+        e = this.elements,
+        targeting, armour;
 
-    this.keymap = sgpvp.keymap;
-    e.ql.value = sgpvp.ql;
-    var targeting = sgpvp.targeting;
+    this.keymap = storage.keymap;
+    e.ql.value = storage.ql;
+    targeting = storage.targeting;
     e.inc.value = this.stringifyOverrideList(targeting.include);
     e.exc.value = this.stringifyOverrideList(targeting.exclude);
-    e.rid.value = sgpvp.rtid;
-    var armour = sgpvp.armour;
-    e.arm.value = armour.points;
+    e.rid.value = storage.rtid;
+    armour = storage.armour;
+    e.sfarm.value = armour.safe;
+    e.arm.value = armour.max;
     e.lvl.value = armour.level;
 
     this.targetingValid = true;
@@ -294,7 +347,6 @@ SGPvPUI.prototype.configure = function() {
     onSetKeySelectChange = this.onSetKeySelectChange.bind(this),
     onSetKeyArgInput = this.onSetKeyArgInput.bind(this),
     onDefaultKeymapClick = this.resetKeyMap.bind(this, 'default_keymap'),
-    onIllarionKeymapClick = this.resetKeyMap.bind(this, 'illarion_keymap'),
     onImpExpKeymapClick = this.importKeyMap.bind(this);
 
     // Install handlers
@@ -304,6 +356,7 @@ SGPvPUI.prototype.configure = function() {
     e.inc.addEventListener('input', onTargetingInput, false);
     e.exc.addEventListener('input', onTargetingInput, false);
     e.rid.addEventListener('input', onRtIdInput, false);
+    e.sfarm.addEventListener('input', onArmInput, false);
     e.arm.addEventListener('input', onArmInput, false);
     e.lvl.addEventListener('input', onArmInput, false);
     e.close.addEventListener('click', onCloseClick, false);
@@ -314,7 +367,6 @@ SGPvPUI.prototype.configure = function() {
     e.setkey_armour.addEventListener('input', onSetKeyArgInput, false);
     e.setkey_missiles.addEventListener('click', onSetKeyArgInput, false);
     e.default_keymap.addEventListener('click', onDefaultKeymapClick, false);
-    e.illarion_keymap.addEventListener('click', onIllarionKeymapClick, false);
     e.impexp_keymap.addEventListener('click', onImpExpKeymapClick, false);
 
     this.labelAllKeys();
@@ -363,13 +415,15 @@ SGPvPUI.prototype.enableCloseIfProper = function() {
 // Parse QL and include/exclude lists. Store if they are valid,
 // inhibit close if they are not.
 SGPvPUI.prototype.onTargetingInput = function() {
+    var qo, settings;
+
     this.targetingValid = false;
 
-    var qo = this.parseQL(this.elements.ql.value);
+    qo = this.parseQL(this.elements.ql.value);
     if(qo) {
         this.targetingValid = true;
         this.elements.ql.style.removeProperty('color');
-        var settings = {
+        settings = {
             ql: qo.ql,
             targeting: {
                 ql: qo.parsed,
@@ -377,7 +431,7 @@ SGPvPUI.prototype.onTargetingInput = function() {
                 exclude: this.parseOverrideList(this.elements.exc.value)
             }
         };
-        this.sgpvp.saveSettings(settings);
+        this.storage.set( settings );
     }
     else
         this.elements.ql.style.color = 'red';
@@ -412,11 +466,12 @@ SGPvPUI.prototype.getPositiveIntegerValue = function(element, max, allowEmpty) {
 };
 
 SGPvPUI.prototype.onArmInput = function() {
-    var points = this.getPositiveIntegerValue(this.elements.arm),
-    level = this.getPositiveIntegerValue(this.elements.lvl, 6);
-    if(points && level) {
+    var safe = this.getPositiveIntegerValue(this.elements.sfarm),
+        max = this.getPositiveIntegerValue(this.elements.arm),
+        level = this.getPositiveIntegerValue(this.elements.lvl, 6);
+    if( safe && max && level) {
         this.armourValid = true;
-        this.sgpvp.saveSettings({ armour: {points:points, level:level} });
+        this.storage.set( { armour: { safe: safe, max: max, level: level } } );
     }
     else
         this.armourValid = false;
@@ -428,7 +483,7 @@ SGPvPUI.prototype.onRtIdInput = function() {
     if(rtid) {
         this.rtidValid = true;
         if(rtid > 0)
-            this.sgpvp.saveSettings({ rtid: rtid });
+            this.storage.set( { rtid: rtid } );
         // else XXX - we should have a deleteSettings method...
     }
     else
@@ -479,10 +534,8 @@ SGPvPUI.prototype.initActionCatalogue = function() {
 };
 
 SGPvPUI.prototype.parseAction = function(action_str) {
-    // XXX - this will be removed in a few versions
-    action_str = this.sgpvp.fixActionString(action_str);
-
     var args, id;
+
     if(action_str) {
         args = action_str.split(',');
         id = args.shift();
@@ -549,7 +602,7 @@ SGPvPUI.prototype.onSetKeyArgInput = function() {
     this.setKeyLegend(e.setkey_key, legend);
     this.setKeyLegend(this.setkey_div, legend);
     this.keymap[this.setkey_code] = action_str;
-    this.saveKeyMap();
+    this.storeKeyMap();
 };
 
 SGPvPUI.prototype.onSetKeySelectChange = function() {
@@ -568,7 +621,7 @@ SGPvPUI.prototype.onSetKeySelectChange = function() {
     else
         delete this.keymap[this.setkey_code];
 
-    this.saveKeyMap();
+    this.storeKeyMap();
 };
 
 SGPvPUI.prototype.setKeyLegend = function(key, legend) {
@@ -589,8 +642,8 @@ SGPvPUI.prototype.setKeyLegend = function(key, legend) {
 
 SGPvPUI.prototype.labelAllKeys = function() {
     var doc = this.doc, e = this.elements,
-    xpr = doc.evaluate('div', e.keyboard, null,
-                       XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
+        xpr = doc.evaluate('div', e.keyboard, null,
+                           XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
     for(var i = 0, end = xpr.snapshotLength; i < end; i++) {
         var kdiv = xpr.snapshotItem(i),
         code = parseInt(kdiv.id.substr(4)),
@@ -603,9 +656,12 @@ SGPvPUI.prototype.labelAllKeys = function() {
 SGPvPUI.prototype.resetKeyMap = function(resid) {
     var r = confirm('This will remove all custom key bindings you '
                     + 'may have defined. You OK with this?');
-    if(r) {
-        this.keymap = JSON.parse(this.sgpvp.getResourceText(resid));
-        this.saveKeyMap();
+    if(r)
+        this.sgpvp.getResourceText(resid, setKeys.bind(this));
+
+    function setKeys( keymap ) {
+        this.keymap = JSON.parse(keymap);
+        this.storeKeyMap();
         this.labelAllKeys();
     }
 };
@@ -623,8 +679,9 @@ SGPvPUI.prototype.importKeyMap = function() {
         }
 
         if(k && typeof(k) == 'object') {
+            this.storage.fixKeymap( k );
             this.keymap = k;
-            this.saveKeyMap();
+            this.storeKeyMap();
             this.labelAllKeys();
         }
         else {
@@ -633,8 +690,8 @@ SGPvPUI.prototype.importKeyMap = function() {
     }
 };
 
-SGPvPUI.prototype.saveKeyMap = function() {
-    this.sgpvp.saveSettings({keymap: this.keymap});
+SGPvPUI.prototype.storeKeyMap = function() {
+    this.storage.set( { keymap: this.keymap } );
 };
 
 SGPvPUI.prototype.parseOverrideList = function(list) {

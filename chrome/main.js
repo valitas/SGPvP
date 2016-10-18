@@ -1,19 +1,22 @@
 // SGMain object. This code must run on Firefox and Google Chrome - no
 // Greasemonkey calls and no chrome.* stuff here.
 
-// V39
+// V40
 
 function SGMain(doc) {
+    var url, m;
+
     this.doc = doc;
 
-    var url = doc.location.href, m = this.LOCATION_RX.exec(url);
+    url = doc.location.href;
+    m = this.LOCATION_RX.exec(url);
     if(!m)
         return;
 
     this.universe = m[1];
     this.page = m[2];
+    this.storage = new SGStorage( this.universe );
 
-    var self = this;
     switch(this.page) {
     case 'main':
         this.setupPageSpecific = this.setupNavPage;
@@ -21,8 +24,8 @@ function SGMain(doc) {
     case 'ship2ship_combat':
     case 'building':
         this.setupPageSpecific = function() {
-            self.setupCombatPage();
-            self.setMissiles(true);
+            this.setupCombatPage();
+            this.setMissiles(true);
             // leave rounds alone for now. if the user engages with a
             // key, we'll set the proper option then
         };
@@ -35,27 +38,59 @@ function SGMain(doc) {
         this.setupPageSpecific = function() {}; // nop
     }
 
-    var setupHandler = function(event) { self.setupPage(event); },
-    finishConfig = function() {
-        if(!self.keymap)
-            // load default keymap
-            self.saveSettings({keymap: JSON.parse(self.getResourceText('default_keymap'))});
+    loadConfig.call( this, true );
 
+    // This function returns immediately at this point.
+
+    // Now this below is a bit convoluted because of the callback structure,
+    // which is needed for the design of the Chrome API, which is really just
+    // the right way given how Javascript works.
+    //
+    // Essentially: loadConfig returns immediately, but arranging for
+    // checkConfig to be called shortly after.  checkConfig may migrate the
+    // configuration and cause loadConfig to be called again, just once; or it
+    // may detect that the keyboard is missing and arrange for the default
+    // keymap to be loaded and storeKeymap to be called; or it may just call
+    // finishConfig immediately.  storeKeymap stores the keymap and arranges for
+    // finishConfig to be called.  finishConfig finally configures the script.
+
+    function loadConfig( allowRetry ) {
+        var names = [ 'keymap', 'targeting', 'armour',
+                      'lkap', 'lkba', 'rtid', 'version' ];
+        this.storage.get( names, checkConfig.bind(this, allowRetry) );
+    }
+
+    function checkConfig( allowRetry ) {
+        if ( allowRetry && !( this.storage.version >= 40 ) )
+            this.storage.migrate( loadConfig.bind(this, false) );
+        else {
+            if( this.storage.keymap )
+                finishConfig.call( this );
+            else
+                this.getResourceText( 'default_keymap',
+                                      storeKeymap.bind(this) );
+        }
+    }
+
+    function storeKeymap( keymap ) {
+        this.storage.set( { keymap: JSON.parse(keymap) },
+                          finishConfig.bind( this ) );
+    }
+
+    function finishConfig() {
         // Insert a bit of script to execute in the page's context and
         // send us what we need. And add a listener to receive the call.
-        var window = self.doc.defaultView;
-        window.addEventListener('message', setupHandler, false);
-        var script = self.doc.createElement('script');
+        var window = this.doc.defaultView;
+        window.addEventListener( 'message', setupHandler.bind(this), false );
+        var script = this.doc.createElement( 'script' );
         script.type = 'text/javascript';
         // window.location.origin is only available on FF 20
         script.textContent = "(function() {var fn=function(){window.postMessage({sgpvp:1,loc:typeof(userloc)=='undefined'?null:userloc,ajax:typeof(ajax)=='undefined'?null:ajax},window.location.protocol+'//'+window.location.host);};if(typeof(addUserFunction)=='function')addUserFunction(fn);fn();})();";
-        self.doc.body.appendChild(script);
-        self.configured = true;
-    };
+        this.doc.body.appendChild(script);
+        this.configured = true;
+    }
 
-    this.loadSettings(['keymap', 'targeting', 'armour',
-                       'lkap', 'lkba', 'rtid' ],
-                      finishConfig);
+    function setupHandler(event) { this.setupPage( event ); }
 }
 
 SGMain.prototype.LOCATION_RX = /^https?:\/\/([^.]+)\.pardus\.at\/([^.]+)\.php/;
@@ -72,7 +107,7 @@ SGMain.prototype.SHIPS = [
 
     // 3 - fighters
     'dominator', 'liberator', 'liberator_eps', 'sudden_death', 'gauntlet',
-    'scorpion', 'pantagruel', 'chitin', 'horpor', 'gargantua', 'reaper',
+    'bopx', 'scorpion', 'pantagruel', 'chitin', 'horpor', 'gargantua', 'reaper',
     'vulcan', 'piranha', 'venom', 'rover', 'mercury', 'trident', 'marauder',
     'shadow_stealth_craft',
 
@@ -84,60 +119,6 @@ SGMain.prototype.SHIPS = [
     'thunderbird', 'spectre', 'interceptor', 'adder', 'tyrant', 'rustfire',
     'wasp', 'ficon', 'rustclaw', 'sabre'
 ];
-
-// A specification of the stuff we keep in persistent storage.
-// 'u' is true for parameters set once for all universes.
-// 'd' is the default value.
-SGMain.prototype.CFGDEF = {
-    keymap: { u:true, d:null },
-    rtid: { u:false, d:null }, // retreat tile id
-    lkap: { u:false, d:null }, // last known armour points
-    lkba: { u:false, d:null }, // last known bots available
-    ql: { u:false, d:'' },
-    targeting: { u:false,
-                 d:{ ql:{includeFactions:{},
-                         excludeFactions:{},
-                         includeAlliances:{},
-                         excludeAlliances:{},
-                         includeCharacters:{},
-                         excludeCharacters:{}},
-                     include:{ids:{},names:{}},
-                     exclude:{ids:{},names:{}},
-                     prioritiseTraders:false,
-                     retreatTile:null } },
-    armour: { u:false, d:{ points: null, level: 5 } }
-};
-
-// Load the specified keys from persistent storage into object properties.
-SGMain.prototype.loadSettings = function(keys, callback) {
-    var self = this, skeys = new Object(), defs = this.CFGDEF,
-        prefix = this.universe + '-';
-    var act = function(r) {
-        for(var skey in skeys) {
-            var key = skeys[skey], def = defs[key], val = r[skey];
-            if(typeof(val) == 'undefined')
-                val = def.d;
-            self[key] = val;
-        }
-        callback();
-    };
-
-    for(var i in keys) {
-        var key = keys[i], def = defs[key], skey = def.u ? key : prefix + key;
-        skeys[skey] = key;
-    }
-
-    this.getValues(Object.keys(skeys), act);
-};
-
-SGMain.prototype.saveSettings = function(settings) {
-    var o = new Object(), defs = this.CFGDEF, prefix = this.universe + '-';
-    for(var key in settings) {
-        var skey = defs[key].u ? key : prefix + key;
-        this[key] = o[skey] = settings[key];
-    }
-    this.setValues(o);
-};
 
 // This is a handler for DOM messages coming from the game page.
 // Arrival of a message means the page contents were updated. The
@@ -160,29 +141,6 @@ SGMain.prototype.closeUi = function() {
         this.sgpvpui.close();
 };
 
-// XXX - this will be removed in a few versions
-SGMain.prototype.OLD_KEYMAP_ACTIONS = {
-    bots1: 'forceBots,1',
-    bots2: 'forceBots,2',
-    bots3: 'forceBots,3',
-    bots4: 'forceBots,4',
-    bots5: 'forceBots,5',
-    bots8: 'forceBots,8',
-    bots12: 'forceBots,12',
-    engage: 'engage,20,m',
-    engage10: 'engage,10,m',
-    engage15: 'engage,15,m',
-    raid: 'raid,20,n',
-    raid10: 'raid,10,n',
-    raid15: 'raid,15,n',
-    damageBuilding: 'damageBuilding,m'
-};
-
-SGMain.prototype.fixActionString = function(str) {
-    var newstr = this.OLD_KEYMAP_ACTIONS[str];
-    return newstr || str;
-};
-
 SGMain.prototype.keyPressHandler = function(keyCode) {
     if(!this.configured)
         // User is mashing too fast, we haven't even had time to load
@@ -197,7 +155,7 @@ SGMain.prototype.keyPressHandler = function(keyCode) {
         return false;
     }
 
-    var astr = this.fixActionString(this.keymap[keyCode]);
+    var astr = this.storage.keymap[ keyCode ];
     if(astr) {
         var args = astr.split(','),
         methodname = args.shift();
@@ -331,11 +289,14 @@ SGMain.prototype.getShipModelPriorities = function() {
 // This if called every time the nav page is loaded or a partial
 // refresh completes.  It should run fast and report no errors.
 SGMain.prototype.setupNavPage = function() {
+    var doc = this.doc,
+        settings = {},
+        n = NaN,
+        elt, m, resid;
+
     // we'll set these if found below
     this.useBotsAmountField = null;
     this.useBotsButton = null;
-
-    var doc = this.doc, settings = new Object(), n = NaN, elt;
 
     // Get the current ship armour. It's in a properly ID'd span.
     elt = doc.getElementById('spanShipArmor');
@@ -352,21 +313,21 @@ SGMain.prototype.setupNavPage = function() {
     n = NaN;
     elt = doc.getElementById('tdCargoRes8');
     if(elt) {
-        var m = elt.textContent.match(/(\d+)/);
+        m = elt.textContent.match(/(\d+)/);
         if(m)
             n = parseInt(m[1]);
     }
     else {
         elt = doc.getElementById('useform');
         if(elt) {
-            var resid = elt.elements.namedItem('resid');
+            resid = elt.elements.namedItem('resid');
             if(resid && resid.value == 8) {
                 // The useres form is open for bots. Remember this...
                 this.useResourceForm = elt;
                 this.useBotsAmountField = elt.elements.namedItem('amount');
                 this.useBotsButton = elt.elements.namedItem('useres');
                 // ... and get the amount of bots available:
-                var m = elt.textContent.match(/On board:[\s:]*(\d+)/);
+                m = elt.textContent.match(/On board:[\s:]*(\d+)/);
                 if(m)
                     n = parseInt(m[1]);
             }
@@ -376,20 +337,23 @@ SGMain.prototype.setupNavPage = function() {
             n = 0;
         }
     }
+
     if(!isNaN(n))
         settings.lkba = n;
 
-    this.saveSettings(settings);
-};
+    this.storage.set( settings );
+}
 
 // This if called every time the ship2ship or building pages are
 // loaded. It should run fast and report no errors.
 SGMain.prototype.setupCombatPage = function() {
-    var doc = this.doc, settings = new Object(), elt;
+    var doc = this.doc,
+        settings = {},
+        elt;
 
-    elt = doc.evaluate("//td/input[@name = 'resid' and @value = '8']",
-                       doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
-                       null).singleNodeValue;
+    elt = doc.evaluate( "//td/input[@name = 'resid' and @value = '8']",
+                        doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                        null ).singleNodeValue;
     if(elt) {
         // Found the resid hidden element for bots. It is contained in
         // a td. The previous td contains the amount available; the
@@ -427,20 +391,23 @@ SGMain.prototype.setupCombatPage = function() {
             settings.lkap = armour;
     }
 
-    this.saveSettings(settings);
+    this.storage.set( settings );
 };
 
-// If thisMany is not supplied, compute the amount needed to the best
-// of our knowledge.
-SGMain.prototype.useBots = function(thisMany) {
-    var botRepair;
+// Mode is either 's' (repair to "safe" armour level), 'm' (repair to max armour
+// level), or a number specifying exactly how many bots to use.
+SGMain.prototype.useBots = function( mode ) {
+    var storage = this.storage,
+        thisMany, bots, botRepair, newSettings, amount, submit, form;
 
-    if(thisMany)
+    if ( typeof mode == 'number' ) {
         // dont bother trying to compute armour, use what we're told exactly
-        botRepair = Math.floor(180 / this.armour.level);
+        thisMany = mode;
+        botRepair = Math.floor( 180 / storage.armour.level );
+    }
     else {
-        var bots = this.computeBotsNeeded();
-        if(!bots) {
+        bots = this.computeBotsNeeded( mode );
+        if( !bots ) {
             this.nav();
             return;
         }
@@ -451,29 +418,30 @@ SGMain.prototype.useBots = function(thisMany) {
 
     // Compute how much armour the bots will repair, and how many
     // we'll have left, and update last known values.
-    var newSettings = {
-        lkap: typeof(this.lkap) == 'number' ?
-            this.lkap + thisMany * botRepair : null,
-        lkba: this.lkba > thisMany ? this.lkba - thisMany : 0
+    newSettings = {
+        lkap: typeof( storage.lkap ) == 'number' ?
+            storage.lkap + thisMany * botRepair : null,
+        lkba: storage.lkba > thisMany ? storage.lkba - thisMany : 0
     };
 
-    var amount, submit;
-    if(this.useBotsAmountField) {
+    if ( this.useBotsAmountField ) {
         amount = this.useBotsAmountField;
         submit = this.useBotsButton;
     }
     else {
         // This really should only happen in the nav and building
         // screens, but it should work on any page...
-        var form = this.getMadeUpBotsForm();
-        amount = form.elements['amount'];
-        submit = form.elements['useres'];
+        form = this.getMadeUpBotsForm();
+        amount = form.elements[ 'amount' ];
+        submit = form.elements[ 'useres' ];
     }
 
-    this.saveSettings(newSettings);
+    console.log( 'bots saving', newSettings );
+
+    storage.set( newSettings );
     amount.value = thisMany;
     submit.click();
-};
+}
 
 SGMain.prototype.getMadeUpBotsForm = function() {
     var doc = this.doc, form = doc.getElementById('sgpvp-useform');
@@ -508,31 +476,49 @@ SGMain.prototype.getMadeUpBotsForm = function() {
 
 // This function shows notifications. If it returns null, bots are not
 // needed or can't be used, and the user already knows.
-SGMain.prototype.computeBotsNeeded = function() {
-    var armour = this.armour, lkap = this.lkap, lkba = this.lkba;
-    if(!(armour.points > 0 && armour.level > 0)) {
-        this.showNotification('Ship armour not configured', 1500);
+//
+// Mode is 's' or 'm', whether we'll use the "safe" or the "max" armour setting
+// for computation.
+SGMain.prototype.computeBotsNeeded = function( mode ) {
+    var storage = this.storage,
+        armour = storage.armour,
+        lkap = storage.lkap,
+        lkba = storage.lkba,
+        modeName, points;
+
+    if ( mode == 's' ) {
+        modeName = 'Safe';
+        points = armour.safe;
+    }
+    else {
+        modeName = 'Max';
+        points = armour.max;
+    }
+
+    if( !( points > 0 && armour.level > 0 ) ) {
+        this.showNotification( modeName + ' armour not configured', 1500);
         return null;
     }
 
-    if(typeof(lkap) != 'number' || lkap < 0) {
+    if( typeof(lkap) != 'number' || lkap < 0 ) {
         // In the nav screen, we should always see the ship's armour
-        this.showNotification("SGPvP error 5001: ship armour not found", 1500);
+        this.showNotification( "SGPvP error 5001: ship armour not found",
+                               1500 );
         return null;
     }
 
-    if(!lkba) {
-        this.showNotification("No bots available!", 500);
+    if( !lkba ) {
+        this.showNotification( "No bots available!", 500 );
         return null;
     }
 
-    if(lkap >= armour.points) {
+    if( lkap >= points ) {
         this.showNotification('Bots not needed', 500);
         return null;
     }
 
-    var botRepair = Math.floor(180 / armour.level);
-    var needed = Math.floor((armour.points - lkap + botRepair - 1) / botRepair);
+    var botRepair = Math.floor( 180 / armour.level );
+    var needed = Math.floor( (points - lkap + botRepair - 1) / botRepair );
     return {
         botRepair: botRepair,
         needed: needed,
@@ -695,32 +681,33 @@ SGMain.prototype.doEngage = function(rounds, missiles, raid) {
     this.target();
 };
 
-SGMain.prototype.doWin = function( minArmour, rounds, missiles, raid ) {
-  var armour = this.armour,
-      lkap = this.lkap,
-      lkba = this.lkba;
+SGMain.prototype.doWin = function( mode, rounds, missiles, raid ) {
+    var storage = this.storage,
+        armour = storage.armour,
+        points = ( mode == 'm' ) ? armour.max : armour.safe,
+        lkap = storage.lkap,
+        lkba = storage.lkba;
 
-  if( minArmour > 0 && armour.points > 0 && armour.level > 0 &&
-      lkba && lkap < minArmour )
-    // Attack safety threshold, ship armour points and level are configured;
-    // we have bots available; and the last known armour points is below the
-    // threshold.  So use bots.
-    this.useBots( null );
-  else
-    this.doEngage( rounds, missiles, raid );
-};
+    if ( points > 0 && armour.level > 0 && lkba && lkap < points )
+        // Armour points and level are configured, we have bots available, and
+        // the last known armour points is below the threshold.  So use bots.
+        this.useBots( mode );
+    else
+        this.doEngage( rounds, missiles, raid );
+}
 
-SGMain.prototype.doWinB = function( minArmour, mode, missiles ) {
-  var armour = this.armour,
-      lkap = this.lkap,
-      lkba = this.lkba;
+SGMain.prototype.doWinB = function( botMode, attackMode, missiles ) {
+    var storage = this.storage,
+        armour = storage.armour,
+        points = ( botMode == 'm' ) ? armour.max : armour.safe,
+        lkap = storage.lkap,
+        lkba = storage.lkba;
 
-  if( minArmour > 0 && armour.points > 0 && armour.level > 0 &&
-      lkba && lkap < minArmour )
-    this.useBots( null );
-  else
-    this.doAttackBuilding( mode, missiles );
-};
+    if ( points > 0 && armour.level > 0 && lkba && lkap < points )
+        this.useBots( botMode );
+    else
+        this.doAttackBuilding( attackMode, missiles );
+}
 
 SGMain.prototype.doAttackBuilding = function(mode, missiles) {
     var doc = this.doc,
@@ -841,13 +828,13 @@ SGMain.prototype.deployTimebomb = function( type ) {
 
 
 SGMain.prototype.setRetreatPoint = function() {
-    if(this.userloc) {
-        this.saveSettings({rtid: this.userloc});
-        this.showNotification('Retreat tile set: ' + this.rtid, 500);
+    if( this.userloc) {
+        this.storage.set( { rtid: this.userloc } );
+        this.showNotification( 'Retreat tile set: ' + this.storage.rtid, 500 );
     }
     else
-        this.showNotification('Can not set retreat tile', 500);
-};
+        this.showNotification( 'Can not set retreat tile', 500 );
+}
 
 SGMain.prototype.engage = function(rounds, missiles) {
     this.doEngage(rounds, missiles, false);
@@ -866,33 +853,36 @@ SGMain.prototype.winRaid = function( minArmour, rounds, missiles ) {
 };
 
 SGMain.prototype.disengage = function() {
+    var storage = this.storage,
+        doc = this.doc,
+        elt, form, destination, input;
+
     // no frantic keypressing.  but this means that, once we're in
     // this function, we *have* to reload, so watch this.
     this.disengage = this.nop;
 
-    var doc = this.doc,
-    elt = doc.evaluate('//input[@name="retreat" and @type="submit"]',
-                       doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
-                       null).singleNodeValue;
+    elt = doc.evaluate( '//input[@name="retreat" and @type="submit"]',
+                        doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                        null ).singleNodeValue;
     if( elt && elt.click &&
-        !(elt.disabled || elt.classList.contains('disabled')) ) {
+        !( elt.disabled || elt.classList.contains('disabled') ) ) {
         elt.click(); // this reloads the page
         return;
     }
 
     // no retreat button...
 
-    if(!this.rtid) {
-        this.showNotification('NO RETREAT TILE SET', 500);
+    if( !storage.rtid ) {
+        this.showNotification( 'NO RETREAT TILE SET', 500 );
         this.nav(); // this reloads the page
         return;
     }
 
-    var form = doc.getElementById('navForm');
+    form = doc.getElementById( 'navForm' );
     if ( form ) {
-        var destination = form.elements.destination;
+        destination = form.elements.destination;
         if( destination )
-            destination.value = this.rtid;
+            destination.value = storage.rtid;
     }
     else {
         // No form, add one.
@@ -901,10 +891,10 @@ SGMain.prototype.disengage = function() {
         form.method = 'post';
         form.action = '/main.php';
         form.style.display = 'none';
-        var input = doc.createElement( 'input' );
+        input = doc.createElement( 'input' );
         input.type = 'hidden';
         input.name = 'destination';
-        input.value = this.rtid;
+        input.value = storage.rtid;
         form.appendChild( input );
         input = doc.createElement( 'input' );
         input.type = 'hidden';
@@ -918,10 +908,10 @@ SGMain.prototype.disengage = function() {
 
 SGMain.prototype.nop = function() { };
 SGMain.prototype.nav = function() { this.doc.location = 'main.php'; this.nav = this.nop; };
-SGMain.prototype.bots = function() { this.useBots(null); };
-SGMain.prototype.forceBots = function(n) { this.useBots(n); };
-SGMain.prototype.testBots = function() {
-    var msg, bots = this.computeBotsNeeded();
+SGMain.prototype.bots = function( mode ) { this.useBots( mode ); };
+SGMain.prototype.forceBots = function( n ) { this.useBots( parseInt(n) ); };
+SGMain.prototype.testBots = function( mode ) {
+    var msg, bots = this.computeBotsNeeded( mode );
     if(!bots)
         return;
 
@@ -985,8 +975,8 @@ SGMain.prototype.testTargeting = function() {
     for(i in ships)
         highlight_target(ships[i].td, 'inherit');
 
-    // XXX this.targeting should not be needed for scan...
-    var targets = this.scanForTargets(this.targeting, ships);
+    // XXX storage.targeting should not be needed for scan...
+    var targets = this.scanForTargets( this.storage.targeting, ships );
     // turn the excluded ships green
     for(i in targets.excluded)
         highlight_target(targets.excluded[i].td, '#050');
@@ -1007,7 +997,7 @@ SGMain.prototype.target = function() {
     if(!ships)
         return;
 
-    var targets = this.scanForTargets(this.targeting, ships);
+    var targets = this.scanForTargets( this.storage.targeting, ships );
     if(targets.included.length > 0) {
         var ship_pri = (this.page == 'main') ?
             this.getShipModelPriorities() : null;
@@ -1040,6 +1030,8 @@ SGMain.prototype.setAmbushRP = function() {
 };
 
 SGMain.prototype.ambush = function() {
+    var storage, doc, xpath, elt, ta, apply;
+
     // Throttle frantic keypresses.
     this.ambush = this.nop;
 
@@ -1050,10 +1042,10 @@ SGMain.prototype.ambush = function() {
 
     // Below we assume some elements are always found.  There's
     // nothing sensible to do here if they aren't.
-    var doc = this.doc,
-    xpath = '//b[contains(text(), "Quicklist parsed and applied")]',
-    elt = doc.evaluate(xpath, doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
-                       null).singleNodeValue;
+    doc = this.doc;
+    xpath = '//b[contains(text(), "Quicklist parsed and applied")]';
+    elt = doc.evaluate( xpath, doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                        null ).singleNodeValue;
     if(elt) {
         // just parsed a QL - set!
         doc.evaluate('//input[@name="confirm" and @type="submit"]',
@@ -1063,20 +1055,18 @@ SGMain.prototype.ambush = function() {
     }
 
     elt = doc.getElementById('readlist');
-    var ta = doc.evaluate('//textarea[@name="readlist"]',
+    ta = doc.evaluate( '//textarea[@name="readlist"]',
+                       elt, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                       null ).singleNodeValue;
+    apply = doc.evaluate( '//input[@name="apply_ql"]',
                           elt, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
-                          null).singleNodeValue,
-    apply = doc.evaluate('//input[@name="apply_ql"]',
-                         elt, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
-                         null).singleNodeValue;
+                          null ).singleNodeValue;
     if(ta.value == '') {
         // load the configured QL and apply
-        var self = this,
-        act = function() {
-            ta.value = self.ql;
+        this.storage.get( ['ql'], function( storage ) {
+            ta.value = storage.ql;
             apply.click();
-        };
-        this.loadSettings(['ql'], act);
+        } );
         return;
     }
 
@@ -1136,6 +1126,6 @@ SGMain.prototype.planetRepair = function() {
 
 SGMain.prototype.configure = function() {
     if(!this.sgpvpui)
-        this.sgpvpui = new SGPvPUI(this, this.doc);
+        this.sgpvpui = new SGPvPUI(this, this.storage, this.doc);
     this.sgpvpui.open();
 };
