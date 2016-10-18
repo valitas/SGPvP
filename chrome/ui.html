@@ -38,12 +38,24 @@
 
   <div id="sg-armour-row">
    <span>
-    <label for="sg-rid">Retreat tile ID: </label><input style="text-align: right;" size="5" id="sg-rid" type="text" />
+    <label for="sg-rid">Retreat tile ID: </label><input style="text-align: right;" size="6" id="sg-rid" type="text" />
    </span>
 
    <span>
-    <label for="sg-arm">Ship armour points: </label><input style="text-align: right;" size="3" id="sg-arm" type="text" /><label for="sg-lvl"> level: </label><input style="text-align: right;" size="1" id="sg-lvl" type="text" />
-
+    Armour:
+    <label for="sg-sfarm">Safe points </label>
+    <input style="text-align: right;" size="3" id="sg-sfarm" type="text" />
+    <label for="sg-arm"> Max points </label>
+    <input style="text-align: right;" size="3" id="sg-arm" type="text" />
+    <label for="sg-lvl"> Strength </label>
+    <select id="sg-lvl">
+     <option value="1">1</option>
+     <option value="2">2</option>
+     <option value="3">3</option>
+     <option value="4">4</option>
+     <option value="5">5</option>
+     <option value="6">6</option>
+    </select>
     <a id="sg-help" target="_blank" href="https://dl.dropboxusercontent.com/u/28969566/sgpvp/help.html">Help</a>
    </span>
   </div>
@@ -102,7 +114,6 @@
 
   <div>
    <span id="sg-default-keymap">Restore default keymap</span> |
-   <span id="sg-illarion-keymap">Use Illarion's keymap</span> |
    <span id="sg-impexp-keymap">Import/export keymap</span>
   </div>
  </div>
@@ -165,7 +176,10 @@
    <input id="sg-setkey-done" type="button" value="Done" />
   </p>
   <div id="sg-skarg-armour">
-   <input id="sg-setkey-armour" type="text" size="3" /><label for="sg-setkey-armour"> armour</label>
+   <select id="sg-setkey-armour">
+    <option value="s">Safe</option>
+    <option value="m">Maximum</option>
+   </select><label for="sg-setkey-armour"> armour</label>
   </div>
   <div id="sg-skarg-rounds">
    <input id="sg-setkey-rounds" type="text" size="2" /><label for="sg-setkey-rounds"> rounds</label>

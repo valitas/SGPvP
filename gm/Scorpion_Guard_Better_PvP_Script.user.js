@@ -6,14 +6,14 @@
 // @match       *://*.pardus.at/game.php
 // @run-at      document-start
 // @require     sgpvp.js
+// @require     storage.js
 // @require     main.js
 // @require     ui.js
 // @resource    ui_html ui.html
 // @resource    ui_style ui.css
 // @resource    default_keymap default-keymap.json
-// @resource    illarion_keymap illarion-keymap.json
 // @author      Val
-// @version     39.1
+// @version     40
 // @updateURL   https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.meta.js
 // @downloadURL https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.user.js
 // @grant       GM_getValue
@@ -53,30 +53,26 @@ SGMain.prototype.getVersion = function() {
 // single source with the main logic. This isn't expensive at all,
 // really, just a bit confusing.
 
-SGMain.prototype.getValues = function(keys, callback) {
+SGStorage.prototype.rawGet = function( keys, callback ) {
     var r = new Object();
     for(var i in keys) {
         var key = keys[i];
         var val = GM_getValue(key);
-        if(typeof(val) != 'undefined') {
-            // This check is for smooth upgrading of installed
-            // versions; we'll remove in the future.  Thing is, we
-            // used to store one parameter, only one, in a form that
-            // isn't amenable to JSON.parse(). So, we test for that
-            // here, and if detected we return the literal string.
-            if(/^[0-9{"]/.test(val))
-                r[key] = JSON.parse(val);
-            else
-                r[key] = val;
-        }
+
+        // We have a problem in FF 38, GM 3.2
+        // https://github.com/greasemonkey/greasemonkey/issues/2156
+        if (val === null)
+            val = undefined;
     }
     callback(r);
-};
+}
 
-SGMain.prototype.setValues = function(entries) {
-    for(var key in entries)
+SGStorage.prototype.rawSet = function( entries, callback ) {
+    for ( var key in entries )
         GM_setValue(key, JSON.stringify(entries[key]));
-};
+    if ( callback )
+        callback();
+}
 
 // The following are here because they deal with oddities introduced
 // by the Firefox extension "Mr Xyzzy's Pardus Helper".  There is no
@@ -190,8 +186,8 @@ SGMain.prototype.getResourceURL = function(resource_id) {
     return GM_getResourceURL(resource_id);
 };
 
-SGMain.prototype.getResourceText = function(resource_id) {
-    return GM_getResourceText(resource_id);
+SGMain.prototype.getResourceText = function(resource_id, callback) {
+    callback( GM_getResourceText(resource_id) );
 };
 
 // Just start the ball...

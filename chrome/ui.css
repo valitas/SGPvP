@@ -37,7 +37,7 @@
 }
 
 #sg-switch span,
-#sg-default-keymap, #sg-illarion-keymap, #sg-impexp-keymap {
+#sg-default-keymap, #sg-impexp-keymap {
     color: rgb(208, 209, 217);
     cursor: pointer;
 }
