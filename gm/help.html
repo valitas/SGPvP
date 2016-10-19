@@ -2,162 +2,151 @@
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
  <head>
   <title>The Scorpion Guard's Better PvP Script User's Manual</title>
+  <meta charset="UTF-8">
   <link rel="stylesheet" type="text/css" href="help.css" />
  </head>
  <body>
   <div id="content">
 
-    <h1>The Scorpion Guard's Better PvP Script V37 User's Manual</h1>
+   <h1>The Scorpion Guard's Better PvP Script V41 User's Manual</h1>
 
-    <div class="logo"><img src="128.png" alt="" /></div>
+   <div class="logo"><img src="128.png" alt="" /></div>
 
-    <div class="index-bar">
-     <a href="#quickstart">Quick start</a> ·
-     <a href="#configuration">Configuration</a> ·
-     <a href="#changes">Changes</a>
-    </div>
+   <div class="index-bar">
+    <a href="#quickstart">Quick start</a> Â·
+    <a href="#configuration">Configuration</a> Â·
+    <a href="#changes">Changes</a>
+   </div>
 
-    <h2><a name="quickstart">Quick start</a></h2>
+   <h2><a name="quickstart">Quick start</a></h2>
 
-    <p>This script adds a number of keyboard commands to help in PvP
+   <p>This extension adds a number of keyboard commands to help in PvP
     combat. In general, it's used as follows:</p>
 
-    <ol>
-     <li>
-      <p><strong>Configure the script.</strong></p>
+   <ol>
+    <li>
+     <p><strong>Configure the extension.</strong></p>
 
-      <p>Press the <em>Configure</em> key to bring up the
-      configuration dialogue (on the default keymap this is key
-      <span>I</span>; the rest of this section assumes the default
-      keymap is in use). Enter your op QL there, and your ship's
-      maximum armour points and armour strength. Close the
-      dialogue.</p>
-     </li>
+     <p>Press the <em>Configure</em> key to bring up the configuration dialogue
+      (on the default keymap this is key <span>I</span>; the rest of this
+      section assumes the default keymap is in use). Enter your op QL there,
+      your preferred "low armour" threshold (for bot repairs), and your ship's
+      maximum armour points and armour strength. Close the dialogue.</p>
+    </li>
 
-     <li>
-      <p><strong>Test your configuration.</strong></p>
+    <li>
+     <p><strong>Test your configuration.</strong></p>
 
-      <p>Press the <em>Test robots</em> key (<span>N</span>). If
-      undocked and other ships are present on the tile, press the
-      <em>Test targeting</em> key (<span>T</span>).</p>
-     </li>
+     <p>Press the <em>Test robots</em> key (<span>N</span>). If undocked and
+      other ships are present on the tile, press the <em>Test targeting</em> key
+      (<span>T</span>).</p>
+    </li>
 
-     <li>
-      <p><strong>Set a retreat tile.</strong></p>
+    <li>
+     <p><strong>Set a retreat tile.</strong></p>
 
-      <p>Move to your retreat tile and press the <em>Set retreat
-      tile</em> key (<span>Z</span>) to have the script "remember"
-      it. The retreat tile can be a planet, wormhole, whatever, but it
-      has to be in sight and reachable from the tile where PvP will
-      occur.</p>
-     </li>
+     <p>Move to your retreat tile and press the <em>Set retreat tile</em> key
+      (<span>Z</span>) to have the extension "remember" it. The retreat tile can
+      be a planet, wormhole, whatever, but it has to be in sight and reachable
+      from the tile where PvP will occur.</p>
+    </li>
 
-     <li>
-      <p><strong>Engage.</strong></p>
+    <li>
+     <p><strong>Engage.</strong></p>
 
-      <p>Move to the tile where PvP will occur and press the
-      <em>Engage</em> key (<span>X</span>) repeatedly. As soon as a
-      target appears, you will be taken to the combat screen. Pressing
-      the <em>Engage</em> key again will fire against the target.</p>
-     </li>
+     <p>Move to the tile where PvP will occur and press the <em>Engage</em> key
+      (<span>X</span>) repeatedly. As soon as a target appears, you will be
+      taken to the combat screen. Pressing the <em>Engage</em> key again will
+      fire against the target.</p>
+    </li>
 
-     <li>
-      <p><strong>Disengage.</strong></p>
+    <li>
+     <p><strong>Disengage.</strong></p>
 
-      <p>When you have to retreat, press the <em>Disengage</em> key
-      (<span>C</span>) repeatedly if needed, until you are back at
-      your retreat tile.</p>
-     </li>
-    </ol>
+     <p>When you have to retreat, press the <em>Disengage</em> key
+      (<span>C</span>) repeatedly if needed, until you are back at your retreat
+      tile.</p>
+    </li>
+   </ol>
 
-    <p>There are many additional functions that you can use; see
-    below.</p>
+   <p>There are many additional functions that you can use; see below.</p>
 
-    <h2><a name="configuration">Configuration</a></h2>
+   <h2><a name="configuration">Configuration</a></h2>
 
-    <h3>Targeting</h3>
+   <h3>Targeting</h3>
 
-    <p>The script requires that you specify which ships on your tile
-    are to be attacked, and which are to be excluded from attack.</p>
+   <p>The script requires that you specify which ships on your tile are to be
+    attacked, and which are to be excluded from attack.</p>
 
-    <p>The way this is done is by pasting a quick list into the
-    configuration dialogue. The script parses the same QL format used
-    for ambushes, and learns from it which factions, alliances, and
-    individuals are to be included and excluded. Note, however, that
-    friend/foe, bounty, and ship class/size criteria in the QL are
-    ignored.</p>
+   <p>The way this is done is by pasting a quick list into the configuration
+    dialogue. The script parses the same QL format used for ambushes, and learns
+    from it which factions, alliances, and individuals are to be included and
+    excluded. Note, however, that friend/foe, bounty, and ship class/size
+    criteria in the QL are ignored.</p>
 
-    <p>On top of the QL, the script provides for include and exclude
-    override lists. You can specify only pilot names or IDs in these
-    lists, not alliances or factions. Pilots excluded this way won't
-    be engaged no matter what. Pilots included in this way will not
-    only be engaged, but will also be prioritised: of all the ships on
-    your tile, the one listed first on your include override list will
-    be targeted.</p>
+   <p>On top of the QL, the script provides for include and exclude override
+    lists. You can specify only pilot names or IDs in these lists, not alliances
+    or factions. Pilots excluded this way won't be engaged no matter
+    what. Pilots included in this way will not only be engaged, but will also be
+    prioritised: of all the ships on your tile, the one listed first on your
+    include override list will be targeted.</p>
 
-    <p>When no priority targets are present on the tile, then a target
-    is selected based on ship type &#8212; the script attempts to
-    engage traders and battleships first, breakers last.  As a last
-    resort, all else being the same, the pilot with the lowest ID will
-    be engaged.</p>
+   <p>When no priority targets are present on the tile, then a target is
+    selected based on ship type &#8212; the script attempts to engage traders
+    and battleships first, breakers last.  As a last resort, all else being the
+    same, the pilot with the lowest ID will be engaged.</p>
 
-    <h3>Keymap</h3>
+   <h3>Keymap</h3>
 
-    <p>In the configuration dialogue, click on <em>Key bindings</em>
-    to view and edit the keymap.  You may click on any key to
-    customise its behaviour.  Do note that there many available
-    functions not bound to a key by default, so explore and suit
-    yourself.</p>
+   <p>In the configuration dialogue, click on <em>Key bindings</em> to view and
+    edit the keymap.  You may click on any key to customise its behaviour.  Do
+    note that there many available functions not bound to a key by default, so
+    explore and suit yourself.</p>
 
-    <p>If you remove the <em>Configure</em> key, or change its binding
-    and later forget what you chose, remember that you can always
-    press <span>Esc</span> to open the configuration dialogue
-    again.</p>
+   <p>If you remove the <em>Configure</em> key, or change its binding and later
+    forget what you chose, remember that you can always press <span>Esc</span>
+    to open the configuration dialogue again.</p>
 
-    <p>Fine-tuning the keymap just the way you want it may be
-    labourious. Consider using <em>Import/Export keymap</em> and then
-    saving your keymap to a text file, or email it to yourself,
-    whatever.  This way, if you ever have to reinstall this script, or
-    use it on a different computer, you can quickly restore your
-    keymap by importing it back.  Technically-minded users may also
-    use this to define arbitrary keys;
-    see <a href="customkeys.html">here</a>.</p>
+   <p>Fine-tuning the keymap just the way you want it may be labourious.
+    Consider using <em>Import/Export keymap</em> and then saving your keymap to
+    a text file, or email it to yourself, whatever.  This way, if you ever have
+    to reinstall this script, or use it on a different computer, you can quickly
+    restore your keymap by importing it back.  Technically-minded users may also
+    use this to define arbitrary keys; see
+    <a href="customkeys.html">here</a>.</p>
 
-    <h3>Robots</h3>
+   <h3>Robots</h3>
 
-    <p>You have to specify your ship's maximum armour points and
-    installed armour strength (1 through 6).  This is required for
-    computing the amount of robots to use when repairing your ship.
-    Note that the script will repair you to full armour even if it has
-    to partially waste one robot.  If you'd rather the script doesn't
-    waste bots, manually configure your ship armour points to the
-    result of:</p>
+   <p>You have to specify your preferred "low armour" threshold, and your ship's
+    maximum armour points and installed armour strength (1 through 6).
+    Normally, the extension will repair your armour once it goes below the low
+    threshold, and will use enough bots to take you to full armour.</p>
 
-    <pre><em>max_ship_armour</em> - (180/<em>armour_strength</em>) + 1</pre>
+   <p>Note that the extension will repair you to full armour even if it has to
+    partially waste one robot.  If you'd rather it doesn't waste bots, manually
+    configure your maximum armour points to the result of:</p>
 
-    <p>(e.g. 445 for a Hawk with level V armour)</p>
+   <pre><em>max_ship_armour</em> - (180/<em>armour_strength</em>) + 1</pre>
 
-    <p>There are rare situations in which the script cannot ascertain
-    how many robots are available, or the state of the ship's armour;
-    the script will then guess, based on last known values, but it may
-    get it wrong.  For such cases, you may want to define and use
-    <em>Force use robots</em> keys: the script will attempt to use as
-    many bots as you specify for those, regardless of what it "thinks"
-    you have or are needed.</p>
+   <p>(e.g. 445 for a Hawk with level V armour)</p>
 
-    <h2><a name="changes">Changes</a></h2>
+   <h2><a name="changes">Changes</a></h2>
 
-    <h3>Version 37.1</h3>
-    <p>Released 5 Jun 2015. Fixes bug introduced by
-      <a href="https://github.com/greasemonkey/greasemonkey/issues/2156">Greasemonkey issue #2156</a>a>.  No changes to Chrome version.</p>
+   <h3>Version 41</h3>
+   <p>Released 19 Oct 2016. A wide array of new actions, including switching
+    combat modes, repair-or-attack keys, timebomb deployment and more.  New
+    download and update URLs for Firefox, due to Dropbox policy change.  Source
+    code now on Github.</p>
 
-    <h3>Version 37</h3>
-    <p>Released 2 Apr 2014. Changes disengage so that, if not blocked,
-    only one server request is needed to jump to retreat tile.  Fixes
-    fast keypress choking for action "set ambush".  Deals with
-    disabled buttons (e.g. cloak when you have no AP) by navving.</p>
+   <h3>Versions 38, 39, 40</h3>
+   <p>Undocumented.</p>
 
-    <p>For earlier releases, see <a href="changelog.html">here</a>.</p>
+   <h3>Version 37.1</h3>
+   <p>Released 5 Jun 2015. Fixes bug introduced by
+    <a href="https://github.com/greasemonkey/greasemonkey/issues/2156">Greasemonkey issue #2156</a>.
+    No changes to Chrome version.</p>
+
+   <p>For earlier releases, see <a href="changelog.html">here</a>.</p>
   </div>
  </body>
 </html>
