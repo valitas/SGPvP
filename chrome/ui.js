@@ -334,8 +334,14 @@ SGPvPUI.prototype.configure = function() {
     e.lvl.value = armour.level;
 
     this.targetingValid = true;
-    this.armourValid = true;
     this.rtidValid = true;
+
+    // Armour is the one setting that is invalid on the very first config.  So
+    // watch for this.
+    this.armourValid =
+        ( armour.low > 0 && armour.max > 0 && armour.low < armour.max );
+
+    this.enableCloseIfProper();
 
     this.initActionCatalogue();
 
@@ -380,6 +386,7 @@ SGPvPUI.prototype.configure = function() {
                             XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
     while((kdiv = xpr.iterateNext()))
         kdiv.addEventListener('click', onKeyClick, false);
+
 };
 
 SGPvPUI.prototype.toggle = function() {
@@ -472,7 +479,7 @@ SGPvPUI.prototype.onArmInput = function() {
     var low = this.getPositiveIntegerValue(this.elements.low),
         max = this.getPositiveIntegerValue(this.elements.max),
         level = this.getPositiveIntegerValue(this.elements.lvl, 6);
-    if( low && max && level) {
+    if ( low && max && low <= max && level > 0 ) {
         this.armourValid = true;
         this.storage.set( { armour: { low: low, max: max, level: level } } );
     }
