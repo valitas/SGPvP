@@ -1,0 +1,1 @@
+../chrome/storage.js

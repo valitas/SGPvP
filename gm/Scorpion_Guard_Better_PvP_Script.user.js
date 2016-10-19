@@ -1,4 +1,4 @@
-// ==UserScript==
+﻿// ==UserScript==
 // @name        Scorpion Guard Better PvP Script
 // @namespace   tag:dssrzs.org,2012-07-16:PvP
 // @description Keyboard commands for Pardus combat
@@ -55,21 +55,25 @@ SGMain.prototype.getVersion = function() {
 
 SGStorage.prototype.rawGet = function( keys, callback ) {
     var r = new Object();
-    for(var i in keys) {
-        var key = keys[i];
-        var val = GM_getValue(key);
+    for ( var i in keys ) {
+        var key = keys[ i ];
+        var val = GM_getValue( key );
 
         // We have a problem in FF 38, GM 3.2
         // https://github.com/greasemonkey/greasemonkey/issues/2156
-        if (val === null)
+        if ( val === null )
             val = undefined;
+        if ( val !== undefined )
+            val = JSON.parse( val );
+
+        r[ key ] = val;
     }
-    callback(r);
+    callback( r );
 }
 
 SGStorage.prototype.rawSet = function( entries, callback ) {
     for ( var key in entries )
-        GM_setValue(key, JSON.stringify(entries[key]));
+        GM_setValue( key, JSON.stringify(entries[key]) );
     if ( callback )
         callback();
 }
