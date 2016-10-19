@@ -64,7 +64,7 @@ function SGMain(doc) {
     }
 
     function checkConfig( allowRetry ) {
-        if ( allowRetry && !( this.storage.version >= 40 ) )
+        if ( allowRetry && !( this.storage.version >= 41 ) )
             this.storage.migrate( loadConfig.bind(this, false) );
         else {
             if( this.storage.keymap )

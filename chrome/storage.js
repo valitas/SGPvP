@@ -112,37 +112,37 @@ SGStorage.prototype.migrate = function( callback ) {
         if ( entries.keymap )
             safe = this.fixKeymap( entries.keymap ).safe;
 
-        fixArmour( 'artemis', entries['artemis-armour'], safe );
-        fixArmour( 'orion', entries['orion-armour'], safe );
-        fixArmour( 'pegasus', entries['pegasus-armour'], safe );
+        fixArmour( entries['artemis-armour'], safe );
+        fixArmour( entries['orion-armour'], safe );
+        fixArmour( entries['pegasus-armour'], safe );
 
         entries.version = 41;
-        console.log( 'FIXED', entries );
+        //console.log( 'Old configuration migrated', entries );
         this.rawSet( entries, callback );
     }
 
-    function fixArmour( name, armour, safe ) {
+    function fixArmour( armour, safe ) {
         if ( armour ) {
-            if ( armour.version == 40 ) {
-                armour.low = armour.safe;
-                delete armour.safe;
-            }
+            if ( armour.points > 0 )
+                armour.max = armour.low = armour.points;
             else {
-                if ( armour.points != undefined ) {
-                    armour.max = armour.points;
-                    delete armour.points;
-                }
-                if ( armour.safe != undefined ) {
-                    armour.low = armour.safe;
-                    delete armour.safe;
+                if ( armour.max > 0 ) {
+                    if ( armour.safe > 0 && armour.safe < armour.max )
+                        armour.low = armour.safe;
+                    else if ( safe > 0 && safe < armour.max )
+                        armour.low = safe;
+                    else
+                        armour.low = armour.max;
                 }
                 else {
-                    if ( safe === undefined || safe > armour.max )
-                        armour.safe = armour.max;
-                    else
-                        armour.safe = safe;
+                    armour.max = null;
+                    armour.low = null;
                 }
             }
+
+            // Make sure these obsolete settings are wiped
+            delete armour.points;
+            delete armour.safe;
         }
     }
 }
@@ -162,7 +162,7 @@ SGStorage.prototype.fixKeymap = function( keymap ) {
             keymap[ key ] = 'bots,m';
             break;
         case 'testBots':
-            keymap[ key ] = 'testBots,m';
+            keymap[ key ] = 'testBots';
             break;
         default:
             m = winrx.exec( action );
