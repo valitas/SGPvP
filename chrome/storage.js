@@ -67,7 +67,7 @@ SGStorage.prototype.get = function( names, callback ) {
 // Store all properties of the given object both as properties of the SGStorage
 // instance, and in persistent storage.
 
-SGStorage.prototype.set = function( settings ) {
+SGStorage.prototype.set = function( settings, callback ) {
     var o = new Object(),
         specs = this.PARAM_DEFINITION,
         prefix = this.universe + '-',
@@ -80,7 +80,7 @@ SGStorage.prototype.set = function( settings ) {
         o[ storageName ] = value;
     }
 
-    this.rawSet( o );
+    this.rawSet( o, callback );
 };
 
 // Update configuration.  We don't do this automatically because we don't want

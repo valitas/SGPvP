@@ -451,8 +451,6 @@ SGMain.prototype.useBots = function( mode ) {
         submit = form.elements[ 'useres' ];
     }
 
-    // console.log( 'bots saving', newSettings );
-
     storage.set( newSettings );
     amount.value = thisMany;
     submit.click();
