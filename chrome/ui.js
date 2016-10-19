@@ -180,16 +180,16 @@ SGPvPActionWinB.prototype.getArgsFromUI = function() {
 // Actions with just a "repair if not low armour" setting (currently just bots)
 function SGPvPActionA() { }
 SGPvPActionA.prototype.serialise = function(threshold) {
-    return this.id + (threshold == 'm' ? ',m' : ',l');
+    return this.id + (threshold == 'l' ? ',l' : ',m');
 };
 SGPvPActionA.prototype.displayName = function(threshold) {
     var name;
-    if ( this.name == 'Use robots' )
+    if ( this.name == 'Use bots' )
         name = 'Bots';
     else
         name = this.name;
-    if ( threshold == 'm' )
-        name += ' max always';
+    if ( threshold == 'l' )
+        name += ' if low armour';
     return name;
 };
 // Call these two from SGPvPUI context
@@ -199,7 +199,7 @@ SGPvPActionA.prototype.updateSetKeyPanelArgs = function(threshold) {
     e.skarg_rounds.style.display = 'none';
     e.skarg_missiles.style.display = 'none';
     e.skarg_alwaysmax.style.display = 'null'; // default to block
-    e.setkey_alwaysmax.checked = (threshold == 'm');
+    e.setkey_alwaysmax.checked = (threshold != 'l');
 };
 SGPvPActionA.prototype.getArgsFromUI = function() {
     var e = this.elements;
