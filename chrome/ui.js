@@ -1,14 +1,17 @@
+// -*- js3-indent-level: 4; js3-indent-tabs-mode: nil -*-
+
+
 // SGPvPUI and related objects - user interface implementation.
 //
-// This code must run on Firefox and Google Chrome - no Greasemonkey
-// calls and no chrome.* APIs here.  localStorage should not be
-// accessed from here either.
+// This code must run on Firefox and Google Chrome - no Greasemonkey calls and
+// no chrome.* APIs here.  localStorage should not be accessed from here either.
 
 
 // XXX - The way we handle actions with arguments is a bit awkward now.  We
 // probably should be done with the hidden fields, and instead add and remove
 // action-specific HTML, but event handlers on the dynamic controls are a
 // problem...
+
 function SGPvPAction() { }
 SGPvPAction.prototype.serialise = function() { return this.id; };
 SGPvPAction.prototype.displayName = function() { return this.name; };
@@ -18,7 +21,7 @@ SGPvPAction.prototype.updateSetKeyPanelArgs = function() {
     e.skarg_bots.style.display = 'none';
     e.skarg_rounds.style.display = 'none';
     e.skarg_missiles.style.display = 'none';
-    e.skarg_armour.style.display = 'none';
+    e.skarg_alwaysmax.style.display = 'none';
 };
 
 function SGPvPNoAction() { }
@@ -40,7 +43,7 @@ SGPvPActionM.prototype.updateSetKeyPanelArgs = function(missiles) {
     var e = this.elements;
     e.skarg_bots.style.display = 'none';
     e.skarg_rounds.style.display = 'none';
-    e.skarg_armour.style.display = 'none';
+    e.skarg_alwaysmax.style.display = 'none';
     e.skarg_missiles.style.display = null; // default to block
     e.setkey_missiles.checked = (missiles != 'n');
 };
@@ -65,7 +68,7 @@ SGPvPActionRM.prototype.displayName = function(rounds, missiles) {
 SGPvPActionRM.prototype.updateSetKeyPanelArgs = function(rounds, missiles) {
     var e = this.elements;
     e.skarg_bots.style.display = 'none';
-    e.skarg_armour.style.display = 'none';
+    e.skarg_alwaysmax.style.display = 'none';
     e.skarg_rounds.style.display = null; // default to block
     e.setkey_rounds.style.color = null; // default
     e.setkey_rounds.value = (rounds || 20);
@@ -96,7 +99,7 @@ SGPvPActionB.prototype.updateSetKeyPanelArgs = function(bots) {
     var e = this.elements;
     e.skarg_rounds.style.display = 'none';
     e.skarg_missiles.style.display = 'none';
-    e.skarg_armour.style.display = 'none';
+    e.skarg_alwaysmax.style.display = 'none';
     e.skarg_bots.style.display = null; // default to block
     e.setkey_bots.style.color = null; // default
     e.setkey_bots.value = (bots || 1);
@@ -109,97 +112,98 @@ SGPvPActionB.prototype.getArgsFromUI = function() {
     return null;
 };
 
-// Actions with "armour level", "rounds", and "missiles" settings (win, winRaid)
+// Actions with "armour threshold", "rounds", and "missiles" settings (win,
+// winRaid)
 function SGPvPActionWin() { }
-SGPvPActionWin.prototype.serialise = function( armour, rounds, missiles ) {
-  return this.id + ',' +
-        (armour == 'm' ? 'm' : 's') + ',' +
+SGPvPActionWin.prototype.serialise = function( threshold, rounds, missiles ) {
+    return this.id + ',' +
+        (threshold == 'm' ? 'm' : 'l') + ',' +
         (rounds || 20) + ',' +
         (missiles != 'n' ? 'm' : 'n');
 };
 SGPvPActionWin.prototype.displayName = function(threshold, rounds, missiles) {
-  if(!rounds)
-    rounds = 20;
-  return this.name + (rounds == 20 ? '' : ' '+rounds) +
-    (missiles != 'n' ? '' : ' no missiles');
+    if(!rounds)
+        rounds = 20;
+    return this.name + (rounds == 20 ? '' : ' '+rounds) +
+        (missiles != 'n' ? '' : ' no mis') +
+        (threshold == 'm' ? ' max arm' : '')
 };
 SGPvPActionWin.prototype.updateSetKeyPanelArgs =
-  function(armour, rounds, missiles) {
-  var e = this.elements;
-  e.skarg_bots.style.display = 'none';
-  e.skarg_armour.style.display = null; // default to block
-  e.setkey_armour.value = (armour == 'm' ? 'm' : 's');
-  e.skarg_rounds.style.display = null; // default to block
-  e.setkey_rounds.value = (rounds || 20);
-  e.skarg_missiles.style.display = null; // default to block
-  e.setkey_missiles.checked = (missiles != 'n');
+    function(threshold, rounds, missiles) {
+    var e = this.elements;
+    e.skarg_bots.style.display = 'none';
+    e.skarg_alwaysmax.style.display = null; // default to block
+    e.setkey_alwaysmax.checked = (threshold == 'm');
+    e.skarg_rounds.style.display = null; // default to block
+    e.setkey_rounds.value = (rounds || 20);
+    e.skarg_missiles.style.display = null; // default to block
+    e.setkey_missiles.checked = (missiles != 'n');
 };
 SGPvPActionWin.prototype.getArgsFromUI = function() {
-  var e = this.elements,
-      rounds = this.getPositiveIntegerValue(e.setkey_rounds, 20);
-  if ( rounds )
-    return [ e.setkey_armour.value == 'm' ? 'm' : 's',
-             rounds,
-             e.setkey_missiles.checked ? 'm' : 'n' ];
-  return null;
+    var e = this.elements,
+        rounds = this.getPositiveIntegerValue(e.setkey_rounds, 20);
+    if ( rounds )
+        return [ e.setkey_alwaysmax.checked ? 'm' : 'l',
+                 rounds,
+                 e.setkey_missiles.checked ? 'm' : 'n' ];
+    return null;
 };
 
-// Actions with "armour level" and "missiles" settings (winB, winBRaid)
+// Actions with "armour threshold" and "missiles" settings (winB, winBRaid)
 function SGPvPActionWinB() { }
-SGPvPActionWinB.prototype.serialise = function( armour, missiles ) {
+SGPvPActionWinB.prototype.serialise = function( threshold, missiles ) {
     return this.id + ',' +
-        (armour == 'm' ? 'm' : 's') + ',' +
+        (threshold == 'm' ? 'm' : 'l') + ',' +
         (missiles != 'n' ? 'm' : 'n');
 };
 SGPvPActionWinB.prototype.displayName = function(threshold, missiles) {
-  return this.name + (missiles != 'n' ? '' : ' no missiles');
+  return this.name +
+        (missiles != 'n' ? '' : ' no mis') +
+        (threshold == 'm' ? ' max arm' : '');
 };
-SGPvPActionWinB.prototype.updateSetKeyPanelArgs = function(armour, missiles) {
-  var e = this.elements;
-  e.skarg_bots.style.display = 'none';
-  e.skarg_rounds.style.display = 'none';
-  e.skarg_armour.style.display = null; // default to block
-  e.setkey_armour.value = (armour == 'm' ? 'm' : 's');
-  e.skarg_missiles.style.display = null; // default to block
-  e.setkey_missiles.checked = (missiles != 'n');
+SGPvPActionWinB.prototype.updateSetKeyPanelArgs =
+    function(threshold, missiles) {
+    var e = this.elements;
+    e.skarg_bots.style.display = 'none';
+    e.skarg_rounds.style.display = 'none';
+    e.skarg_alwaysmax.style.display = null; // default to block
+    e.setkey_alwaysmax.checked = (threshold == 'm');
+    e.skarg_missiles.style.display = null; // default to block
+    e.setkey_missiles.checked = (missiles != 'n');
 };
 SGPvPActionWinB.prototype.getArgsFromUI = function() {
-  var e = this.elements;
-  return [ e.setkey_armour.value == 'm' ? 'm' : 's',
-           e.setkey_missiles.checked ? 'm' : 'n' ];
+    var e = this.elements;
+    return [ e.setkey_alwaysmax.checked ? 'm' : 'l',
+             e.setkey_missiles.checked ? 'm' : 'n' ];
 };
 
-// Actions with just a "armour level" setting (bots, testBots)
+// Actions with just a "repair if not low armour" setting (currently just bots)
 function SGPvPActionA() { }
-SGPvPActionA.prototype.serialise = function(armour) {
-    return this.id + (armour == 's' ? ',s' : ',m');
+SGPvPActionA.prototype.serialise = function(threshold) {
+    return this.id + (threshold == 'm' ? ',m' : ',l');
 };
-SGPvPActionA.prototype.displayName = function(armour) {
+SGPvPActionA.prototype.displayName = function(threshold) {
     var name;
-    switch ( this.name ) {
-    case 'Use robots':
+    if ( this.name == 'Use robots' )
         name = 'Bots';
-        break;
-    case 'Test robots':
-        name = 'Test bots';
-        break;
-    default:
+    else
         name = this.name;
-    }
-    return name + ' to ' + (armour == 's' ? 'safe' : 'max') + ' level';
+    if ( threshold == 'm' )
+        name += ' max always';
+    return name;
 };
 // Call these two from SGPvPUI context
-SGPvPActionA.prototype.updateSetKeyPanelArgs = function(armour) {
+SGPvPActionA.prototype.updateSetKeyPanelArgs = function(threshold) {
     var e = this.elements;
     e.skarg_bots.style.display = 'none';
     e.skarg_rounds.style.display = 'none';
     e.skarg_missiles.style.display = 'none';
-    e.skarg_armour.style.display = 'null'; // default to block
-    e.setkey_armour.value = (armour == 's' ? 's' : 'm');
+    e.skarg_alwaysmax.style.display = 'null'; // default to block
+    e.setkey_alwaysmax.checked = (threshold == 'm');
 };
 SGPvPActionA.prototype.getArgsFromUI = function() {
     var e = this.elements;
-    return [ e.setkey_armour.value == 's' ? 's' : 'm' ];
+    return [ e.setkey_alwaysmax.checked ? 'm' : 'l' ];
 };
 
 
@@ -207,7 +211,6 @@ SGPvPActionA.prototype.getArgsFromUI = function() {
 SGPvPUI.prototype.ACTION_TYPES = {
   '': SGPvPNoAction,
   bots: SGPvPActionA,
-  testBots: SGPvPActionA,
   damageBuilding: SGPvPActionM,
   raidBuilding: SGPvPActionM,
   engage: SGPvPActionRM,
@@ -245,20 +248,22 @@ SGPvPUI.prototype.injectStyle = function() {
 
 // We use all these elements from the UI DOM.
 SGPvPUI.prototype.UI_ELEMENT_IDS =
-    [ 'sg-arm',
-      'sg-close',
+    [ 'sg-close',
       'sg-default-keymap',
       'sg-exc',
       'sg-impexp-keymap',
       'sg-inc',
       'sg-keybindings',
       'sg-keyboard',
+      'sg-low',
       'sg-lvl',
+      'sg-max',
       'sg-ql',
       'sg-rid',
       'sg-s2keys',
       'sg-s2targeting',
       'sg-setkey',
+      'sg-setkey-alwaysmax',
       'sg-setkey-bots',
       'sg-setkey-code',
       'sg-setkey-done',
@@ -266,12 +271,10 @@ SGPvPUI.prototype.UI_ELEMENT_IDS =
       'sg-setkey-missiles',
       'sg-setkey-rounds',
       'sg-setkey-select',
-      'sg-setkey-armour',
-      'sg-sfarm',
+      'sg-skarg-alwaysmax',
       'sg-skarg-bots',
       'sg-skarg-missiles',
       'sg-skarg-rounds',
-      'sg-skarg-armour',
       'sg-targeting',
       'sg-version' ];
 
@@ -326,8 +329,8 @@ SGPvPUI.prototype.configure = function() {
     e.exc.value = this.stringifyOverrideList(targeting.exclude);
     e.rid.value = storage.rtid;
     armour = storage.armour;
-    e.sfarm.value = armour.safe;
-    e.arm.value = armour.max;
+    e.low.value = armour.low;
+    e.max.value = armour.max;
     e.lvl.value = armour.level;
 
     this.targetingValid = true;
@@ -356,15 +359,15 @@ SGPvPUI.prototype.configure = function() {
     e.inc.addEventListener('input', onTargetingInput, false);
     e.exc.addEventListener('input', onTargetingInput, false);
     e.rid.addEventListener('input', onRtIdInput, false);
-    e.sfarm.addEventListener('input', onArmInput, false);
-    e.arm.addEventListener('input', onArmInput, false);
+    e.low.addEventListener('input', onArmInput, false);
+    e.max.addEventListener('input', onArmInput, false);
     e.lvl.addEventListener('input', onArmInput, false);
     e.close.addEventListener('click', onCloseClick, false);
     e.setkey_done.addEventListener('click', onS2KeysClick, false);
     e.setkey_select.addEventListener('change', onSetKeySelectChange, false);
     e.setkey_bots.addEventListener('input', onSetKeyArgInput, false);
     e.setkey_rounds.addEventListener('input', onSetKeyArgInput, false);
-    e.setkey_armour.addEventListener('input', onSetKeyArgInput, false);
+    e.setkey_alwaysmax.addEventListener('click', onSetKeyArgInput, false);
     e.setkey_missiles.addEventListener('click', onSetKeyArgInput, false);
     e.default_keymap.addEventListener('click', onDefaultKeymapClick, false);
     e.impexp_keymap.addEventListener('click', onImpExpKeymapClick, false);
@@ -466,12 +469,12 @@ SGPvPUI.prototype.getPositiveIntegerValue = function(element, max, allowEmpty) {
 };
 
 SGPvPUI.prototype.onArmInput = function() {
-    var safe = this.getPositiveIntegerValue(this.elements.sfarm),
-        max = this.getPositiveIntegerValue(this.elements.arm),
+    var low = this.getPositiveIntegerValue(this.elements.low),
+        max = this.getPositiveIntegerValue(this.elements.max),
         level = this.getPositiveIntegerValue(this.elements.lvl, 6);
-    if( safe && max && level) {
+    if( low && max && level) {
         this.armourValid = true;
-        this.storage.set( { armour: { safe: safe, max: max, level: level } } );
+        this.storage.set( { armour: { low: low, max: max, level: level } } );
     }
     else
         this.armourValid = false;

@@ -225,6 +225,6 @@
     cursor: default;
 }
 
-#sg-setkey-armour, #sg-setkey-rounds, #sg-setkey-bots {
+#sg-setkey-rounds, #sg-setkey-bots {
     text-align: right;
 }

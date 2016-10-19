@@ -1,7 +1,10 @@
+// -*- js3-indent-level: 4; js3-indent-tabs-mode: nil -*-
+
+
 // SGMain object. This code must run on Firefox and Google Chrome - no
 // Greasemonkey calls and no chrome.* stuff here.
 
-// V40
+// V41
 
 function SGMain(doc) {
     var url, m;
@@ -394,25 +397,37 @@ SGMain.prototype.setupCombatPage = function() {
     this.storage.set( settings );
 };
 
-// Mode is either 's' (repair to "safe" armour level), 'm' (repair to max armour
-// level), or a number specifying exactly how many bots to use.
+// Mode is either 'l' or 'm', or a number specifying exactly how many bots to
+// use.
+//
+// 'l' mode is the normal case: if the ship's armour is below the "low"
+// threshold, then use enough bots to reach max armour.  'm' mode ignores the
+// low threshold and repairs whenever armour is below max.
 SGMain.prototype.useBots = function( mode ) {
     var storage = this.storage,
-        thisMany, bots, botRepair, newSettings, amount, submit, form;
+        thisMany, bots, botWorth, newSettings, amount, submit, form;
 
     if ( typeof mode == 'number' ) {
         // dont bother trying to compute armour, use what we're told exactly
         thisMany = mode;
-        botRepair = Math.floor( 180 / storage.armour.level );
+        botWorth = Math.floor( 180 / storage.armour.level );
     }
     else {
-        bots = this.computeBotsNeeded( mode );
-        if( !bots ) {
+        bots = this.computeBotsNeeded( mode == 'm' );
+        if ( bots.error ) {
+            // Tell the user.  We'll reload immediately so they may not see it,
+            // but at least try.
+            this.showNotification(bots.error, 2000)
             this.nav();
             return;
         }
 
-        botRepair = bots.botRepair;
+        if( !bots.repair || !(bots.available > 0) ) {
+            this.nav();
+            return;
+        }
+
+        botWorth = bots.botWorth;
         thisMany = bots.available;
     }
 
@@ -420,7 +435,7 @@ SGMain.prototype.useBots = function( mode ) {
     // we'll have left, and update last known values.
     newSettings = {
         lkap: typeof( storage.lkap ) == 'number' ?
-            storage.lkap + thisMany * botRepair : null,
+            storage.lkap + thisMany * botWorth : null,
         lkba: storage.lkba > thisMany ? storage.lkba - thisMany : 0
     };
 
@@ -436,7 +451,7 @@ SGMain.prototype.useBots = function( mode ) {
         submit = form.elements[ 'useres' ];
     }
 
-    console.log( 'bots saving', newSettings );
+    // console.log( 'bots saving', newSettings );
 
     storage.set( newSettings );
     amount.value = thisMany;
@@ -474,56 +489,84 @@ SGMain.prototype.getMadeUpBotsForm = function() {
     return form;
 };
 
-// This function shows notifications. If it returns null, bots are not
-// needed or can't be used, and the user already knows.
+// This function always returns an object with the following properties:
 //
-// Mode is 's' or 'm', whether we'll use the "safe" or the "max" armour setting
-// for computation.
-SGMain.prototype.computeBotsNeeded = function( mode ) {
+// error: If non-null, a misconfiguration was detected.  This will be a string
+//        that the caller can show in a notification (this function does not
+//        notify the user).
+//
+// needed: Contains the amount of bots needed to repair to max armour; can be
+//        zero if no bots are needed.
+//
+// available: Contains the amount of bots that can actually be used to repair
+//        (not the amount of bots in the hold; this property will always be less
+//        than or equal to "needed").  If this value is non-zero, this is the
+//        amount of bots to use.
+//
+// botWorth: Contains how much armour a bot will repair.
+//
+// repair: If false, repair should not be performed, even if available is larger
+//        than zero, because the armour is not low enough.  Note that repair may
+//        be true even if available is 0; caller then should tell the user that
+//        no bots are available.
+//
+// If alwaysRepair is true, the configured low armour threshold is ignored; the
+// caller is instructed to repair whenever armour is below max.
+
+SGMain.prototype.computeBotsNeeded = function( alwaysRepair ) {
+
     var storage = this.storage,
         armour = storage.armour,
         lkap = storage.lkap,
         lkba = storage.lkba,
-        modeName, points;
+        r = {
+            error: null,
+            needed: 0,
+            available: 0,
+            botWorth: 0,
+            repair: false
+        }
 
-    if ( mode == 's' ) {
-        modeName = 'Safe';
-        points = armour.safe;
-    }
-    else {
-        modeName = 'Max';
-        points = armour.max;
-    }
-
-    if( !( points > 0 && armour.level > 0 ) ) {
-        this.showNotification( modeName + ' armour not configured', 1500);
-        return null;
+    if ( !(armour.level > 0) ) {
+        r.error = 'Armour level not configured!';
+        return r;
     }
 
-    if( typeof(lkap) != 'number' || lkap < 0 ) {
+    r.botWorth = Math.floor( 180 / armour.level );
+
+    if ( !(armour.max > 0) ) {
+        r.error = 'Max armour not configured!';
+        return r;
+    }
+
+    if ( typeof(lkap) != 'number' || lkap < 0 ) {
         // In the nav screen, we should always see the ship's armour
-        this.showNotification( "SGPvP error 5001: ship armour not found",
-                               1500 );
-        return null;
+        r.error = 'SGPvP error 5001: ship armour not found';
+        return r;
     }
 
-    if( !lkba ) {
-        this.showNotification( "No bots available!", 500 );
-        return null;
+    if ( lkap >= armour.max )
+        // Bots not needed
+        return r;
+
+    if ( !(lkba > 0) )
+        // No bots available. Don't return just yet.
+        lkba = 0;
+
+    r.needed = Math.floor( (armour.max - lkap + r.botWorth - 1) / r.botWorth );
+    r.available = r.needed > lkba ? lkba : r.needed;
+
+    if ( alwaysRepair )
+        r.repair = true;
+    else {
+        if ( !(armour.low > 0) )
+            // Low armour apparently not configured; behave as if low = max
+            r.repair = true;
+
+        r.repair = ( lkap < armour.low );
     }
 
-    if( lkap >= points ) {
-        this.showNotification('Bots not needed', 500);
-        return null;
-    }
-
-    var botRepair = Math.floor( 180 / armour.level );
-    var needed = Math.floor( (points - lkap + botRepair - 1) / botRepair );
-    return {
-        botRepair: botRepair,
-        needed: needed,
-        available: needed > lkba ? lkba : needed
-    };
+    return r;
 };
 
 SGMain.prototype.getShips = function() {
@@ -684,7 +727,7 @@ SGMain.prototype.doEngage = function(rounds, missiles, raid) {
 SGMain.prototype.doWin = function( mode, rounds, missiles, raid ) {
     var storage = this.storage,
         armour = storage.armour,
-        points = ( mode == 'm' ) ? armour.max : armour.safe,
+        points = ( mode == 'm' ) ? armour.max : armour.low,
         lkap = storage.lkap,
         lkba = storage.lkba;
 
@@ -699,7 +742,7 @@ SGMain.prototype.doWin = function( mode, rounds, missiles, raid ) {
 SGMain.prototype.doWinB = function( botMode, attackMode, missiles ) {
     var storage = this.storage,
         armour = storage.armour,
-        points = ( botMode == 'm' ) ? armour.max : armour.safe,
+        points = ( botMode == 'm' ) ? armour.max : armour.low,
         lkap = storage.lkap,
         lkba = storage.lkba;
 
@@ -910,19 +953,45 @@ SGMain.prototype.nop = function() { };
 SGMain.prototype.nav = function() { this.doc.location = 'main.php'; this.nav = this.nop; };
 SGMain.prototype.bots = function( mode ) { this.useBots( mode ); };
 SGMain.prototype.forceBots = function( n ) { this.useBots( parseInt(n) ); };
-SGMain.prototype.testBots = function( mode ) {
-    var msg, bots = this.computeBotsNeeded( mode );
-    if(!bots)
-        return;
+SGMain.prototype.testBots = function() {
+    var bots = this.computeBotsNeeded( false ),
+        delay = 1000,
+        plural, msg;
 
-    if(this.useBotsAmountField)
+    if ( bots.error ) {
+        msg = bots.error;
+        delay = 2000;
+    }
+    else {
+        if ( bots.needed > 0 ) {
+            if ( bots.needed == 1 )
+                plural = '1 bot';
+            else
+                plural = bots.needed + ' bots';
+
+            if ( bots.available > 0 ) {
+                if ( bots.available == bots.needed )
+                    msg = 'Need ' + plural;
+                else if ( bots.available > 0 ) {
+                    msg = 'Need ' + plural + ', have ' + bots.available;
+                    delay += 500; // give them a bit more time to read
+                }
+                if (!bots.repair) {
+                    msg += ", won't use yet";
+                    delay += 500; // and a bit more
+                }
+            }
+            else
+                msg = 'Need ' + plural + ', have none';
+        }
+        else
+            msg = 'Bots not needed';
+    }
+
+    if( bots.available && this.useBotsAmountField )
         this.useBotsAmountField.value = bots.available;
 
-    if(bots.needed == 1)
-        msg = 'Need ' + bots.needed + ' robot, would use ' + bots.available;
-    else
-        msg = 'Need ' + bots.needed + ' robots, would use ' + bots.available;
-    this.showNotification(msg, 1000);
+    this.showNotification(msg, delay);
 };
 
 SGMain.prototype.damageBuilding = function(missiles) {

@@ -13,9 +13,9 @@
 // @resource    ui_style ui.css
 // @resource    default_keymap default-keymap.json
 // @author      Val
-// @version     40
-// @updateURL   https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.meta.js
-// @downloadURL https://dl.dropboxusercontent.com/u/28969566/sgpvp/Scorpion_Guard_Better_PvP_Script.user.js
+// @version     41
+// @updateURL   https://dssrzs.org/sgpvp/Scorpion_Guard_Better_PvP_Script.meta.js
+// @downloadURL https://dssrzs.org/sgpvp/Scorpion_Guard_Better_PvP_Script.user.js
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @grant       GM_deleteValue
@@ -193,3 +193,9 @@ SGMain.prototype.getResourceText = function(resource_id, callback) {
 // Just start the ball...
 
 top.sgpvp = new SGPvP(top);
+
+// Emacs: don't make me set these old prefs of mine every time...
+// Local Variables:
+// js3-indent-level: 4
+// js3-indent-tabs-mode: nil
+// End:

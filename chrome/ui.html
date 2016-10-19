@@ -43,10 +43,10 @@
 
    <span>
     Armour:
-    <label for="sg-sfarm">Safe points </label>
-    <input style="text-align: right;" size="3" id="sg-sfarm" type="text" />
-    <label for="sg-arm"> Max points </label>
-    <input style="text-align: right;" size="3" id="sg-arm" type="text" />
+    <label for="sg-low">Low points </label>
+    <input style="text-align: right;" size="3" id="sg-low" type="text" />
+    <label for="sg-max"> Max points </label>
+    <input style="text-align: right;" size="3" id="sg-max" type="text" />
     <label for="sg-lvl"> Strength </label>
     <select id="sg-lvl">
      <option value="1">1</option>
@@ -149,9 +149,9 @@
      <option value="ambush">Ambush</option>
     </optgroup>
     <optgroup label="Robots">
-     <option value="testBots">Test robots</option>
-     <option value="bots">Use robots</option>
-     <option value="forceBots">Force use robots</option>
+     <option value="testBots">Test bots</option>
+     <option value="bots">Use bots</option>
+     <option value="forceBots">Force use bots</option>
     </optgroup>
     <optgroup label="Various">
      <option value="switchToDC">Defensive combat</option>
@@ -173,11 +173,8 @@
    </select>
    <input id="sg-setkey-done" type="button" value="Done" />
   </p>
-  <div id="sg-skarg-armour">
-   <select id="sg-setkey-armour">
-    <option value="s">Safe</option>
-    <option value="m">Maximum</option>
-   </select><label for="sg-setkey-armour"> armour</label>
+  <div id="sg-skarg-alwaysmax">
+   <input id="sg-setkey-alwaysmax" type="checkbox" /><label for="sg-setkey-alwaysmax"> repair even if not low</label>
   </div>
   <div id="sg-skarg-rounds">
    <input id="sg-setkey-rounds" type="text" size="2" /><label for="sg-setkey-rounds"> rounds</label>

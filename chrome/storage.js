@@ -1,3 +1,5 @@
+// -*- js3-indent-level: 4; js3-indent-tabs-mode: nil -*-
+
 function SGStorage( universe ) {
     this.universe = universe;
 };
@@ -24,7 +26,7 @@ SGStorage.prototype.PARAM_DEFINITION = {
                       exclude: { ids: {}, names: {} },
                       prioritiseTraders: false,
                       retreatTile: null } },
-    armour: { u: false, d: { safe: null, max: null, level: 5 } }
+    armour: { u: false, d: { low: null, max: null, level: 5 } }
 };
 
 // Request retrieval of named values from persistent storage.  Once retrieved,
@@ -88,9 +90,18 @@ SGStorage.prototype.set = function( settings ) {
 SGStorage.prototype.migrate = function( callback ) {
 
     // The configuration prior to V40 stored only one armour level, called
-    // "points".  We now store two, safe and max, with max being the old points.
+    // "points".  V40 stored two, safe and max, with max being the old points.
     // If the user had defined any "win" actions, we get the safe level from one
     // of these.  Otherwise, we set safe equal to max.
+    //
+    // And then, in V41 we're changing things again from V40's "safe" and "max"
+    // armour levels.  We have "low" and "max" now, with different semantics,
+    // but it's safe to use "safe" as "low".
+    //
+    // We deal with both cases because, with our boneheaded policy of keeping a
+    // "private" version available only to friends, we now have plenty instances
+    // of this script in the wild using both styles.  We'll upgrade all to V41.
+
     this.rawGet(
         [ 'keymap', 'artemis-armour', 'orion-armour', 'pegasus-armour' ],
         onValues.bind( this ) );
@@ -105,22 +116,32 @@ SGStorage.prototype.migrate = function( callback ) {
         fixArmour( 'orion', entries['orion-armour'], safe );
         fixArmour( 'pegasus', entries['pegasus-armour'], safe );
 
-        entries.version = 40;
+        entries.version = 41;
         console.log( 'FIXED', entries );
         this.rawSet( entries, callback );
     }
 
     function fixArmour( name, armour, safe ) {
         if ( armour ) {
-            if ( armour.points != undefined ) {
-                armour.max = armour.points;
-                delete armour.points;
+            if ( armour.version == 40 ) {
+                armour.low = armour.safe;
+                delete armour.safe;
             }
-            if ( armour.safe == undefined ) {
-                if ( safe === undefined || safe > armour.max )
-                    armour.safe = armour.max;
-                else
-                    armour.safe = safe;
+            else {
+                if ( armour.points != undefined ) {
+                    armour.max = armour.points;
+                    delete armour.points;
+                }
+                if ( armour.safe != undefined ) {
+                    armour.low = armour.safe;
+                    delete armour.safe;
+                }
+                else {
+                    if ( safe === undefined || safe > armour.max )
+                        armour.safe = armour.max;
+                    else
+                        armour.safe = safe;
+                }
             }
         }
     }
@@ -130,7 +151,7 @@ SGStorage.prototype.migrate = function( callback ) {
 // This is done when migrating a configuration, and also when importing one,
 // because it may be old.
 SGStorage.prototype.fixKeymap = function( keymap ) {
-    var winrx = /^(win(?:Raid|B|BRaid)?,)(\d+),(.*)$/,
+    var winrx = /^(win(?:Raid|B|BRaid)?,)(\d+|s),(.*)$/,
     safes = [],
         key, action, m, safe;
 
@@ -146,8 +167,9 @@ SGStorage.prototype.fixKeymap = function( keymap ) {
         default:
             m = winrx.exec( action );
             if ( m ) {
-                safes.push( m[2] );
-                keymap[ key ] = m[1] + 's,' + m[3];
+                if ( m[2] != 's' )
+                    safes.push( m[2] );
+                keymap[ key ] = m[1] + 'l,' + m[3];
             }
         }
     }
