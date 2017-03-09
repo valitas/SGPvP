@@ -110,13 +110,13 @@ SGMain.prototype.SHIPS = [
 
     // 3 - fighters
     'dominator', 'liberator', 'liberator_eps', 'sudden_death', 'gauntlet',
-    'bopx', 'scorpion', 'pantagruel', 'chitin', 'horpor', 'gargantua', 'reaper',
+    'bopx', 'pantagruel', 'chitin', 'horpor', 'gargantua', 'reaper',
     'vulcan', 'piranha', 'venom', 'rover', 'mercury', 'trident', 'marauder',
-    'shadow_stealth_craft',
+    'shadow_stealth_craft', 'hawk', 'scorpion', 'doomstar', "harvester",
 
     // 4 - breakers
-    'phantom_advanced_stealth_craft', 'hawk', 'doomstar',
-    'viper_defence_craft', 'nano', 'nighthawk_deluxe', 'nighthawk',
+    'phantom_advanced_stealth_craft', 'viper_defence_craft', 'nano',
+    'nighthawk_deluxe', 'nighthawk',
 
     // 5 - harmless noob ships that may still be under protection
     'thunderbird', 'spectre', 'interceptor', 'adder', 'tyrant', 'rustfire',
@@ -178,18 +178,19 @@ SGMain.prototype.NOTIFICATION_STYLE = {
 
 SGMain.prototype.showNotification = function(text, delay) {
     if(this.notification_timer)
-        clearTimeout(this.notification_timer);
+        window.clearTimeout(this.notification_timer);
     this.hideNotification();
     this.notification =
         this.createElement('div', this.NOTIFICATION_STYLE, null, text, null);
     this.doc.body.appendChild(this.notification);
 
-    var self = this, window = this.doc.defaultView;
     this.notification_timer =
-        window.setTimeout(function() {
-                              self.notification_timer = null;
-                              self.hideNotification();
-                          }, delay);
+        window.setTimeout(callback.bind(this), delay);
+
+    function callback() {
+        this.notification_timer = null;
+        this.hideNotification();
+    }
 };
 
 SGMain.prototype.hideNotification = function() {
@@ -575,6 +576,8 @@ SGMain.prototype.getShips = function() {
         return this.getShipsCombat();
     case 'main':
         return this.getShipsNav();
+    case 'ship2opponent_combat':
+        return [];
     }
     return null;
 };
@@ -777,90 +780,86 @@ SGMain.prototype.clickById = function(id) {
 // Thank you Traxus :)
 // mode can be offensive, balanced or defensive (exactly)
 SGMain.prototype.switchCombatMode = function(newCombatMode) {
-  var _this = this;
+    switch(this.page) {
+    case 'main':
+        var url = "overview_advanced_skills.php",
+            params = "action=switch_combat_mode&combat_mode=" + newCombatMode;
+        this.postRequest(url, params, callback.bind(this));
+        break;
 
-  switch(this.page) {
-  case 'main':
-	var url = "overview_advanced_skills.php",
-	    params = "action=switch_combat_mode&combat_mode=" + newCombatMode;
-	this.postRequest(url, params, callback);
-	break;
+    case 'ship2ship_combat':
+    case 'building':
+    case 'ship2opponent_combat':
+        // were are in PvP, PvNPC or PvB, find the button
+        var button = this.doc.evaluate(
+            "//input[@type='submit' and @name='combat_mode' and @value='" +
+                capitalizeFirstLetter(newCombatMode) + "']",
+            this.doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+            null).singleNodeValue;
+        if ( button )
+            button.click();
+    }
 
-  case 'ship2ship_combat':
-  case 'building':
-  case 'ship2opponent_combat':
-	// were are in PvP, PvNPC or PvB, find the button
-	var button =
-      this.doc.evaluate( "//input[@type='submit' and @name='combat_mode' and @value='" +
-                         capitalizeFirstLetter(newCombatMode) + "']",
-        	             this.doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
-	                     null).singleNodeValue;
-	if ( button )
-	  button.click();
-  }
+    // function returns here.
 
-  // function returns here.
+    function capitalizeFirstLetter( s ) {
+        return s.charAt(0).toUpperCase() + s.slice(1);
+    }
 
-  function capitalizeFirstLetter( s ) {
-    return s.charAt(0).toUpperCase() + s.slice(1);
-  }
-
-  function callback( status, responseText ) {
-	if (status != 200) {
-	  _this.showNotification("Can't switch combat mode", 1000);
-	} else {
-	  // now check what the response from the server was
-	  if (responseText.indexOf("<font color='red'>OFFENSIVE</font>") > -1) {
-		_this.showNotification("OFFENSIVE COMBAT", 1000);
-	  } else if (responseText.indexOf("<font color='gray'>BALANCED</font>") > -1) {
-		_this.showNotification("Balanced combat", 1000);
-	  } else if (responseText.indexOf("<font color='green'>DEFENSIVE</font>") > -1) {
-		_this.showNotification("Defensive combat", 1000);
-	  }
-	}
-  }
+    function callback( status, responseText ) {
+        if (status != 200)
+            this.showNotification("Can't switch combat mode", 1000);
+        else {
+            // now check what the response from the server was
+            if (responseText.indexOf("<font color='red'>OFFENSIVE</font>") > -1)
+                this.showNotification("OFFENSIVE COMBAT", 1000);
+            else if (responseText.indexOf("<font color='gray'>BALANCED</font>") > -1)
+                this.showNotification("Balanced combat", 1000);
+            else if (responseText.indexOf("<font color='green'>DEFENSIVE</font>") > -1)
+                this.showNotification("Defensive combat", 1000);
+        }
+    }
 };
 
 // XXX - can firefox handle this?
 SGMain.prototype.postRequest = function(url, params, callback) {
-  var http = new XMLHttpRequest();
-  http.open("POST", url, true);
-  http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-  http.onreadystatechange = function() {
-	if( http.readyState == 4 )
-      callback( http.status, http.responseText );
-  }
-  http.send(params);
+    var http = new XMLHttpRequest();
+    http.open("POST", url, true);
+    http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    http.onreadystatechange = function() {
+        if( http.readyState == 4 )
+            callback( http.status, http.responseText );
+    }
+    http.send(params);
 };
 
 SGMain.prototype.DEPLOYED_TB_RX = /Type (I|II) Tbomb active in<br>(.*?) \[(\d+),(\d+)\]<\/font>/;
 // type is 1 or 2
 SGMain.prototype.deployTimebomb = function( type ) {
-  var url = "overview_advanced_skills.php",
-      params = "action=deploy_timebomb&timebomb_type=type_" + type,
-      _this = this;
+    var url = "overview_advanced_skills.php",
+        params = "action=deploy_timebomb&timebomb_type=type_" + type;
 
-  this.postRequest(url, params, callback);
+    this.postRequest(url, params, callback.bind(this));
 
-  // Function returns here.
+    // Function returns here.
 
-  function callback( status, responseText ) {
-	if (status != 200) {
-	  _this.showNotification("Error, can't deploy", 1000);
-	} else {
-	  // now check what the response from the server was
-	  // is TB deployed ?
-	  var deployed = _this.DEPLOYED_TB_RX.exec(responseText);
-	  if (deployed) {
-		_this.showNotification("TB " + deployed[1] + " deployed at " +
-                               deployed[2] + " [" +deployed[3]+ "," +
-                               deployed[4] + "]", 1000);
-	  } else if (responseText.indexOf("There is an object on your current position!") > -1)
-		_this.showNotification("Can't deploy here", 1000);
-	  else
-		_this.showNotification("Can't deploy", 1000);
-	}
-  }
+    function callback( status, responseText ) {
+        if (status != 200) {
+            this.showNotification("Error, can't deploy", 1000);
+        } else {
+            // now check what the response from the server was
+            // is TB deployed ?
+            var deployed = this.DEPLOYED_TB_RX.exec(responseText);
+            if (deployed) {
+                this.showNotification("TB " + deployed[1] + " deployed at " +
+                                      deployed[2] + " [" +deployed[3]+ "," +
+                                      deployed[4] + "]", 1000);
+            } else if (responseText.indexOf("There is an object on your current position!") > -1)
+                this.showNotification("Can't deploy here", 1000);
+            else
+                this.showNotification("Can't deploy", 1000);
+        }
+    }
 }
 
 
@@ -1160,35 +1159,180 @@ SGMain.prototype.deployTB2 = function() {
 
 // Thanks Traxus!
 SGMain.prototype.planetRepair = function() {
-  switch(this.page) {
-	case 'ship_equipment':
-	var openTab =
-      this.doc.evaluate("//td[contains(@style,'/tabactive.png')]/text()",
-                        this.doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+    switch(this.page) {
+    case 'ship_equipment':
+        var openTab =
+            this.doc.evaluate(
+                "//td[contains(@style,'/tabactive.png')]/text()",
+                this.doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                null).singleNodeValue;
+        if(!openTab)
+            return;
+
+        if (openTab.textContent != "Repair") {
+            this.doc.location = 'ship_equipment.php?sort=repair';
+            return;
+        }
+
+        var button = this.doc.evaluate(
+            "//form[input[@name='action' and @value='regenerateall']]/input[@type='submit' and @value='Repair all']",
+            this.doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+            null).singleNodeValue;
+
+        if (!button || button.disabled)
+            this.doc.location = 'main.php';
+        else
+            button.click();
+        break;
+
+    case 'main':
+        this.doc.location = 'ship_equipment.php?sort=repair';
+        return;
+    }
+}
+
+SGMain.prototype.TELEROB_RX = /[?&]playerid=(\d+)/;
+SGMain.prototype.telerob = function() {
+    switch(this.page) {
+    case 'main':
+        // telerob from nav screen
+        var ships = this.getShips();
+        if(!ships)
+            return;
+
+        var targets = this.scanForTargets(this.storage.targeting, ships);
+        if(targets.included.length > 0) {
+            var ship_pri = (this.page == 'main') ?
+                this.getShipModelPriorities() : null;
+            var best = this.chooseTarget(targets.included, ship_pri);
+            this.postRequest( "main_ajax.php", "steal=" + best.id,
+                              callback.bind(this) );
+            // Next telerob we'll nav instead. Can't nav now because that'd
+            // break the rule of one server request per user action.
+            this.telerob = this.nav;
+        }
+        else
+            this.nav();
+        break;
+
+    case 'ship2ship_combat':
+        var m = this.TELEROB_RX.exec( this.doc.location.href );
+        if( m )
+            this.postRequest( "main_ajax.php", "steal=" + m[1],
+                              callback.bind(this) );
+        // XXX should we disable telerob here? Nav? Reload the combat page?
+        break;
+
+    default:
+        this.nav();
+    }
+
+    function callback( status, responseText ) {
+        if (status != 200)
+            this.showNotification("TELEROB ERROR", 1000);
+        else
+            this.showNotification("Teleport attempt!", 1000);
+    }
+}
+
+SGMain.prototype.BUY_MISSILE_PRIORITIES = {
+    113: 5, // NN550
+    27:  4, // NN500
+    26:  3, // LV111
+    25:  2, // KL760
+    33:  1  // P80
+};
+SGMain.prototype.MISSILE_FREE_SPACE_RX = /Free Space: (\d+)/;
+SGMain.prototype.buyMissile = function() {
+    switch(this.page) {
+    case 'ship_equipment':
+        var openTab = this.doc.evaluate(
+            '//td[contains(@style,"tabactive.png")]', this.doc, null,
+            XPathResult.ANY_UNORDERED_NODE_TYPE, null).singleNodeValue;
+
+        if (!openTab || openTab.textContent != "Weapons") {
+            this.doc.location = 'ship_equipment.php?sort=weapon';
+            return;
+        }
+
+        var available = scanMissiles.call(this),
+            space = getFreeSpace.call(this);
+
+        // Find the first entry in that fits in the available space, and submit
+        // that form.
+        for(var i = 0, end = available.length; i < end; i++) {
+            var m = available[i];
+            if(space >= m.size) {
+                m.form.submit();
+                return;
+            }
+        }
+
+        // Still here?
+        this.nav();
+        break;
+
+    case 'main':
+        this.doc.location = 'ship_equipment.php?sort=weapon';
+    }
+
+    // End of execution, inner function definitions below
+
+    function scanMissiles() {
+        var r = [], trs, sizexp, formxp, tr, size, form, eqid, pri;
+
+        // We will execute these two expressions repeatedly over many table
+        // rows, so we compile them.
+        //
+        // First: get the second td element in the row.
+        sizexp = this.doc.createExpression('td[position()=2]', null);
+
+        // Second: find a form inside a td, where the form contains an input of
+        // type "submit" and value "Buy"
+        formxp = this.doc.createExpression(
+            'td/form[input[@type="submit" and @value="Buy"]]', null);
+
+        // Now, find the table that contains a row with a header in column 2
+        // that contains the text "Space", and a header that contains the
+        // text "Price (buy)"; iterate over each tr in this table that contains
+        // a td element, that contains a form of action "ship_equipment.php",
+        // that contains an input of type "submit" and value "Buy" which is not
+        // disabled.
+        trs = this.doc.evaluate(
+            '//tbody[tr[th[position()=2 and contains(text(),"Space")]][th[contains(text(),"Price (buy)")]]]/tr[td/form[@action="ship_equipment.php"][input[@type="submit" and @value="Buy" and not(@disabled)]]]',
+            this.doc, null, XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
+
+        while((tr = trs.iterateNext()) != null) {
+            form = formxp.evaluate(tr, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                                   null).singleNodeValue;
+            eqid = form.elements['eq_id'];
+            if(eqid) {
+                pri = this.BUY_MISSILE_PRIORITIES[eqid.value];
+                if(pri) {
+                    size = sizexp.evaluate(
+                        tr, XPathResult.ANY_UNORDERED_NODE_TYPE,
                         null).singleNodeValue;
-	if(!openTab)
-	  return;
+                    r.push({ pri: pri,
+                             form: form,
+                             size: parseInt(size.textContent) });
+                }
+            }
+        }
 
-	if (openTab.textContent != "Repair") {
-	  this.doc.location = 'ship_equipment.php?sort=repair';
-	  return;
-	}
+        return r.sort(function(a, b) { return b.pri - a.pri; });
+    }
 
-	var button =
-      this.doc.evaluate("//form[input[@name='action' and @value='regenerateall']]/input[@type='submit' and @value='Repair all']",
-                        this.doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
-                        null).singleNodeValue;
-
-	if (!button || button.disabled)
-	  this.doc.location = 'main.php';
-	else
-	  button.click();
-	break;
-
-	case 'main':
-	this.doc.location = 'ship_equipment.php?sort=repair';
-	return;
-  }
+    function getFreeSpace() {
+        var b = this.doc.evaluate(
+            '//td/b[contains(text(), "Free Space:")]', this.doc, null,
+            XPathResult.ANY_UNORDERED_NODE_TYPE, null).singleNodeValue;
+        if(b) {
+            var m = this.MISSILE_FREE_SPACE_RX.exec(b.textContent);
+            if(m)
+                return parseInt(m[1]);
+        }
+        return -1;
+    }
 }
 
 SGMain.prototype.configure = function() {

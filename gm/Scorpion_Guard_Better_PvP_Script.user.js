@@ -13,7 +13,7 @@
 // @resource    ui_style ui.css
 // @resource    default_keymap default-keymap.json
 // @author      Val
-// @version     41
+// @version     42
 // @updateURL   https://dssrzs.org/sgpvp/Scorpion_Guard_Better_PvP_Script.meta.js
 // @downloadURL https://dssrzs.org/sgpvp/Scorpion_Guard_Better_PvP_Script.user.js
 // @grant       GM_getValue
@@ -114,7 +114,7 @@ SGMain.prototype.getShipsCombat = function() {
         var heading = th.textContent;
         if(heading == 'Other Ships')
             return this.parseOtherShipsTable(th.parentNode.parentNode,
-                                             SHIP2SHIP_RX);
+                                             this.SHIP2SHIP_RX);
         else if(heading == ' ATTACK Other Ships ATTACK ')
             return this.parseOtherShipsTable_MrX(th.parentNode.parentNode);
     }
