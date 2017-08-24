@@ -1150,6 +1150,18 @@ SGMain.prototype.switchToOC = function() {
   this.switchCombatMode("offensive");
 };
 
+SGMain.prototype.activateAB = function() {
+	this.activateBoost("agility");
+};
+
+SGMain.prototype.activateTB = function() {
+	this.activateBoost("taming");
+};
+
+SGMain.prototype.activateCB = function() {
+	this.activateBoost("cloaking");
+};
+
 SGMain.prototype.deployTB1 = function() {
   this.deployTimebomb( 1 );
 };
@@ -1340,3 +1352,24 @@ SGMain.prototype.configure = function() {
         this.sgpvpui = new SGPvPUI(this, this.storage, this.doc);
     this.sgpvpui.open();
 };
+
+SGMain.prototype.activateBoost = function(boost) {
+    var url = "overview_advanced_skills.php",
+        params = "action=boost&boost=" + boost;
+    this.postRequest(url, params, callback.bind(this));
+		
+	// Function returns here.
+
+    function callback( status, responseText ) {
+	// I copied this from above, but it shows the success notification 
+	// even if you don't have that boost or it's already on. 
+	// I'm leaving it in because some message is better than none ;-) 
+	// Agility boost has been tested & works.
+	// - K.
+        if (status != 200) {
+            this.showNotification("Error, can't activate", 1000);
+		} else {
+			this.showNotification(boost + " activated",1000);
+		}
+	}
+}
