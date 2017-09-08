@@ -339,7 +339,7 @@ SGPvPUI.prototype.configure = function() {
     // Armour is the one setting that is invalid on the very first config.  So
     // watch for this.
     this.armourValid =
-        ( armour.low > 0 && armour.max > 0 && armour.low < armour.max );
+        ( armour.low > 0 && armour.max > 0 && armour.low <= armour.max );
 
     this.enableCloseIfProper();
 
@@ -478,7 +478,7 @@ SGPvPUI.prototype.getPositiveIntegerValue = function(element, max, allowEmpty) {
 SGPvPUI.prototype.onArmInput = function() {
     var low = this.getPositiveIntegerValue(this.elements.low),
         max = this.getPositiveIntegerValue(this.elements.max),
-        level = this.getPositiveIntegerValue(this.elements.lvl, 6);
+        level = this.getPositiveIntegerValue(this.elements.lvl, 7);
     if ( low && max && low <= max && level > 0 ) {
         this.armourValid = true;
         this.storage.set( { armour: { low: low, max: max, level: level } } );
