@@ -1010,7 +1010,13 @@ SGMain.prototype.flyClose = function() {
     this.flyClose = this.nop;
 };
 SGMain.prototype.exitFlyClose = function() {
-    this.doc.location = 'main.php?exitsb=1';
+    var a = this.doc.evaluate(
+        '//a[contains(text(), "Exit inner starbase")]', this.doc, null,
+        XPathResult.ANY_UNORDERED_NODE_TYPE, null).singleNodeValue;
+    if(a)
+        a.click();
+    else
+        this.doc.location = 'main.php?exitsb=1';
     this.exitFlyClose = this.nop;
 };
 SGMain.prototype.dockUndock = function() { this.undock() || this.dock(); };
