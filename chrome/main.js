@@ -1010,7 +1010,13 @@ SGMain.prototype.flyClose = function() {
     this.flyClose = this.nop;
 };
 SGMain.prototype.exitFlyClose = function() {
-    this.doc.location = 'main.php?exitsb=1';
+    var a = this.doc.evaluate(
+        '//a[contains(text(), "Exit inner starbase")]', this.doc, null,
+        XPathResult.ANY_UNORDERED_NODE_TYPE, null).singleNodeValue;
+    if(a)
+        a.click();
+    else
+        this.doc.location = 'main.php?exitsb=1';
     this.exitFlyClose = this.nop;
 };
 SGMain.prototype.dockUndock = function() { this.undock() || this.dock(); };
@@ -1151,15 +1157,15 @@ SGMain.prototype.switchToOC = function() {
 };
 
 SGMain.prototype.activateAB = function() {
-	this.activateBoost("agility");
+  this.activateBoost("agility");
 };
 
 SGMain.prototype.activateTB = function() {
-	this.activateBoost("taming");
+  this.activateBoost("taming");
 };
 
 SGMain.prototype.activateCB = function() {
-	this.activateBoost("cloaking");
+  this.activateBoost("cloaking");
 };
 
 SGMain.prototype.deployTB1 = function() {
@@ -1354,22 +1360,21 @@ SGMain.prototype.configure = function() {
 };
 
 SGMain.prototype.activateBoost = function(boost) {
-    var url = "overview_advanced_skills.php",
-        params = "action=boost&boost=" + boost;
+    var url = 'overview_advanced_skills.php',
+        params = 'action=boost&boost=' + boost;
     this.postRequest(url, params, callback.bind(this));
-		
-	// Function returns here.
+
+    // Function returns here.
 
     function callback( status, responseText ) {
-	// I copied this from above, but it shows the success notification 
-	// even if you don't have that boost or it's already on. 
-	// I'm leaving it in because some message is better than none ;-) 
-	// Agility boost has been tested & works.
-	// - K.
-        if (status != 200) {
+        // I copied this from above, but it shows the success notification even
+        // if you don't have that boost or it's already on.
+        // I'm leaving it in because some message is better than none ;-)
+        // Agility boost has been tested & works.
+        // - K.
+        if (status != 200)
             this.showNotification("Error, can't activate", 1000);
-		} else {
-			this.showNotification(boost + " activated",1000);
-		}
-	}
+        else
+            this.showNotification('Activated ' + boost + ' boost', 1000);
+    }
 }
