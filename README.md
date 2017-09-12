@@ -4,10 +4,14 @@
 space game [Pardus](http://www.pardus.at/). It adds keyboard shortcuts to player
 vs. player combat, giving you an edge in speed while engaged in a dogfight.
 
-* [Install SGPvP for Google Chrome](https://chrome.google.com/webstore/detail/scorpion-guards-better-pv/flbeciljbdgkljhfmmgnglcjilacfgfe)
-* [Install SGPvP for Greasemonkey](https://dssrzs.org/sgpvp/Scorpion_Guard_Better_PvP_Script.user.js)
+* [Install SGPvP for Google Chrome](https://chrome.google.com/webstore/detail/flbeciljbdgkljhfmmgnglcjilacfgfe)
+* [Install SGPvP for Firefox](https://addons.mozilla.org/firefox/addon/pardus-sgpvp/)
 
 Once installed, reload your Pardus tab, press the key _i_ (for _info_), and find
 and click the link to the online help; this will get you started.
 
-This extension has been approved by the Pardus developers.
+**Firefox users: please note that the Greasemonkey version is now deprecated**, it will
+not be supported or updated any more. Firefox users should remove it and install
+the version from Mozilla Add-ons.
+
+This extension is approved by the Pardus developers.
