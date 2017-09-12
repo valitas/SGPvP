@@ -286,14 +286,15 @@ SGPvPUI.prototype.open = function() {
 
     function finish( uihtml ) {
         var doc = this.doc,
+	    parser = new DOMParser(),
             e = {},
             dummy, div, i, id;
 
         this.injectStyle();
 
-        dummy = doc.createElement('div');
-        dummy.innerHTML = uihtml;
-        div = dummy.removeChild(dummy.firstChild);
+	dummy = parser.parseFromString( uihtml, 'text/html' );
+	div = dummy.body.removeChild( dummy.body.firstElementChild );
+
         doc.body.appendChild(div);
 
         this.ui_element = div;
