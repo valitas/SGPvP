@@ -27,5 +27,11 @@
     "web_accessible_resources": [
         "ui.html", "ui.css", "default-keymap.json"
     ],
-    "version": "43.2"
+    "version": "43.2",
+    "applications": {
+        "gecko": {
+            "id": "{1ebc2426-b985-4323-94c5-55756c11c4c9}",
+            "strict_min_version": "48.0"
+        }
+    }
 }
