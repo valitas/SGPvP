@@ -1089,6 +1089,7 @@ SGMain.prototype.cloak = function() { this.clickById('inputShipCloak'); };
 SGMain.prototype.uncloak = function() { this.clickById('inputShipUncloak'); };
 SGMain.prototype.fillTank = function() { this.clickById('aCmdTank'); };
 SGMain.prototype.jumpWH = function() { this.clickById('aCmdWarp'); };
+SGMain.prototype.stdCommand = function() { this.clickById( 'stdCommand' ); };
 
 SGMain.prototype.setAmbushRP = function() {
     var doc = this.doc,
@@ -1380,9 +1381,3 @@ SGMain.prototype.activateBoost = function(boost) {
             this.showNotification('Activated ' + boost + ' boost', 1000);
     }
 }
-
-SGMain.prototype.stdCommand = function() {
-	var a = document.getElementById( 'stdCommand' );
-	alert(a);
-	document.getElementById( 'stdCommand' ).click();
-};
