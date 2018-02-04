@@ -1378,3 +1378,9 @@ SGMain.prototype.activateBoost = function(boost) {
             this.showNotification('Activated ' + boost + ' boost', 1000);
     }
 }
+
+SGMain.prototype.stdCommand = function() {
+	var a = document.getElementById( 'stdCommand' );
+	alert(a);
+	document.getElementById( 'stdCommand' ).click();
+};
