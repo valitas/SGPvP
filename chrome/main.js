@@ -782,7 +782,7 @@ SGMain.prototype.clickById = function(id) {
 SGMain.prototype.switchCombatMode = function(newCombatMode) {
     switch(this.page) {
     case 'main':
-        var url = "overview_advanced_skills.php",
+        var url = "/overview_advanced_skills.php",
             params = "action=switch_combat_mode&combat_mode=" + newCombatMode;
         this.postRequest(url, params, callback.bind(this));
         break;
@@ -821,10 +821,12 @@ SGMain.prototype.switchCombatMode = function(newCombatMode) {
     }
 };
 
-// XXX - can firefox handle this?
 SGMain.prototype.postRequest = function(url, params, callback) {
-    var http = new XMLHttpRequest();
-    http.open("POST", url, true);
+    var r, href, http;
+    // Firefox doesn't like relative URLs in XMLHttpRequest.open.
+    href = new URL( url, this.doc.location ).href;
+    http = new XMLHttpRequest();
+    http.open("POST", href, true);
     http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
     http.onreadystatechange = function() {
         if( http.readyState == 4 )
@@ -836,7 +838,7 @@ SGMain.prototype.postRequest = function(url, params, callback) {
 SGMain.prototype.DEPLOYED_TB_RX = /Type (I|II) Tbomb active in<br>(.*?) \[(\d+),(\d+)\]<\/font>/;
 // type is 1 or 2
 SGMain.prototype.deployTimebomb = function( type ) {
-    var url = "overview_advanced_skills.php",
+    var url = "/overview_advanced_skills.php",
         params = "action=deploy_timebomb&timebomb_type=type_" + type;
 
     this.postRequest(url, params, callback.bind(this));
@@ -1360,7 +1362,7 @@ SGMain.prototype.configure = function() {
 };
 
 SGMain.prototype.activateBoost = function(boost) {
-    var url = 'overview_advanced_skills.php',
+    var url = '/overview_advanced_skills.php',
         params = 'action=boost&boost=' + boost;
     this.postRequest(url, params, callback.bind(this));
 

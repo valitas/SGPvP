@@ -27,5 +27,5 @@
     "web_accessible_resources": [
         "ui.html", "ui.css", "default-keymap.json"
     ],
-    "version": "43"
+    "version": "43.2"
 }
