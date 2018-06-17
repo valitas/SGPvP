@@ -1090,6 +1090,8 @@ SGMain.prototype.uncloak = function() { this.clickById('inputShipUncloak'); };
 SGMain.prototype.fillTank = function() { this.clickById('aCmdTank'); };
 SGMain.prototype.jumpWH = function() { this.clickById('aCmdWarp'); };
 SGMain.prototype.stdCommand = function() { this.clickById( 'stdCommand' ); };
+SGMain.prototype.collect = function() { this.clickById('aCmdCollect'); };
+
 
 SGMain.prototype.setAmbushRP = function() {
     var doc = this.doc,
