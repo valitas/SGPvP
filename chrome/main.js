@@ -59,7 +59,7 @@ function SGMain(doc) {
 
     function loadConfig( allowRetry ) {
         var names = [ 'keymap', 'targeting', 'armour',
-                      'lkap', 'lkba', 'rtid', 'version' ];
+                      'lkap', 'lkba', 'rtid', 'version', 'wayp' ];
         this.storage.get( names, checkConfig.bind(this, allowRetry) );
     }
 
@@ -1379,4 +1379,109 @@ SGMain.prototype.activateBoost = function(boost) {
         else
             this.showNotification('Activated ' + boost + ' boost', 1000);
     }
+}
+
+SGMain.prototype.setWaypoint = function() {
+    if( this.userloc ) {
+        var o = this.storage.wayp;
+        if (o.len > 0 ) {
+            if(o.tid[o.currentIndex] == this.userloc) {
+                this.showNotification('waypoint already set!', 750)
+                return;
+            }
+        }
+        o.tid[o.len] = this.userloc;
+        o.currentIndex = o.len;
+        o.len ++;
+        this.storage.set( { wayp : o } );
+        this.showNotification( 'Waypoint ' + o.currentIndex + ' set: ' + this.storage.wayp.tid[this.storage.wayp.currentIndex], 500 );
+    }
+    else
+        this.showNotification( 'Can not set waypoint!', 500 );
+}
+
+
+SGMain.prototype.travel = function() {
+    var storage = this.storage,
+        doc = this.doc,
+        elt, form, destination, input;
+
+    
+
+    // no frantic keypressing.  but this means that, once we're in
+    // this function, we *have* to reload, so watch this.
+    this.disengage = this.nop;
+
+    elt = doc.evaluate( '//input[@name="retreat" and @type="submit"]',
+                        doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                        null ).singleNodeValue;
+
+    if (this.userloc == storage.wayp.tid[storage.wayp.currentIndex]) {
+        if ( storage.wayp.len > 1) {
+            if ( (storage.wayp.currentIndex + storage.wayp.direction == storage.wayp.len) || (storage.wayp.currentIndex + storage.wayp.direction < 0) ) {
+                storage.wayp.direction *= -1;
+            }
+            storage.wayp.currentIndex += storage.wayp.direction;
+        } 
+        else if (!elt) {
+            this.showNotification( 'ONLY ONE WAYPOINT SET', 750 );
+            this.nav()
+            return;
+        }
+        this.storage.set( { wayp : storage.wayp } );
+    }
+
+    if( elt && elt.click &&
+        !( elt.disabled || elt.classList.contains('disabled') ) ) {
+        elt.click(); // this reloads the page
+        return;
+    }
+
+    // no retreat button...
+
+    if( storage.wayp.len == 0 ) {
+        this.showNotification( 'NO WAYPOINTS SET', 750 );
+        this.nav(); // this reloads the page
+        return;
+    }
+
+    //console.log("location: " + this.userloc + " waypoint: " + storage.wayp.tid[storage.wayp.currentIndex] + " index: " + storage.wayp.currentIndex)
+    
+
+    form = doc.getElementById( 'navForm' );
+    if ( form ) {
+        destination = form.elements.destination;
+        if( destination ) {
+            destination.value = storage.wayp.tid[storage.wayp.currentIndex];
+        }
+    }
+    else {
+        // No form, add one.
+        form = doc.createElement( 'form' );
+        form.name = 'navForm';
+        form.method = 'post';
+        form.action = '/main.php';
+        form.style.display = 'none';
+        input = doc.createElement( 'input' );
+        input.type = 'hidden';
+        input.name = 'destination';
+        input.value = getDestination(storage.wayp.tid[storage.wayp.currentIndex]);
+        form.appendChild( input );
+        input = doc.createElement( 'input' );
+        input.type = 'hidden';
+        input.name = 'ts';
+        input.value = Date.now();
+        doc.body.appendChild( form );
+    }
+    this.showNotification( "Moving to waypoint: " + storage.wayp.currentIndex , 500 );
+    form.submit(); // this reloads the page
+};
+
+SGMain.prototype.clearWaypoints = function() {
+    wayp = this.storage.wayp;
+    this.showNotification( 'Waypoints cleared: ' + this.storage.wayp.len, 500);
+    this.storage.set( { wayp : { len : 0, tid : {}, currentIndex : -1, direction : -1 } } );
+    console.log(wayp.len)
+    console.log(wayp.currentIndex)
+    console.log(wayp.direction)
 }

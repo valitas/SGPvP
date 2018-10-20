@@ -26,7 +26,8 @@ SGStorage.prototype.PARAM_DEFINITION = {
                       exclude: { ids: {}, names: {} },
                       prioritiseTraders: false,
                       retreatTile: null } },
-    armour: { u: false, d: { low: null, max: null, level: 5 } }
+    armour: { u: false, d: { low: null, max: null, level: 5 } },
+    wayp: { u: false, d: { length : 0, tid : {}, currentIndex : -1, direction : -1 } }
 };
 
 // Request retrieval of named values from persistent storage.  Once retrieved,
