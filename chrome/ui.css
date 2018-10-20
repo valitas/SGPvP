@@ -228,3 +228,15 @@
 #sg-setkey-rounds, #sg-setkey-bots {
     text-align: right;
 }
+
+
+/* the waypoints panel*/
+#sg-wpl {
+    width: 578px;
+    height: 72px;
+}
+
+#sg-clear-waypoints, #sg-impexp-waypoints {
+    color: rgb(208, 209, 217);
+    cursor: pointer;
+}
