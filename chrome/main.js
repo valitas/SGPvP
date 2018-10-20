@@ -1414,27 +1414,6 @@ SGMain.prototype.travel = function() {
     elt = doc.evaluate( '//input[@name="retreat" and @type="submit"]',
                         doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
                         null ).singleNodeValue;
-
-        if( elt && elt.click &&
-        !( elt.disabled || elt.classList.contains('disabled') ) ) {
-        //reversing waypoint direction.
-        if (storage.wayp.len > 1) {
-            storage.wayp.direction *= -1;
-            storage.wayp.currentIndex += storage.wayp.direction;
-            this.storage.set( { wayp : storage.wayp });
-        }
-        elt.click(); // this reloads the page
-        return;
-    }
-
-    // no retreat button...
-
-    if( storage.wayp.len == 0 ) {
-        this.showNotification( 'No waypoints set!', 750 );
-        this.nav(); // this reloads the page
-        return;
-    }
-
     //calculating next waypoint
     if (this.userloc == storage.wayp.tid[storage.wayp.currentIndex]) {
         if ( storage.wayp.len > 1) {
@@ -1450,6 +1429,23 @@ SGMain.prototype.travel = function() {
         }
         this.storage.set( { wayp : storage.wayp } );
     }    
+        if( elt && elt.click &&
+        !( elt.disabled || elt.classList.contains('disabled') ) ) {
+        //reversing waypoint direction.
+
+        elt.click(); // this reloads the page
+        return;
+    }
+
+    // no retreat button...
+
+    if( storage.wayp.len == 0 ) {
+        this.showNotification( 'No waypoints set!', 750 );
+        this.nav(); // this reloads the page
+        return;
+    }
+
+    
 
     form = doc.getElementById( 'navForm' );
     if ( form ) {
@@ -1481,7 +1477,6 @@ SGMain.prototype.travel = function() {
 };
 
 SGMain.prototype.clearWaypoints = function() {
-    wayp = this.storage.wayp;
     this.showNotification( 'Waypoints cleared: ' + this.storage.wayp.len, 500);
     this.storage.set( { wayp : { len : 0, tid : {}, currentIndex : -1, direction : -1 } } );
     //console.log(wayp.len)
