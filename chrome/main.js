@@ -1386,7 +1386,7 @@ SGMain.prototype.setWaypoint = function() {
         var o = this.storage.wayp;
         if (o.len > 0 ) {
             if(o.tid[o.currentIndex] == this.userloc) {
-                this.showNotification('waypoint already set!', 750)
+                this.showNotification('Waypoint already set!', 750)
                 return;
             }
         }
@@ -1394,7 +1394,7 @@ SGMain.prototype.setWaypoint = function() {
         o.currentIndex = o.len;
         o.len ++;
         this.storage.set( { wayp : o } );
-        this.showNotification( 'Waypoint ' + o.currentIndex + ' set: ' + this.storage.wayp.tid[this.storage.wayp.currentIndex], 500 );
+        this.showNotification( 'Waypoint #' + o.currentIndex + ' set: ' + this.storage.wayp.tid[this.storage.wayp.currentIndex], 500 );
     }
     else
         this.showNotification( 'Can not set waypoint!', 500 );
@@ -1406,7 +1406,6 @@ SGMain.prototype.travel = function() {
         doc = this.doc,
         elt, form, destination, input;
 
-    
 
     // no frantic keypressing.  but this means that, once we're in
     // this function, we *have* to reload, so watch this.
@@ -1416,6 +1415,27 @@ SGMain.prototype.travel = function() {
                         doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
                         null ).singleNodeValue;
 
+        if( elt && elt.click &&
+        !( elt.disabled || elt.classList.contains('disabled') ) ) {
+        //reversing waypoint direction.
+        if (storage.wayp.len > 1) {
+            storage.wayp.direction *= -1;
+            storage.wayp.currentIndex += storage.wayp.direction;
+            this.storage.set( { wayp : storage.wayp });
+        }
+        elt.click(); // this reloads the page
+        return;
+    }
+
+    // no retreat button...
+
+    if( storage.wayp.len == 0 ) {
+        this.showNotification( 'No waypoints set!', 750 );
+        this.nav(); // this reloads the page
+        return;
+    }
+
+    //calculating next waypoint
     if (this.userloc == storage.wayp.tid[storage.wayp.currentIndex]) {
         if ( storage.wayp.len > 1) {
             if ( (storage.wayp.currentIndex + storage.wayp.direction == storage.wayp.len) || (storage.wayp.currentIndex + storage.wayp.direction < 0) ) {
@@ -1424,29 +1444,12 @@ SGMain.prototype.travel = function() {
             storage.wayp.currentIndex += storage.wayp.direction;
         } 
         else if (!elt) {
-            this.showNotification( 'ONLY ONE WAYPOINT SET', 750 );
+            this.showNotification( 'Arrived at waypoint.', 750 );
             this.nav()
             return;
         }
         this.storage.set( { wayp : storage.wayp } );
-    }
-
-    if( elt && elt.click &&
-        !( elt.disabled || elt.classList.contains('disabled') ) ) {
-        elt.click(); // this reloads the page
-        return;
-    }
-
-    // no retreat button...
-
-    if( storage.wayp.len == 0 ) {
-        this.showNotification( 'NO WAYPOINTS SET', 750 );
-        this.nav(); // this reloads the page
-        return;
-    }
-
-    //console.log("location: " + this.userloc + " waypoint: " + storage.wayp.tid[storage.wayp.currentIndex] + " index: " + storage.wayp.currentIndex)
-    
+    }    
 
     form = doc.getElementById( 'navForm' );
     if ( form ) {
@@ -1481,7 +1484,7 @@ SGMain.prototype.clearWaypoints = function() {
     wayp = this.storage.wayp;
     this.showNotification( 'Waypoints cleared: ' + this.storage.wayp.len, 500);
     this.storage.set( { wayp : { len : 0, tid : {}, currentIndex : -1, direction : -1 } } );
-    console.log(wayp.len)
-    console.log(wayp.currentIndex)
-    console.log(wayp.direction)
+    //console.log(wayp.len)
+    //console.log(wayp.currentIndex)
+    //console.log(wayp.direction)
 }
