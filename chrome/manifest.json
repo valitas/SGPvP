@@ -13,7 +13,7 @@
           "run_at": "document_start" }
     ],
     "content_security_policy": "script-src 'self'; object-src 'self'",
-    "description": "Keyboard actions for PvP in the online game Pardus.",
+    "description": "Keyboard actions for PvP in the online game Pardus",
     "icons": {
         "16": "16.png",
         "48": "48.png",
@@ -23,9 +23,9 @@
     "minimum_chrome_version": "20",
     "name": "Scorpion Guard's Better PvP Pardus Extension",
     "permissions": [ "storage" ],
-    "short_name": "SGPvPt",
+    "short_name": "SGPvP",
     "web_accessible_resources": [
         "ui.html", "ui.css", "default-keymap.json"
     ],
-    "version": "43.3"
+    "version": "43.2"
 }

@@ -21,11 +21,8 @@
     "82":"planetRepair",
     "83":"winRaid,l,16,n",
     "84":"testTargeting",
-    "85":"clearWaypoints",
     "86":"nav",
     "88":"win,l,20,m",
-    "87":"travel",
-    "89":"setWaypoint",
     "90":"setRetreatPoint",
     "188":"winBRaid,l,m"
 }
