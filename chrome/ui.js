@@ -262,6 +262,7 @@ SGPvPUI.prototype.UI_ELEMENT_IDS =
       'sg-rid',
       'sg-s2keys',
       'sg-s2targeting',
+      'sg-s2waypoints',
       'sg-setkey',
       'sg-setkey-alwaysmax',
       'sg-setkey-bots',
@@ -276,7 +277,11 @@ SGPvPUI.prototype.UI_ELEMENT_IDS =
       'sg-skarg-missiles',
       'sg-skarg-rounds',
       'sg-targeting',
-      'sg-version' ];
+      'sg-waypoints',
+      'sg-impexp-waypoints',
+      'sg-clear-waypoints',
+      'sg-version',
+      'sg-wpl' ];
 
 SGPvPUI.prototype.open = function() {
     if(this.ui_element)
@@ -309,10 +314,10 @@ SGPvPUI.prototype.open = function() {
             e[id.substr(3).replace('-','_')] = doc.getElementById(id);
         }
 
-        e.version.textContent = this.sgpvp.getVersion();
+        //e.version.textContent = this.sgpvp.getVersion();
 
         // load settings and configure
-        this.storage.get( [ 'keymap', 'ql', 'targeting', 'rtid', 'armour' ],
+        this.storage.get( [ 'keymap', 'ql', 'targeting', 'rtid', 'armour', 'wayp' ],
                           this.configure.bind(this) );
     }
 };
@@ -333,6 +338,7 @@ SGPvPUI.prototype.configure = function() {
     e.low.value = armour.low;
     e.max.value = armour.max;
     e.lvl.value = armour.level;
+    e.wpl.value = JSON.stringify(storage.wayp);
 
     this.targetingValid = true;
     this.rtidValid = true;
@@ -349,6 +355,7 @@ SGPvPUI.prototype.configure = function() {
     // Make handlers
     var onS2TargetingClick = this.switchToPanel.bind(this, 'targeting'),
     onS2KeysClick = this.switchToPanel.bind(this, 'bindings'),
+    onS2WaypointsClick = this.switchToPanel.bind(this, 'waypoints'),
     onTargetingInput = this.onTargetingInput.bind(this),
     onArmInput = this.onArmInput.bind(this),
     onRtIdInput = this.onRtIdInput.bind(this),
@@ -358,10 +365,13 @@ SGPvPUI.prototype.configure = function() {
     onSetKeyArgInput = this.onSetKeyArgInput.bind(this),
     onDefaultKeymapClick = this.resetKeyMap.bind(this, 'default_keymap'),
     onImpExpKeymapClick = this.importKeyMap.bind(this);
+    onImpExpWaypointsClick = this.importWaypoints.bind(this);
+    onClearWaypointsClick = this.clearWaypoints.bind(this);
 
     // Install handlers
     e.s2targeting.addEventListener('click', onS2TargetingClick, false);
     e.s2keys.addEventListener('click', onS2KeysClick, false);
+    e.s2waypoints.addEventListener('click', onS2WaypointsClick, false);
     e.ql.addEventListener('input', onTargetingInput, false);
     e.inc.addEventListener('input', onTargetingInput, false);
     e.exc.addEventListener('input', onTargetingInput, false);
@@ -378,7 +388,8 @@ SGPvPUI.prototype.configure = function() {
     e.setkey_missiles.addEventListener('click', onSetKeyArgInput, false);
     e.default_keymap.addEventListener('click', onDefaultKeymapClick, false);
     e.impexp_keymap.addEventListener('click', onImpExpKeymapClick, false);
-
+    e.impexp_waypoints.addEventListener('click', onImpExpWaypointsClick, false);
+    e.clear_waypoints.addEventListener('click', onClearWaypointsClick,false);
     this.labelAllKeys();
 
     // Bind the keys
@@ -506,20 +517,35 @@ SGPvPUI.prototype.switchToPanel = function(panel) {
     var e = this.elements;
     switch(panel) {
     case 'targeting':
+        e.s2waypoints.className = '';
         e.s2targeting.className = 'active';
         e.s2keys.className = '';
+        e.waypoints.style.display = 'none';
         e.targeting.style.display = 'block';
         e.keybindings.style.display = 'none';
         e.setkey.style.display = 'none';
         this.enableCloseIfProper();
         break;
     case 'bindings':
+        e.s2waypoints.className = '';
         e.s2targeting.className = '';
         e.s2keys.className = 'active';
+        e.waypoints.style.display = 'none';
         e.targeting.style.display = 'none';
         e.keybindings.style.display = 'block';
         e.setkey.style.display = 'none';
         this.enableClose(true);
+        break;
+    case 'waypoints':
+        e.s2waypoints.className = 'active';
+        e.s2targeting.className = '';
+        e.s2keys.className = '';
+        e.waypoints.style.display = 'block'
+        e.targeting.style.display = 'none';
+        e.keybindings.style.display = 'none';
+        e.setkey.style.display = 'none';
+        this.enableClose(true);
+        break;
     }
 };
 
@@ -704,6 +730,43 @@ SGPvPUI.prototype.importKeyMap = function() {
 SGPvPUI.prototype.storeKeyMap = function() {
     this.storage.set( { keymap: this.keymap } );
 };
+
+
+//waypoints methods heavily based on keymaps
+SGPvPUI.prototype.importWaypoints = function() {
+    var text = JSON.stringify(this.storage.wayp), w,
+    r = prompt('Copy this text to export the waypoints. ' +
+               'Edit or replace it, and press OK, to import the keymap.',
+               text);
+    if(r) {
+        try {
+            w = JSON.parse(r);
+        } catch (x) {
+            w = null;
+        }
+
+        if(w && typeof(w) == 'object') {
+            this.wayp = w;
+            this.storeWaypoints();
+        }
+        else {
+            alert('The waypoints have errors and could not be imported.');
+        }
+    }
+};
+
+SGPvPUI.prototype.storeWaypoints = function() {
+    this.storage.set( { wayp: this.wayp } );
+};
+
+SGPvPUI.prototype.clearWaypoints = function () {
+    var r = confirm('This will remove all waypoints '
+                + 'may have defined. You OK with this?');
+    if(r) {
+        this.storage.set( { wayp : { len : 0, tid : {}, currentIndex : -1, direction : -1 } } );
+        this.elements.wpl.value = JSON.stringify(this.storage.wayp);
+    }
+}
 
 SGPvPUI.prototype.parseOverrideList = function(list) {
     var a = list.split(/\n|,/);
