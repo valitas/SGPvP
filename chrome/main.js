@@ -1087,6 +1087,14 @@ SGMain.prototype.target = function() {
 
 SGMain.prototype.cloak = function() { this.clickById('inputShipCloak'); };
 SGMain.prototype.uncloak = function() { this.clickById('inputShipUncloak'); };
+SGMain.prototype.toggleCloak = function() { 
+    var elt = this.doc.getElementById('inputShipCloak');
+    if(elt && elt.click &&
+       !(elt.disabled || elt.classList.contains('disabled')) )
+        elt.click();
+    else
+        this.uncloak();
+};
 SGMain.prototype.fillTank = function() { this.clickById('aCmdTank'); };
 SGMain.prototype.jumpWH = function() { this.clickById('aCmdWarp'); };
 
@@ -1472,7 +1480,7 @@ SGMain.prototype.travel = function() {
         input.value = Date.now();
         doc.body.appendChild( form );
     }
-    this.showNotification( "Moving to waypoint: " + storage.wayp.currentIndex , 500 );
+    //this.showNotification( "Moving to waypoint: " + storage.wayp.currentIndex , 500 );
     form.submit(); // this reloads the page
 };
 
