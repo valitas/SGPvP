@@ -1263,6 +1263,49 @@ SGMain.prototype.telerob = function() {
     }
 }
 
+SGMain.prototype.PASSORBITER_RX = /[?&]playerid=(\d+)/;
+SGMain.prototype.passOrbiter = function() {
+    switch(this.page) {
+    case 'main':
+        // pass  from nav screen
+        var ships = this.getShips();
+        if(!ships)
+            return;
+
+        var targets = this.scanForTargets(this.storage.targeting, ships);
+        if(targets.included.length > 0) {
+            var ship_pri = (this.page == 'main') ?
+                this.getShipModelPriorities() : null;
+            var best = this.chooseTarget(targets.included, ship_pri);
+            this.postRequest( "/overview_ship.php", "player=" + best.id + "&transferorb=Send Orbiter",
+                              callback.bind(this) );
+            // Next pass we'll nav instead. Can't nav now because that'd
+            // break the rule of one server request per user action.
+            this.passOrbiter = this.nav;
+        }
+        else
+            this.nav();
+        break;
+
+    case 'ship2ship_combat':
+        var m = this.PASSORBITER_RX.exec( this.doc.location.href );
+        if( m )
+            this.postRequest( "/overview_ship.php", "player=" + m[1] + "&transferorb=Send Orbiter",
+                              callback.bind(this) );
+        // XXX should we disable pass here? Nav? Reload the combat page?
+        break;
+
+    default:
+        this.nav();
+    }
+
+    function callback( status, responseText ) {
+        if (status != 200)
+            this.showNotification("ORBITER ERROR", 1000);
+        else
+            this.showNotification("Orbiter passed?!", 1000);
+    }
+}
 SGMain.prototype.BUY_MISSILE_PRIORITIES = {
     113: 5, // NN550
     27:  4, // NN500
