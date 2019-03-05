@@ -1097,6 +1097,21 @@ SGMain.prototype.toggleCloak = function() {
 };
 SGMain.prototype.fillTank = function() { this.clickById('aCmdTank'); };
 SGMain.prototype.jumpWH = function() { this.clickById('aCmdWarp'); };
+SGMain.prototype.stdCommand = function() { 
+    let navTable = this.doc.getElementById( 'navareatransition' );
+	if ( !navTable )
+		navTable = this.doc.getElementById( 'navarea' );
+    if ( !navTable ) {
+        this.nav();
+        return;
+        }
+    var elt = this.doc.evaluate( './/a[contains(@id, "stdCommand")]', 
+        navTable, null, XPathResult.FIRST_ORDERED_NODE_TYPE, 
+        null).singleNodeValue;
+    elt.click();
+    };
+SGMain.prototype.collect = function() { this.clickById('aCmdCollect'); };
+
 
 SGMain.prototype.setAmbushRP = function() {
     var doc = this.doc,
