@@ -224,12 +224,12 @@ SGMain.prototype.scanForTargets = function(targeting_data, ships) {
     for(var i in ships) {
         var ship = ships[i], name = ship.name.toLowerCase(), n;
 
-        if(exclude.ids[ship.id] || exclude.names[name])
-            exc.push(ship);
-        else if((n = include.ids[ship.id]) || (n = include.names[name])) {
+        if((n = include.ids[ship.id]) || (n = include.names[name])) {
             ship.includePriority = n;
             inc.push(ship);
         }
+        else if(exclude.ids[ship.id] || exclude.names[name])
+            exc.push(ship);
         else if(ql.excludeFactions[ship.faction] ||
                 ql.excludeAlliances[ship.ally_id] ||
                 ql.excludeCharacters[ship.id])
