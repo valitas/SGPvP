@@ -676,9 +676,9 @@ SGMain.prototype.selectMaxValue = function(select, limit) {
 
 SGMain.prototype.setRounds = function(limit) {
     var doc = this.doc, sel,
-    xpr = doc.evaluate('//select[@name = "rounds"]', doc, null,
-                       XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
-    while((sel = xpr.iterateNext())) {
+    xpr = doc.evaluate('//select[@name = "rounds"]', doc, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+    var index = 0;
+    while((sel = xpr.snapshotItem(index))) {
         if(sel.style.display == 'none' &&
            sel.nextElementSibling.tagName == 'SELECT')
             // for some reason, Pardus now hides the rounds select,
@@ -687,6 +687,7 @@ SGMain.prototype.setRounds = function(limit) {
             sel = sel.nextElementSibling;
 
         this.selectMaxValue(sel, limit);
+        index++;
     }
 };
 
