@@ -4,6 +4,8 @@
 space game [Pardus](http://www.pardus.at/). It adds keyboard shortcuts to player
 vs. player combat, giving you an edge in speed while engaged in a dogfight.
 
+## Installation
+
 * [Install SGPvP for Google Chrome](https://chrome.google.com/webstore/detail/sgs-better-pvp-pardus-ext/fgaanejfgbdmilifodhjhlpkigncjfih)
 * [Install SGPvP for Firefox](https://addons.mozilla.org/firefox/addon/sgpvp-pardus-trader-edition/)
 
