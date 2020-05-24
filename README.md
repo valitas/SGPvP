@@ -1,6 +1,6 @@
-# The Scorpion Guard's Better PvP Pardus Extension, the FWEer's best friend.
+# The Scorpion Guard's Better PvP Pardus Extension Trader Edition.
 
-**SGPvP** is a browser extension that enhances the user interface of the online
+**SGPv TEP** is a browser extension that enhances the user interface of the online
 space game [Pardus](http://www.pardus.at/). It adds keyboard shortcuts to player
 vs. player combat, giving you an edge in speed while engaged in a dogfight.
 
