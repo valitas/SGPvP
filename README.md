@@ -15,5 +15,3 @@ and click the link to the online help; this will get you started.
 **Firefox users: please note that the Greasemonkey version is now deprecated**, it will
 not be supported or updated any more. Firefox users should remove it and install
 the version from Mozilla Add-ons.
-
-# This fork of the original extension has not yet been approved by the Pardus developers! Use at your own risk!
