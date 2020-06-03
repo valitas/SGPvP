@@ -432,6 +432,14 @@ SGMain.prototype.useBots = function( mode ) {
         thisMany = bots.available;
     }
 
+    // Compute how much armour the bots will repair, and how many
+    // we'll have left, and update last known values.
+    newSettings = {
+        lkap: typeof( storage.lkap ) == 'number' ?
+            storage.lkap + thisMany * botWorth : null,
+        lkba: storage.lkba > thisMany ? storage.lkba - thisMany : 0
+    };
+
     if ( this.useBotsAmountField ) {
         amount = this.useBotsAmountField;
         submit = this.useBotsButton;
@@ -444,6 +452,7 @@ SGMain.prototype.useBots = function( mode ) {
         submit = form.elements[ 'useres' ];
     }
 
+    storage.set( newSettings );
     amount.value = thisMany;
     submit.click();
 }
