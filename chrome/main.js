@@ -432,14 +432,6 @@ SGMain.prototype.useBots = function( mode ) {
         thisMany = bots.available;
     }
 
-    // Compute how much armour the bots will repair, and how many
-    // we'll have left, and update last known values.
-    newSettings = {
-        lkap: typeof( storage.lkap ) == 'number' ?
-            storage.lkap + thisMany * botWorth : null,
-        lkba: storage.lkba > thisMany ? storage.lkba - thisMany : 0
-    };
-
     if ( this.useBotsAmountField ) {
         amount = this.useBotsAmountField;
         submit = this.useBotsButton;
@@ -452,7 +444,6 @@ SGMain.prototype.useBots = function( mode ) {
         submit = form.elements[ 'useres' ];
     }
 
-    storage.set( newSettings );
     amount.value = thisMany;
     submit.click();
 }
@@ -739,6 +730,8 @@ SGMain.prototype.doWin = function( mode, rounds, missiles, raid ) {
         this.useBots( mode );
     else
         this.doEngage( rounds, missiles, raid );
+
+    this.doWin = this.nop; // Prevent user from navving too fast
 }
 
 SGMain.prototype.doWinB = function( botMode, attackMode, missiles ) {
@@ -748,10 +741,12 @@ SGMain.prototype.doWinB = function( botMode, attackMode, missiles ) {
         lkap = storage.lkap,
         lkba = storage.lkba;
 
-    if ( points > 0 && armour.level > 0 && lkba && lkap < points )
+    if ( points > 0 && armour.level > 0 && lkap < points )
         this.useBots( botMode );
     else
         this.doAttackBuilding( attackMode, missiles );
+
+    this.doWinB = this.nop; // Prevent user from navving too fast
 }
 
 SGMain.prototype.doAttackBuilding = function(mode, missiles) {
