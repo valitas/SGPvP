@@ -750,7 +750,7 @@ SGMain.prototype.doWinB = function( botMode, attackMode, missiles ) {
         lkap = storage.lkap,
         lkba = storage.lkba;
 
-    if ( points > 0 && armour.level > 0 && lkap < points )
+    if ( points > 0 && armour.level > 0 && lkba && lkap < points )
         this.useBots( botMode );
     else
         this.doAttackBuilding( attackMode, missiles );
