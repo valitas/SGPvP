@@ -59,7 +59,7 @@ function SGMain(doc) {
 
     function loadConfig( allowRetry ) {
         var names = [ 'keymap', 'targeting', 'armour',
-                      'lkap', 'lkba', 'rtid', 'version' ];
+                      'lkap', 'lkba', 'rtid', 'version', 'wayp' ];
         this.storage.get( names, checkConfig.bind(this, allowRetry) );
     }
 
@@ -224,12 +224,12 @@ SGMain.prototype.scanForTargets = function(targeting_data, ships) {
     for(var i in ships) {
         var ship = ships[i], name = ship.name.toLowerCase(), n;
 
-        if(exclude.ids[ship.id] || exclude.names[name])
-            exc.push(ship);
-        else if((n = include.ids[ship.id]) || (n = include.names[name])) {
+        if((n = include.ids[ship.id]) || (n = include.names[name])) {
             ship.includePriority = n;
             inc.push(ship);
         }
+        else if(exclude.ids[ship.id] || exclude.names[name])
+            exc.push(ship);
         else if(ql.excludeFactions[ship.faction] ||
                 ql.excludeAlliances[ship.ally_id] ||
                 ql.excludeCharacters[ship.id])
@@ -676,9 +676,9 @@ SGMain.prototype.selectMaxValue = function(select, limit) {
 
 SGMain.prototype.setRounds = function(limit) {
     var doc = this.doc, sel,
-    xpr = doc.evaluate('//select[@name = "rounds"]', doc, null,
-                       XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
-    while((sel = xpr.iterateNext())) {
+    xpr = doc.evaluate('//select[@name = "rounds"]', doc, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+    var index = 0;
+    while((sel = xpr.snapshotItem(index))) {
         if(sel.style.display == 'none' &&
            sel.nextElementSibling.tagName == 'SELECT')
             // for some reason, Pardus now hides the rounds select,
@@ -687,6 +687,7 @@ SGMain.prototype.setRounds = function(limit) {
             sel = sel.nextElementSibling;
 
         this.selectMaxValue(sel, limit);
+        index++;
     }
 };
 
@@ -738,6 +739,8 @@ SGMain.prototype.doWin = function( mode, rounds, missiles, raid ) {
         this.useBots( mode );
     else
         this.doEngage( rounds, missiles, raid );
+
+    this.doWin = this.nop; // Prevent user from navving too fast
 }
 
 SGMain.prototype.doWinB = function( botMode, attackMode, missiles ) {
@@ -751,6 +754,8 @@ SGMain.prototype.doWinB = function( botMode, attackMode, missiles ) {
         this.useBots( botMode );
     else
         this.doAttackBuilding( attackMode, missiles );
+
+    this.doWinB = this.nop; // Prevent user from navving too fast
 }
 
 SGMain.prototype.doAttackBuilding = function(mode, missiles) {
@@ -1087,8 +1092,31 @@ SGMain.prototype.target = function() {
 
 SGMain.prototype.cloak = function() { this.clickById('inputShipCloak'); };
 SGMain.prototype.uncloak = function() { this.clickById('inputShipUncloak'); };
+SGMain.prototype.toggleCloak = function() { 
+    var elt = this.doc.getElementById('inputShipCloak');
+    if(elt && elt.click &&
+       !(elt.disabled || elt.classList.contains('disabled')) )
+        elt.click();
+    else
+        this.uncloak();
+};
 SGMain.prototype.fillTank = function() { this.clickById('aCmdTank'); };
 SGMain.prototype.jumpWH = function() { this.clickById('aCmdWarp'); };
+SGMain.prototype.stdCommand = function() { 
+    let navTable = this.doc.getElementById( 'navareatransition' );
+	if ( !navTable )
+		navTable = this.doc.getElementById( 'navarea' );
+    if ( !navTable ) {
+        this.nav();
+        return;
+        }
+    var elt = this.doc.evaluate( './/a[contains(@id, "stdCommand")]', 
+        navTable, null, XPathResult.FIRST_ORDERED_NODE_TYPE, 
+        null).singleNodeValue;
+    elt.click();
+    };
+SGMain.prototype.collect = function() { this.clickById('aCmdCollect'); };
+
 
 SGMain.prototype.setAmbushRP = function() {
     var doc = this.doc,
@@ -1255,6 +1283,49 @@ SGMain.prototype.telerob = function() {
     }
 }
 
+SGMain.prototype.PASSORBITER_RX = /[?&]playerid=(\d+)/;
+SGMain.prototype.passOrbiter = function() {
+    switch(this.page) {
+    case 'main':
+        // pass  from nav screen
+        var ships = this.getShips();
+        if(!ships)
+            return;
+
+        var targets = this.scanForTargets(this.storage.targeting, ships);
+        if(targets.included.length > 0) {
+            var ship_pri = (this.page == 'main') ?
+                this.getShipModelPriorities() : null;
+            var best = this.chooseTarget(targets.included, ship_pri);
+            this.postRequest( "/overview_ship.php", "player=" + best.id + "&transferorb=Send Orbiter",
+                              callback.bind(this) );
+            // Next pass we'll nav instead. Can't nav now because that'd
+            // break the rule of one server request per user action.
+            this.passOrbiter = this.nav;
+        }
+        else
+            this.nav();
+        break;
+
+    case 'ship2ship_combat':
+        var m = this.PASSORBITER_RX.exec( this.doc.location.href );
+        if( m )
+            this.postRequest( "/overview_ship.php", "player=" + m[1] + "&transferorb=Send Orbiter",
+                              callback.bind(this) );
+        // XXX should we disable pass here? Nav? Reload the combat page?
+        break;
+
+    default:
+        this.nav();
+    }
+
+    function callback( status, responseText ) {
+        if (status != 200)
+            this.showNotification("ORBITER ERROR", 1000);
+        else
+            this.showNotification("Orbiter passed?!", 1000);
+    }
+}
 SGMain.prototype.BUY_MISSILE_PRIORITIES = {
     113: 5, // NN550
     27:  4, // NN500
@@ -1379,4 +1450,107 @@ SGMain.prototype.activateBoost = function(boost) {
         else
             this.showNotification('Activated ' + boost + ' boost', 1000);
     }
+}
+
+SGMain.prototype.setWaypoint = function() {
+    if( this.userloc ) {
+        var o = this.storage.wayp;
+        if (o.len > 0 ) {
+            if(o.tid[o.currentIndex] == this.userloc) {
+                this.showNotification('Waypoint already set!', 750)
+                return;
+            }
+        }
+        o.tid[o.len] = this.userloc;
+        o.currentIndex = o.len;
+        o.len ++;
+        this.storage.set( { wayp : o } );
+        this.showNotification( 'Waypoint #' + o.currentIndex + ' set: ' + this.storage.wayp.tid[this.storage.wayp.currentIndex], 500 );
+    }
+    else
+        this.showNotification( 'Can not set waypoint!', 500 );
+}
+
+
+SGMain.prototype.travel = function() {
+    var storage = this.storage,
+        doc = this.doc,
+        elt, form, destination, input;
+
+
+    // no frantic keypressing.  but this means that, once we're in
+    // this function, we *have* to reload, so watch this.
+    this.disengage = this.nop;
+
+    elt = doc.evaluate( '//input[@name="retreat" and @type="submit"]',
+                        doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                        null ).singleNodeValue;
+    //calculating next waypoint
+    if (this.userloc == storage.wayp.tid[storage.wayp.currentIndex]) {
+        if ( storage.wayp.len > 1) {
+            if ( (storage.wayp.currentIndex + storage.wayp.direction == storage.wayp.len) || (storage.wayp.currentIndex + storage.wayp.direction < 0) ) {
+                storage.wayp.direction *= -1;
+            }
+            storage.wayp.currentIndex += storage.wayp.direction;
+        } 
+        else if (!elt) {
+            this.showNotification( 'Arrived at waypoint.', 750 );
+            this.nav()
+            return;
+        }
+        this.storage.set( { wayp : storage.wayp } );
+    }    
+        if( elt && elt.click &&
+        !( elt.disabled || elt.classList.contains('disabled') ) ) {
+        //reversing waypoint direction.
+
+        elt.click(); // this reloads the page
+        return;
+    }
+
+    // no retreat button...
+
+    if( storage.wayp.len == 0 ) {
+        this.showNotification( 'No waypoints set!', 750 );
+        this.nav(); // this reloads the page
+        return;
+    }
+
+    
+
+    form = doc.getElementById( 'navForm' );
+    if ( form ) {
+        destination = form.elements.destination;
+        if( destination ) {
+            destination.value = storage.wayp.tid[storage.wayp.currentIndex];
+        }
+    }
+    else {
+        // No form, add one.
+        form = doc.createElement( 'form' );
+        form.name = 'navForm';
+        form.method = 'post';
+        form.action = '/main.php';
+        form.style.display = 'none';
+        input = doc.createElement( 'input' );
+        input.type = 'hidden';
+        input.name = 'destination';
+        input.value = getDestination(storage.wayp.tid[storage.wayp.currentIndex]);
+        form.appendChild( input );
+        input = doc.createElement( 'input' );
+        input.type = 'hidden';
+        input.name = 'ts';
+        input.value = Date.now();
+        doc.body.appendChild( form );
+    }
+    //this.showNotification( "Moving to waypoint: " + storage.wayp.currentIndex , 500 );
+    form.submit(); // this reloads the page
+};
+
+SGMain.prototype.clearWaypoints = function() {
+    this.showNotification( 'Waypoints cleared: ' + this.storage.wayp.len, 500);
+    this.storage.set( { wayp : { len : 0, tid : {}, currentIndex : -1, direction : -1 } } );
+    //console.log(wayp.len)
+    //console.log(wayp.currentIndex)
+    //console.log(wayp.direction)
 }
