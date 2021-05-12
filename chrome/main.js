@@ -1456,7 +1456,28 @@ SGMain.prototype.setWaypoint = function() {
     if( this.userloc ) {
         var o = this.storage.wayp;
         if (o.len > 0 ) {
+            //i don't like how it's done. 
             if(o.tid[o.currentIndex] == this.userloc) {
+                //if it's wormhole, set it as wormhole jump
+                if(this.doc.getElementById("aCmdWarp") && !(o.tid[o.currentIndex]=="wh") ) {
+                    o.tid[o.len] = "wh";
+                    o.currentIndex = o.len;
+                    o.len ++;
+                    this.storage.set( { wayp : o } );
+                    this.showNotification( 'Waypoint #' + o.currentIndex + ' set: Wormhole', 1000 );
+                    return;
+                } else if (["/building.php","/building_trade.php","/starbase.php","/starbase_trade.php","/planet.php","/planet_trade.php"].includes(this.doc.location.pathname)) {
+                    o.tid[o.len] = "trade";
+                    o.currentIndex = o.len;
+                    o.len++;
+                    this.storage.set( { wayp : o } );
+                    this.showNotification( 'Waypoint #' + o.currentIndex + ' set: Trade', 1000 );
+                    return;
+                }
+                //if it's an xhole/yhole, set as xhole jump
+                this.showNotification('Waypoint already set!', 750)
+                return;
+            } else if(o.tid[o.currentIndex-1] == this.userloc && typeof(o.tid[o.currentIndex]) == "string") {
                 this.showNotification('Waypoint already set!', 750)
                 return;
             }
@@ -1465,7 +1486,7 @@ SGMain.prototype.setWaypoint = function() {
         o.currentIndex = o.len;
         o.len ++;
         this.storage.set( { wayp : o } );
-        this.showNotification( 'Waypoint #' + o.currentIndex + ' set: ' + this.storage.wayp.tid[this.storage.wayp.currentIndex], 500 );
+        this.showNotification( `Waypoint #${o.currentIndex} set: ${this.storage.wayp.tid[this.storage.wayp.currentIndex]}`, 1000 );
     }
     else
         this.showNotification( 'Can not set waypoint!', 500 );
@@ -1485,22 +1506,48 @@ SGMain.prototype.travel = function() {
     elt = doc.evaluate( '//input[@name="retreat" and @type="submit"]',
                         doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
                         null ).singleNodeValue;
+
+
     //calculating next waypoint
-    if (this.userloc == storage.wayp.tid[storage.wayp.currentIndex]) {
+    //if the pilot is where it should be
+    // if the tid is a string, we do special stuff, trade/wormhole jump as appropriate
+    if (storage.wayp.tid[storage.wayp.currentIndex]=="wh") {
+        //advance index
         if ( storage.wayp.len > 1) {
+            //if the pilot has reached the end of the path, turn around
             if ( (storage.wayp.currentIndex + storage.wayp.direction == storage.wayp.len) || (storage.wayp.currentIndex + storage.wayp.direction < 0) ) {
                 storage.wayp.direction *= -1;
             }
+            //set destination to the next tile on the path
             storage.wayp.currentIndex += storage.wayp.direction;
+        }
+        this.storage.set( { wayp : storage.wayp } );
+     } else if (storage.wayp.tid[storage.wayp.currentIndex] == "trade") {
+        //if we're already in trade screen and there's no more trading to be done, we advance
+
+        //if we're able to click trade, enter building
+
+    }
+    if (this.userloc == storage.wayp.tid[storage.wayp.currentIndex]) {
+        //if the path consists of more than one tile lol
+        if ( storage.wayp.len > 1) {
+            //if the pilot has reached the end of the path, turn around
+            if ( (storage.wayp.currentIndex + storage.wayp.direction == storage.wayp.len) || (storage.wayp.currentIndex + storage.wayp.direction < 0) ) {
+                storage.wayp.direction *= -1;
+            }
+            //set destination to the next tile on the path
+            storage.wayp.currentIndex += storage.wayp.direction;
+            this.storage.set( { wayp : storage.wayp } );
         } 
         else if (!elt) {
+            //otherwise, we're at the one and only tile...
             this.showNotification( 'Arrived at waypoint.', 750 );
             this.nav()
             return;
         }
-        this.storage.set( { wayp : storage.wayp } );
-    }    
-        if( elt && elt.click &&
+    }
+    //if there is a retreat button, we click it.
+    if( elt && elt.click &&
         !( elt.disabled || elt.classList.contains('disabled') ) ) {
         //reversing waypoint direction.
 
@@ -1516,40 +1563,103 @@ SGMain.prototype.travel = function() {
         return;
     }
 
-    
-
+    //doing string stuff.
+    // first, if it's a wormhole and we're on one, jump
+    if (storage.wayp.tid[storage.wayp.currentIndex]=="wh") {
+        if(doc.getElementById("aCmdWarp")) {
+            doc.getElementById("aCmdWarp").click()
+            return;
+        }
+    } else if (storage.wayp.tid[storage.wayp.currentIndex]=="trade") {
+        var autobuybutton = doc.getElementById("quickButtonSellAndBuy");
+        console.log(autobuybutton)
+        if (!(autobuybutton)) {
+            if (doc.location.pathname=="/main.php") {
+                //try to enter trade
+                var ele;
+                var trades = ["aCmdBuildingTrade" , "aCmdPlanetTrade", "aCmdStarbaseTrade"];
+                for (e in trades) {
+                    ele = doc.getElementById(trades[e])
+                    if (ele){
+                        ele.click()
+                        break;
+                    }
+                }
+                //failing that, we advance.
+                if (!ele) {
+                    if ( storage.wayp.len > 1) {
+                        //if the pilot has reached the end of the path, turn around
+                        if ( (storage.wayp.currentIndex + storage.wayp.direction == storage.wayp.len) || (storage.wayp.currentIndex + storage.wayp.direction < 0) ) {
+                            storage.wayp.direction *= -1;
+                        }
+                        //set destination to the next tile on the path
+                        storage.wayp.currentIndex += storage.wayp.direction;
+                        this.storage.set( { wayp : storage.wayp } );
+                    }
+                    return;
+                }
+            } else {
+                this.showNotification("not on nav", 1000)
+                this.nav();
+            }
+        }
+        else if (autobuybutton.getAttribute("onclick").localeCompare("resetForm(); quickSell({}); quickBuy({}); submitTradeForm(); return false;") != 0 ) {
+            autobuybutton.click();
+            console.log("trading")
+        } else {
+            console.log("done trading");
+            //done trading, we can advance
+            if ( storage.wayp.len > 1) {
+                //if the pilot has reached the end of the path, turn around
+                if ( (storage.wayp.currentIndex + storage.wayp.direction == storage.wayp.len) || (storage.wayp.currentIndex + storage.wayp.direction < 0) ) {
+                    storage.wayp.direction *= -1;
+                }
+                //set destination to the next tile on the path
+                storage.wayp.currentIndex += storage.wayp.direction;
+                this.storage.set( { wayp : storage.wayp } );
+            }
+            this.nav();
+        }
+        return;
+    }
     form = doc.getElementById( 'navForm' );
     if ( form ) {
         destination = form.elements.destination;
         if( destination ) {
             destination.value = storage.wayp.tid[storage.wayp.currentIndex];
         }
+        form.submit(); // this reloads the page
     }
     else {
-        // No form, add one.
-        form = doc.createElement( 'form' );
-        form.name = 'navForm';
-        form.method = 'post';
-        form.action = '/main.php';
-        form.style.display = 'none';
-        input = doc.createElement( 'input' );
-        input.type = 'hidden';
-        input.name = 'destination';
-        input.value = getDestination(storage.wayp.tid[storage.wayp.currentIndex]);
-        form.appendChild( input );
-        input = doc.createElement( 'input' );
-        input.type = 'hidden';
-        input.name = 'ts';
-        input.value = Date.now();
-        doc.body.appendChild( form );
-    }
+        if(doc.location.pathname == "/main.php"){
+            // No form, add one.
+            form = doc.createElement( 'form' );
+            form.name = 'navForm';
+            form.method = 'post';
+            form.action = '/main.php';
+            form.style.display = 'none';
+            input = doc.createElement( 'input' );
+            input.type = 'hidden';
+            input.name = 'destination';
+            input.value = getDestination(storage.wayp.tid[storage.wayp.currentIndex]);//wtf is getdestination? only works on main.php?
+            form.appendChild( input );
+            input = doc.createElement( 'input' );
+            input.type = 'hidden';
+            input.name = 'ts';
+            input.value = Date.now();
+            doc.body.appendChild( form );
+            console.log("making form");
+            form.submit(); // this reloads the page
+        } else {
+            this.nav();
+        }
+}
     //this.showNotification( "Moving to waypoint: " + storage.wayp.currentIndex , 500 );
-    form.submit(); // this reloads the page
 };
 
 SGMain.prototype.clearWaypoints = function() {
     this.showNotification( 'Waypoints cleared: ' + this.storage.wayp.len, 500);
-    this.storage.set( { wayp : { len : 0, tid : {}, currentIndex : -1, direction : -1 } } );
+    this.storage.set( { wayp : { len : 0, tid : {}, currentIndex : -1, direction : 1 } } );
     //console.log(wayp.len)
     //console.log(wayp.currentIndex)
     //console.log(wayp.direction)
