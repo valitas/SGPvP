@@ -8,7 +8,7 @@ vs. player combat, giving you an edge in speed while engaged in a dogfight.
 
 [![Install SGPvP for Google Chrome](https://img.shields.io/chrome-web-store/v/fgaanejfgbdmilifodhjhlpkigncjfih)](https://chrome.google.com/webstore/detail/sgs-better-pvp-pardus-ext/fgaanejfgbdmilifodhjhlpkigncjfih)  [![Install SGPvP for Firefox](https://img.shields.io/amo/v/sgpvp-pardus-trader-edition)](https://addons.mozilla.org/firefox/addon/sgpvp-pardus-trader-edition/)
 
-Once installed, reload your Pardus tab, press the key _i_ (for _info_), and find
+Once installed, reload your Pardus tab, press the key _i_ (for _info_) or escape key, and find
 and click the link to the online help; this will get you started.
 
 **Firefox users: please note that the Greasemonkey version is now deprecated**, it will
