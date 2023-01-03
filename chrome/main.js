@@ -1017,15 +1017,26 @@ SGMain.prototype.flyClose = function() {
     this.flyClose = this.nop;
 };
 SGMain.prototype.exitFlyClose = function() {
-    var a = this.doc.evaluate(
-        '//a[contains(text(), "Exit inner starbase")]', this.doc, null,
-        XPathResult.ANY_UNORDERED_NODE_TYPE, null).singleNodeValue;
-    if(a)
-        a.click();
-    else
-        this.doc.location = 'main.php?exitsb=1';
+    this.doc.location = 'main.php?exitsb=1';
     this.exitFlyClose = this.nop;
 };
+
+SGMain.prototype.toggleFlyClose = function() {
+    // if there is a enter SB button
+    // or the ship is on starbase main page, or starbase equipment pages
+    // then fly close
+    // otherwise, exit sb
+    // notable fail state is if on SB tile and in pvp - generally only happens on friendly SBs.
+    // results in +1 nav when want to enter/chase i guess.
+    if (this.doc.getElementById("aCmdStarbase") || this.doc.location.pathname.indexOf('/starbase') != -1 || this.doc.location.pathname.indexOf('/ship_equipment') != -1) {
+        this.doc.location = 'main.php?entersb=1';
+    }
+    else {
+        this.doc.location = 'main.php?exitsb=1';
+    }
+    this.toggleFlyClose = this.nop;
+};
+
 SGMain.prototype.dockUndock = function() { this.undock() || this.dock(); };
 SGMain.prototype.dock = function() { top.location = 'game.php?logout=1'; };
 SGMain.prototype.undock = function() {
