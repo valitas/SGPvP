@@ -1,9 +1,8 @@
 (function () {
     let navved = false;
-    function onmsg(event) {
-        console.log('received message on main', event.origin, event.data);
+    function onMessage(event) {
         let data = event.data;
-        if (data.sgpvp !== 3) {
+        if (data.sgpvp !== 'click-id') {
             return;
         }
 
@@ -16,21 +15,18 @@
             navved = true;
         }
     }
-    window.addEventListener('message', onmsg);
+    window.addEventListener('message', onMessage);
 
-    let f = function () {
+    let postVars = function () {
         let msg = {
-            sgpvp: 1,
-            loc: typeof (userloc) === 'undefined' ? null : userloc,
-            ajax: typeof (ajax) === 'undefined' ? null : ajax
+            sgpvp: 'pardus-vars',
+            loc: typeof userloc === 'undefined' ? null : userloc,
+            ajax: typeof ajax === 'undefined' ? null : ajax
         };
-        window.postMessage(
-            msg,
-            `${window.location.protocol}//${window.location.host}`
-        );
+        window.postMessage(msg, document.location.origin);
     };
     if (typeof (addUserFunction) == 'function') {
-        addUserFunction(f);
+        addUserFunction(postVars);
     }
-    f();
+    postVars();
 })();

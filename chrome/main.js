@@ -1,11 +1,3 @@
-// -*- js3-indent-level: 4; js3-indent-tabs-mode: nil -*-
-
-
-// SGMain object. This code must run on Firefox and Google Chrome - no
-// Greasemonkey calls and no chrome.* stuff here.
-
-// V41
-
 function SGMain(doc) {
     var url, m;
 
@@ -84,15 +76,13 @@ function SGMain(doc) {
         // Insert a bit of script to execute in the page's context and
         // send us what we need. And add a listener to receive the call.
         let window = this.doc.defaultView;
-        window.addEventListener( 'message', setupHandler.bind(this), false );
+        window.addEventListener( 'message', this.setupPage.bind(this) );
         let script = this.doc.createElement( 'script' );
         script.src = chrome.runtime.getURL('postvars.js');
         script.onload = function() { this.remove(); };
         this.doc.head.appendChild(script);
         this.configured = true;
     }
-
-    function setupHandler(event) { this.setupPage( event ); }
 }
 
 SGMain.prototype.LOCATION_RX = /^https?:\/\/([^.]+)\.pardus\.at\/([^.]+)\.php/;
@@ -131,11 +121,11 @@ SGMain.prototype.SHIPS = [
 // Plus, this spares us from using unsafeWindow at all, which is a
 // Good Thing.
 SGMain.prototype.setupPage = function(event) {
-    if(!event.data || event.data.sgpvp != 1)
-        return;
-    this.userloc = parseInt(event.data.loc);
-    this.ajax = event.data.ajax;
-    this.setupPageSpecific();
+    if(event.data.sgpvp === 'pardus-vars') {
+        this.userloc = parseInt(event.data.loc);
+        this.ajax = event.data.ajax;
+        this.setupPageSpecific();
+    }
 };
 
 SGMain.prototype.closeUi = function() {
@@ -778,7 +768,7 @@ SGMain.prototype.doAttackBuilding = function(mode, missiles) {
 SGMain.prototype.clickByIdMsg = function(id) {
     let w = this.doc.defaultView;
     let data = {
-        sgpvp: 3,
+        sgpvp: 'click-id',
         id: id
     };
     w.postMessage(data, this.doc.location.origin);
@@ -1137,16 +1127,16 @@ SGMain.prototype.stdCommand = function() {
         null).singleNodeValue;
     elt.click();
 };
-SGMain.prototype.collect = function() { this.clickById('aCmdCollect'); };
-
+SGMain.prototype.collect = function() { this.clickByIdMsg('aCmdCollect'); };
 
 SGMain.prototype.setAmbushRP = function() {
     var doc = this.doc,
     xpath = '//div[@id="emsg"]//input[@name="retreat_point_set" and @type="submit"]',
     elt = doc.evaluate(xpath, doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
                        null).singleNodeValue;
-    if(elt) { elt.click(); return; }
-
+    if(elt) {
+        elt.click(); return;
+    }
     this.clickByIdMsg('aCmdRetreatInfo');
 };
 
