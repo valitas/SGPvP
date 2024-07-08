@@ -55,15 +55,16 @@ function SGMain(doc) {
         this.storage.get( names, checkConfig.bind(this, allowRetry) );
     }
 
-    function checkConfig( allowRetry ) {
-        if ( allowRetry && !( this.storage.version >= 41 ) )
-            this.storage.migrate( loadConfig.bind(this, false) );
+    function checkConfig(allowRetry) {
+        if (allowRetry && !(this.storage.version >= 41))
+            this.storage.migrate(loadConfig.bind(this, false));
         else {
-            if( this.storage.keymap )
-                finishConfig.call( this );
-            else
-                this.getResourceText( 'default_keymap',
-                                      storeKeymap.bind(this) );
+            if (this.storage.keymap) {
+                finishConfig.call(this);
+            } else {
+                this.getResourceText('default-keymap.json')
+                    .then((keymap) => this.storeKeymap(keymap));
+            }
         }
     }
 
@@ -1749,26 +1750,11 @@ SGMain.prototype.getShipEntryExtras = function(entry) {
         entry.faction = 'neu';
 };
 
-
-// Our versions of GM_getResourceURL and GM_getResourceText. We use
-// these in Chrome to fetch resources included with the extension.
-
-SGMain.prototype.RESOURCE = {
-    ui_html: 'ui.html',
-    ui_style: 'ui.css',
-    default_keymap: 'default-keymap.json'
-};
-
-SGMain.prototype.getResourceURL = function(resource_id) {
-    return chrome.runtime.getURL(this.RESOURCE[resource_id]);
-};
-
-SGMain.prototype.getResourceText = function(resource_id, callback) {
-    var rq = new XMLHttpRequest();
-    rq.open('GET', this.getResourceURL(resource_id));
-    rq.onreadystatechange = function() {
-        if (rq.readyState == XMLHttpRequest.DONE)
-            callback(rq.responseText);
-    };
-    rq.send();
+SGMain.prototype.getResourceText = async function (resource) {
+    let url = chrome.runtime.getURL(resource);
+    let response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`getResourceText response status: ${response.status}`);
+    }
+    return response.text();
 };

@@ -229,25 +229,6 @@ function SGPvPUI(sgpvp, storage, doc) {
     this.doc = doc;
 }
 
-/*
-SGPvPUI.prototype.injectStyle = function() {
-    var doc = this.doc;
-
-    if(doc.getElementById('sg-style'))
-        return;
-
-    var head = doc.evaluate('/html/head', doc, null,
-                                 XPathResult.ANY_UNORDERED_NODE_TYPE,
-                                 null).singleNodeValue;
-    var link = doc.createElement('link');
-    link.id = 'sg-style';
-    link.rel = 'stylesheet';
-    link.type = 'text/css';
-    link.href = this.sgpvp.getResourceURL('ui_style');
-    head.appendChild(link);
-};
-*/
-
 // We use all these elements from the UI DOM.
 SGPvPUI.prototype.UI_ELEMENT_IDS =
     [ 'sg-close',
@@ -290,8 +271,7 @@ SGPvPUI.prototype.open = function() {
     if(this.ui_element)
         return;
 
-    //this.injectStyle();
-    this.sgpvp.getResourceText('ui_html', finish.bind(this));
+    this.sgpvp.getResourceText('ui.html').then((html) => finish.call(this, html));
 
     function finish( uihtml ) {
         var doc = this.doc,
@@ -366,7 +346,7 @@ SGPvPUI.prototype.configure = function() {
     onKeyClick = this.onKeyClick.bind(this),
     onSetKeySelectChange = this.onSetKeySelectChange.bind(this),
     onSetKeyArgInput = this.onSetKeyArgInput.bind(this),
-    onDefaultKeymapClick = this.resetKeyMap.bind(this, 'default_keymap'),
+    onDefaultKeymapClick = this.resetKeyMap.bind(this),
     onImpExpKeymapClick = this.importKeyMap.bind(this);
     onImpExpWaypointsClick = this.importWaypoints.bind(this);
     onClearWaypointsClick = this.clearWaypoints.bind(this);
@@ -693,16 +673,16 @@ SGPvPUI.prototype.labelAllKeys = function() {
     }
 };
 
-SGPvPUI.prototype.resetKeyMap = function(resid) {
+SGPvPUI.prototype.resetKeyMap = function() {
     var r = confirm('This will remove all custom key bindings you '
                     + 'may have defined. You OK with this?');
-    if(r)
-        this.sgpvp.getResourceText(resid, setKeys.bind(this));
-
-    function setKeys( keymap ) {
-        this.keymap = JSON.parse(keymap);
-        this.storeKeyMap();
-        this.labelAllKeys();
+    if(r) {
+        this.sgpvp.getResourceText('default-keymap.json')
+            .then((text) => {
+                this.keymap = JSON.parse(text);
+                this.storeKeyMap();
+                this.labelAllKeys();
+            });
     }
 };
 
