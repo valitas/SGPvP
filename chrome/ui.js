@@ -229,6 +229,7 @@ function SGPvPUI(sgpvp, storage, doc) {
     this.doc = doc;
 }
 
+/*
 SGPvPUI.prototype.injectStyle = function() {
     var doc = this.doc;
 
@@ -245,6 +246,7 @@ SGPvPUI.prototype.injectStyle = function() {
     link.href = this.sgpvp.getResourceURL('ui_style');
     head.appendChild(link);
 };
+*/
 
 // We use all these elements from the UI DOM.
 SGPvPUI.prototype.UI_ELEMENT_IDS =
@@ -260,6 +262,7 @@ SGPvPUI.prototype.UI_ELEMENT_IDS =
       'sg-max',
       'sg-ql',
       'sg-rid',
+      'sg-help',
       'sg-s2keys',
       'sg-s2targeting',
       'sg-s2waypoints',
@@ -287,18 +290,17 @@ SGPvPUI.prototype.open = function() {
     if(this.ui_element)
         return;
 
+    //this.injectStyle();
     this.sgpvp.getResourceText('ui_html', finish.bind(this));
 
     function finish( uihtml ) {
         var doc = this.doc,
-	    parser = new DOMParser(),
+	        parser = new DOMParser(),
             e = {},
             dummy, div, i, id;
 
-        this.injectStyle();
-
-	dummy = parser.parseFromString( uihtml, 'text/html' );
-	div = dummy.body.removeChild( dummy.body.firstElementChild );
+	    dummy = parser.parseFromString( uihtml, 'text/html' );
+	    div = dummy.body.removeChild( dummy.body.firstElementChild );
 
         doc.body.appendChild(div);
 
@@ -314,7 +316,8 @@ SGPvPUI.prototype.open = function() {
             e[id.substr(3).replace('-','_')] = doc.getElementById(id);
         }
 
-        //e.version.textContent = this.sgpvp.getVersion();
+        e.version.textContent = this.sgpvp.getVersion();
+        e.help.href = chrome.runtime.getURL('help.html');
 
         // load settings and configure
         this.storage.get( [ 'keymap', 'ql', 'targeting', 'rtid', 'armour', 'wayp' ],

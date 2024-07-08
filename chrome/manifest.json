@@ -1,31 +1,64 @@
 {
     "content_scripts": [
-        { "all_frames": false,
-          "js": [
-              "sgpvp.js", "storage.js", "main.js", "ui.js", "chrome.js",
-              "game.js"
-          ],
-          "matches": [ "*://*.pardus.at/game.php" ],
-          "run_at": "document_start" },
-        { "all_frames": true,
-          "js": [ "all.js" ],
-          "matches": [ "*://*.pardus.at/*" ],
-          "run_at": "document_start" }
+        {
+            "all_frames": false,
+            "js": [
+                "storage.js",
+                "main.js",
+                "ui.js"
+            ],
+            "matches": [
+                "*://*.pardus.at/game.php"
+            ],
+            "run_at": "document_end"
+        },
+        {
+            "all_frames": true,
+            "js": [
+                "sgpvp.js", "all.js"
+            ],
+            "css": [
+                "ui.css"
+            ],
+            "matches": [
+                "*://*.pardus.at/*"
+            ],
+            "run_at": "document_end"
+        }
     ],
-    "content_security_policy": "script-src 'self'; object-src 'self'",
-    "description": "Keyboard actions for PvP in the online game Pardus. Trader Edition",
+    "content_security_policy": {
+        "extension_pages": "default-src 'self'"
+    },
+    "description": "Keyboard actions for PvP in the online game Pardus",
     "icons": {
         "16": "16.png",
         "48": "48.png",
         "128": "128.png"
     },
-    "manifest_version": 2,
-    "minimum_chrome_version": "20",
-    "name": "SG's Better PvP Pardus Extension, TE",
-    "permissions": [ "storage" ],
-    "short_name": "SGPvPt",
-    "web_accessible_resources": [
-        "ui.html", "ui.css", "default-keymap.json"
+    "manifest_version": 3,
+    "minimum_chrome_version": "99",
+    "name": "Scorpion Guard's Better PvP Pardus Extension",
+    "permissions": [
+        "storage"
     ],
-    "version": "43.8.0"
+    "short_name": "SGPvP",
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "ui.html",
+                "ui.css",
+                "default-keymap.json",
+                "postvars.js",
+                "help.html",
+                "help.css",
+                "changelog.html",
+                "customkeys.html"
+            ],
+            "matches": [
+                "*://*.pardus.at/*"
+            ]
+        }
+    ],
+    "version": "44",
+    "version_name": "44-rc1"
 }

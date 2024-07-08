@@ -83,13 +83,12 @@ function SGMain(doc) {
     function finishConfig() {
         // Insert a bit of script to execute in the page's context and
         // send us what we need. And add a listener to receive the call.
-        var window = this.doc.defaultView;
+        let window = this.doc.defaultView;
         window.addEventListener( 'message', setupHandler.bind(this), false );
-        var script = this.doc.createElement( 'script' );
-        script.type = 'text/javascript';
-        // window.location.origin is only available on FF 20
-        script.textContent = "(function() {var fn=function(){window.postMessage({sgpvp:1,loc:typeof(userloc)=='undefined'?null:userloc,ajax:typeof(ajax)=='undefined'?null:ajax},window.location.protocol+'//'+window.location.host);};if(typeof(addUserFunction)=='function')addUserFunction(fn);fn();})();";
-        this.doc.body.appendChild(script);
+        let script = this.doc.createElement( 'script' );
+        script.src = chrome.runtime.getURL('postvars.js');
+        script.onload = function() { this.remove(); };
+        this.doc.head.appendChild(script);
         this.configured = true;
     }
 
@@ -1583,7 +1582,7 @@ SGMain.prototype.travel = function() {
         }
     } else if (storage.wayp.tid[storage.wayp.currentIndex]=="trade") {
         var autobuybutton = doc.getElementById("quickButtonSellAndBuy");
-        console.log(autobuybutton)
+        //console.log(autobuybutton)
         if (!(autobuybutton)) {
             if (doc.location.pathname=="/main.php") {
                 //try to enter trade
@@ -1616,9 +1615,9 @@ SGMain.prototype.travel = function() {
         }
         else if (autobuybutton.getAttribute("onclick").localeCompare("resetForm(); quickSell({}); quickBuy({}); submitTradeForm(); return false;") != 0 ) {
             autobuybutton.click();
-            console.log("trading")
+            //console.log("trading")
         } else {
-            console.log("done trading");
+            //console.log("done trading");
             //done trading, we can advance
             if ( storage.wayp.len > 1) {
                 //if the pilot has reached the end of the path, turn around
@@ -1659,7 +1658,7 @@ SGMain.prototype.travel = function() {
             input.name = 'ts';
             input.value = Date.now();
             doc.body.appendChild( form );
-            console.log("making form");
+            //console.log("making form");
             form.submit(); // this reloads the page
         } else {
             this.nav();
@@ -1675,3 +1674,102 @@ SGMain.prototype.clearWaypoints = function() {
     //console.log(wayp.currentIndex)
     //console.log(wayp.direction)
 }
+
+
+SGMain.prototype.getVersion = function() {
+    return chrome.runtime.getManifest().version_name;
+};
+
+// The following are here because the Firefox implementations have to
+// deal with oddities introduced by "Mr Xyzzy's Pardus Helper".
+// There's no such thing on Chrome, so we can simplify here.
+
+SGMain.prototype.BUILDING_PLAYER_DETAIL_RX = /^building\.php\?detail_type=player&detail_id=(\d+)/;
+SGMain.prototype.getShipsBuilding = function() {
+    var doc = this.doc,
+    xpr = doc.evaluate("//table[@class='messagestyle']/tbody/tr/th",
+                       doc, null, XPathResult.UNORDERED_NODE_ITERATOR_TYPE,
+                       null);
+    var th;
+    while((th = xpr.iterateNext())) {
+        var heading = th.textContent;
+        if(heading == 'Other Ships')
+            return this.parseOtherShipsTable(th.parentNode.parentNode,
+                                             this.BUILDING_PLAYER_DETAIL_RX);
+    }
+
+    // Still here?
+    return [];
+};
+
+// XXX - untested!!
+SGMain.prototype.SHIP2SHIP_RX = /^ship2ship_combat\.php\?playerid=(\d+)/;
+SGMain.prototype.getShipsCombat = function() {
+    var doc = this.doc,
+    xpr = doc.evaluate("//table[@class='messagestyle']/tbody/tr/th",
+                       doc, null, XPathResult.UNORDERED_NODE_ITERATOR_TYPE,
+                       null);
+    var th;
+    while((th = xpr.iterateNext())) {
+        var heading = th.textContent;
+        if(heading == 'Other Ships')
+            return this.parseOtherShipsTable(th.parentNode.parentNode,
+                                             this.SHIP2SHIP_RX);
+    }
+
+    // Still here?
+    return [];
+};
+
+// This gets the faction and ship type from a ship entry. It's a
+// separate method to reuse it - we do it the same in all pages.
+SGMain.prototype.SHIPBGIMAGE_RX = /^url\("[^"]+\/ships\/([^/.]+)(?:_paint\d+|xmas)?\.png"\)$/;
+SGMain.prototype.SHIPIMSRC_RX = /ships\/([^/.]+)(?:_paint\d+|xmas)?\.png$/;
+SGMain.prototype.FACTIONSIGN_RX = /factions\/sign_(fed|emp|uni)/;
+SGMain.prototype.getShipEntryExtras = function(entry) {
+    // find the ship type
+    var itd = entry.td.previousElementSibling;
+    if(itd) {
+        var m = this.SHIPBGIMAGE_RX.exec(itd.style.backgroundImage);
+        if(m)
+            entry.shipModel = m[1];
+
+        // see if we find a faction
+        var xpr = this.doc.evaluate("img", itd, null,
+                                    XPathResult.UNORDERED_NODE_ITERATOR_TYPE,
+                                    null);
+        var img;
+        while((img = xpr.iterateNext())) {
+            var src = img.src;
+            if((m = this.FACTIONSIGN_RX.exec(src)))
+                entry.faction = m[1];
+        }
+    }
+
+    if(!entry.faction)
+        entry.faction = 'neu';
+};
+
+
+// Our versions of GM_getResourceURL and GM_getResourceText. We use
+// these in Chrome to fetch resources included with the extension.
+
+SGMain.prototype.RESOURCE = {
+    ui_html: 'ui.html',
+    ui_style: 'ui.css',
+    default_keymap: 'default-keymap.json'
+};
+
+SGMain.prototype.getResourceURL = function(resource_id) {
+    return chrome.runtime.getURL(this.RESOURCE[resource_id]);
+};
+
+SGMain.prototype.getResourceText = function(resource_id, callback) {
+    var rq = new XMLHttpRequest();
+    rq.open('GET', this.getResourceURL(resource_id));
+    rq.onreadystatechange = function() {
+        if (rq.readyState == XMLHttpRequest.DONE)
+            callback(rq.responseText);
+    };
+    rq.send();
+};

@@ -180,3 +180,11 @@ SGStorage.prototype.fixKeymap = function( keymap ) {
 
     return { safeArmour: safe }
 }
+
+SGStorage.prototype.rawGet = function( keys, callback ) {
+    chrome.storage.local.get( keys, callback );
+}
+
+SGStorage.prototype.rawSet = function( settings, callback ) {
+    chrome.storage.local.set( settings, callback );
+}

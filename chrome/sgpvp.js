@@ -1,55 +1,42 @@
-// -*- js3-indent-level: 4; js3-indent-tabs-mode: nil -*-
+class SGPvP {
+    #keyDownHandler;
+    #mainDriver;
 
+    static get singleton() {
+        let instance = top.SGPvP;
+        if (instance === undefined) {
+            instance = new SGPvP();
+            top.SGPvP = instance;
+        }
+        return instance;
+    }
 
-// SGPvP object. This code must run on Firefox and Google Chrome - no
-// Greasemonkey calls and no chrome.* stuff here.
+    constructor() {
+        this.#keyDownHandler = this.#onKeyDown.bind(this);
+    }
 
-// V41
+    registerCurrentFrame(document) {
+        let frameElement = document.defaultView.frameElement;
+        if (frameElement !== null && frameElement.id === 'main') {
+            this.#mainDriver = new SGMain(document);
+        }
 
-function SGPvP(top) {
-    this.top = top;
-    this.doc = top.document;
-    this.doc.addEventListener('DOMContentLoaded',
-                              this.onTopReady.bind(this), false);
-}
+        // This actually installs a handler on the frameset document.  Is that a
+        // problem?
+        document.addEventListener('keydown', this.#keyDownHandler);
+    }
 
-SGPvP.prototype.onTopReady = function() {
-    this.frames = {
-        main: this.doc.getElementById('main'),
-        menu: this.doc.getElementById('menu'),
-        msgframe: this.doc.getElementById('msgframe')
-    };
-    if(!this.frames.main || !this.frames.menu || !this.frames.msgframe)
-        throw new Error('SGPvP cannot find Pardus frames');
-    this.platformInit();
-};
-
-SGPvP.prototype.onFrameReady = function(frame_id) {
-    var frame = this.frames[frame_id];
-    if(!frame)
-        return;
-
-    if(frame_id == 'main')
-        this.mainDriver = new SGMain(frame.contentDocument);
-
-    // We handle keys in all three Pardus frames.  In menu and
-    // msgframe we don't really do anything, but we want to listen for
-    // keys anyway because focus may switch to those, and we don't
-    // want the user to have to click on the main frame.
-    frame.contentDocument.addEventListener('keydown',
-                                           this.onKeyDown.bind(this), false);
-};
-
-SGPvP.prototype.onKeyDown = function(event) {
-    if ( !this.mainDriver || event.ctrlKey || event.altKey || event.metaKey )
-        return;
-    if ( event.target ) {
-        var name = event.target.nodeName;
-        if (name == 'INPUT' || name == 'SELECT' || name == 'TEXTAREA' )
+    #onKeyDown(event) {
+        if (!this.#mainDriver || event.ctrlKey || event.altKey || event.metaKey)
             return;
+        if (event.target) {
+            var name = event.target.nodeName;
+            if (name == 'INPUT' || name == 'SELECT' || name == 'TEXTAREA')
+                return;
+        }
+        if (this.#mainDriver.keyPressHandler(event.keyCode)) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
     }
-    if(this.mainDriver.keyPressHandler(event.keyCode)) {
-        event.preventDefault();
-        event.stopPropagation();
-    }
-};
+}
