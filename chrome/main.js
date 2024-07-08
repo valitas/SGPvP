@@ -772,6 +772,18 @@ SGMain.prototype.doAttackBuilding = function(mode, missiles) {
     this.doAttackBuilding = this.nop; // prevent freezes by user mashing key too fast
 };
 
+// Click on a link with a javascript: href. This can't be done from the content
+// script because of CSP, so post a message for the injected script there to do
+// it.
+SGMain.prototype.clickByIdMsg = function(id) {
+    let w = this.doc.defaultView;
+    let data = {
+        sgpvp: 3,
+        id: id
+    };
+    w.postMessage(data, this.doc.location.origin);
+}
+
 SGMain.prototype.clickById = function(id) {
     var elt = this.doc.getElementById(id);
     if(elt && elt.click &&
@@ -1110,8 +1122,8 @@ SGMain.prototype.toggleCloak = function() {
     else
         this.uncloak();
 };
-SGMain.prototype.fillTank = function() { this.clickById('aCmdTank'); };
-SGMain.prototype.jumpWH = function() { this.clickById('aCmdWarp'); };
+SGMain.prototype.fillTank = function() { this.clickByIdMsg('aCmdTank'); };
+SGMain.prototype.jumpWH = function() { this.clickByIdMsg('aCmdWarp'); };
 SGMain.prototype.stdCommand = function() { 
     let navTable = this.doc.getElementById( 'navareatransition' );
 	if ( !navTable )
@@ -1124,7 +1136,7 @@ SGMain.prototype.stdCommand = function() {
         navTable, null, XPathResult.FIRST_ORDERED_NODE_TYPE, 
         null).singleNodeValue;
     elt.click();
-    };
+};
 SGMain.prototype.collect = function() { this.clickById('aCmdCollect'); };
 
 
@@ -1135,10 +1147,7 @@ SGMain.prototype.setAmbushRP = function() {
                        null).singleNodeValue;
     if(elt) { elt.click(); return; }
 
-    elt = doc.getElementById('aCmdRetreatInfo');
-    if(elt) { elt.click(); return; }
-
-    this.nav();
+    this.clickByIdMsg('aCmdRetreatInfo');
 };
 
 SGMain.prototype.ambush = function() {
