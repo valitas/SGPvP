@@ -1,11 +1,3 @@
-// -*- js3-indent-level: 4; js3-indent-tabs-mode: nil -*-
-
-
-// SGMain object. This code must run on Firefox and Google Chrome - no
-// Greasemonkey calls and no chrome.* stuff here.
-
-// V41
-
 function SGMain(doc) {
     var url, m;
 
@@ -59,41 +51,39 @@ function SGMain(doc) {
 
     function loadConfig( allowRetry ) {
         var names = [ 'keymap', 'targeting', 'armour',
-                      'lkap', 'lkba', 'rtid', 'version' ];
+                      'lkap', 'lkba', 'rtid', 'version', 'wayp' ];
         this.storage.get( names, checkConfig.bind(this, allowRetry) );
     }
 
-    function checkConfig( allowRetry ) {
-        if ( allowRetry && !( this.storage.version >= 41 ) )
-            this.storage.migrate( loadConfig.bind(this, false) );
+    function checkConfig(allowRetry) {
+        if (allowRetry && !(this.storage.version >= 41))
+            this.storage.migrate(loadConfig.bind(this, false));
         else {
-            if( this.storage.keymap )
-                finishConfig.call( this );
-            else
-                this.getResourceText( 'default_keymap',
-                                      storeKeymap.bind(this) );
+            if (this.storage.keymap) {
+                finishConfig.call(this);
+            } else {
+                this.getResourceText('default-keymap.json')
+                    .then((json) => storeKeymap.call(this, json));
+            }
         }
     }
 
-    function storeKeymap( keymap ) {
-        this.storage.set( { keymap: JSON.parse(keymap) },
+    function storeKeymap( json ) {
+        this.storage.set( { keymap: JSON.parse(json) },
                           finishConfig.bind( this ) );
     }
 
     function finishConfig() {
         // Insert a bit of script to execute in the page's context and
         // send us what we need. And add a listener to receive the call.
-        var window = this.doc.defaultView;
-        window.addEventListener( 'message', setupHandler.bind(this), false );
-        var script = this.doc.createElement( 'script' );
-        script.type = 'text/javascript';
-        // window.location.origin is only available on FF 20
-        script.textContent = "(function() {var fn=function(){window.postMessage({sgpvp:1,loc:typeof(userloc)=='undefined'?null:userloc,ajax:typeof(ajax)=='undefined'?null:ajax},window.location.protocol+'//'+window.location.host);};if(typeof(addUserFunction)=='function')addUserFunction(fn);fn();})();";
-        this.doc.body.appendChild(script);
+        let window = this.doc.defaultView;
+        window.addEventListener( 'message', this.setupPage.bind(this) );
+        let script = this.doc.createElement( 'script' );
+        script.src = chrome.runtime.getURL('postvars.js');
+        script.onload = function() { this.remove(); };
+        this.doc.head.appendChild(script);
         this.configured = true;
     }
-
-    function setupHandler(event) { this.setupPage( event ); }
 }
 
 SGMain.prototype.LOCATION_RX = /^https?:\/\/([^.]+)\.pardus\.at\/([^.]+)\.php/;
@@ -132,11 +122,15 @@ SGMain.prototype.SHIPS = [
 // Plus, this spares us from using unsafeWindow at all, which is a
 // Good Thing.
 SGMain.prototype.setupPage = function(event) {
-    if(!event.data || event.data.sgpvp != 1)
-        return;
-    this.userloc = parseInt(event.data.loc);
-    this.ajax = event.data.ajax;
-    this.setupPageSpecific();
+    //console.log(`handling message with sgpvp opcode ${event.data.sgpvp}`);
+    if(event.data.sgpvp === 'pardus-vars') {
+        this.userloc = parseInt(event.data.loc);
+        this.ajax = event.data.ajax;
+        this.setupPageSpecific();
+    } else if(event.data.sgpvp === 'keydown') {
+        //console.log(`forwarding keycode ${event.data.keyCode}`);
+        this.keyPressHandler(event.data.keyCode);
+    }
 };
 
 SGMain.prototype.closeUi = function() {
@@ -224,12 +218,12 @@ SGMain.prototype.scanForTargets = function(targeting_data, ships) {
     for(var i in ships) {
         var ship = ships[i], name = ship.name.toLowerCase(), n;
 
-        if(exclude.ids[ship.id] || exclude.names[name])
-            exc.push(ship);
-        else if((n = include.ids[ship.id]) || (n = include.names[name])) {
+        if((n = include.ids[ship.id]) || (n = include.names[name])) {
             ship.includePriority = n;
             inc.push(ship);
         }
+        else if(exclude.ids[ship.id] || exclude.names[name])
+            exc.push(ship);
         else if(ql.excludeFactions[ship.faction] ||
                 ql.excludeAlliances[ship.ally_id] ||
                 ql.excludeCharacters[ship.id])
@@ -676,9 +670,9 @@ SGMain.prototype.selectMaxValue = function(select, limit) {
 
 SGMain.prototype.setRounds = function(limit) {
     var doc = this.doc, sel,
-    xpr = doc.evaluate('//select[@name = "rounds"]', doc, null,
-                       XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
-    while((sel = xpr.iterateNext())) {
+    xpr = doc.evaluate('//select[@name = "rounds"]', doc, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+    var index = 0;
+    while((sel = xpr.snapshotItem(index))) {
         if(sel.style.display == 'none' &&
            sel.nextElementSibling.tagName == 'SELECT')
             // for some reason, Pardus now hides the rounds select,
@@ -687,6 +681,7 @@ SGMain.prototype.setRounds = function(limit) {
             sel = sel.nextElementSibling;
 
         this.selectMaxValue(sel, limit);
+        index++;
     }
 };
 
@@ -738,6 +733,8 @@ SGMain.prototype.doWin = function( mode, rounds, missiles, raid ) {
         this.useBots( mode );
     else
         this.doEngage( rounds, missiles, raid );
+
+    this.doWin = this.nop; // Prevent user from navving too fast
 }
 
 SGMain.prototype.doWinB = function( botMode, attackMode, missiles ) {
@@ -751,6 +748,8 @@ SGMain.prototype.doWinB = function( botMode, attackMode, missiles ) {
         this.useBots( botMode );
     else
         this.doAttackBuilding( attackMode, missiles );
+
+    this.doWinB = this.nop; // Prevent user from navving too fast
 }
 
 SGMain.prototype.doAttackBuilding = function(mode, missiles) {
@@ -767,6 +766,18 @@ SGMain.prototype.doAttackBuilding = function(mode, missiles) {
     doc.location = 'building.php';
     this.doAttackBuilding = this.nop; // prevent freezes by user mashing key too fast
 };
+
+// Click on a link with a javascript: href. This can't be done from the content
+// script because of CSP, so post a message for the injected script there to do
+// it.
+SGMain.prototype.clickByIdMsg = function(id) {
+    let w = this.doc.defaultView;
+    let data = {
+        sgpvp: 'click-id',
+        id: id
+    };
+    w.postMessage(data, this.doc.location.origin);
+}
 
 SGMain.prototype.clickById = function(id) {
     var elt = this.doc.getElementById(id);
@@ -1012,15 +1023,26 @@ SGMain.prototype.flyClose = function() {
     this.flyClose = this.nop;
 };
 SGMain.prototype.exitFlyClose = function() {
-    var a = this.doc.evaluate(
-        '//a[contains(text(), "Exit inner starbase")]', this.doc, null,
-        XPathResult.ANY_UNORDERED_NODE_TYPE, null).singleNodeValue;
-    if(a)
-        a.click();
-    else
-        this.doc.location = 'main.php?exitsb=1';
+    this.doc.location = 'main.php?exitsb=1';
     this.exitFlyClose = this.nop;
 };
+
+SGMain.prototype.toggleFlyClose = function() {
+    // if there is a enter SB button
+    // or the ship is on starbase main page, or starbase equipment pages
+    // then fly close
+    // otherwise, exit sb
+    // notable fail state is if on SB tile and in pvp - generally only happens on friendly SBs.
+    // results in +1 nav when want to enter/chase i guess.
+    if (this.doc.getElementById("aCmdStarbase") || this.doc.location.pathname.indexOf('/starbase') != -1 || this.doc.location.pathname.indexOf('/ship_equipment') != -1) {
+        this.doc.location = 'main.php?entersb=1';
+    }
+    else {
+        this.doc.location = 'main.php?exitsb=1';
+    }
+    this.toggleFlyClose = this.nop;
+};
+
 SGMain.prototype.dockUndock = function() { this.undock() || this.dock(); };
 SGMain.prototype.dock = function() { top.location = 'game.php?logout=1'; };
 SGMain.prototype.undock = function() {
@@ -1087,20 +1109,40 @@ SGMain.prototype.target = function() {
 
 SGMain.prototype.cloak = function() { this.clickById('inputShipCloak'); };
 SGMain.prototype.uncloak = function() { this.clickById('inputShipUncloak'); };
-SGMain.prototype.fillTank = function() { this.clickById('aCmdTank'); };
-SGMain.prototype.jumpWH = function() { this.clickById('aCmdWarp'); };
+SGMain.prototype.toggleCloak = function() { 
+    var elt = this.doc.getElementById('inputShipCloak');
+    if(elt && elt.click &&
+       !(elt.disabled || elt.classList.contains('disabled')) )
+        elt.click();
+    else
+        this.uncloak();
+};
+SGMain.prototype.fillTank = function() { this.clickByIdMsg('aCmdTank'); };
+SGMain.prototype.jumpWH = function() { this.clickByIdMsg('aCmdWarp'); };
+SGMain.prototype.stdCommand = function() { 
+    let navTable = this.doc.getElementById( 'navareatransition' );
+	if ( !navTable )
+		navTable = this.doc.getElementById( 'navarea' );
+    if ( !navTable ) {
+        this.nav();
+        return;
+        }
+    var elt = this.doc.evaluate( './/a[contains(@id, "stdCommand")]', 
+        navTable, null, XPathResult.FIRST_ORDERED_NODE_TYPE, 
+        null).singleNodeValue;
+    elt.click();
+};
+SGMain.prototype.collect = function() { this.clickByIdMsg('aCmdCollect'); };
 
 SGMain.prototype.setAmbushRP = function() {
     var doc = this.doc,
     xpath = '//div[@id="emsg"]//input[@name="retreat_point_set" and @type="submit"]',
     elt = doc.evaluate(xpath, doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
                        null).singleNodeValue;
-    if(elt) { elt.click(); return; }
-
-    elt = doc.getElementById('aCmdRetreatInfo');
-    if(elt) { elt.click(); return; }
-
-    this.nav();
+    if(elt) {
+        elt.click(); return;
+    }
+    this.clickByIdMsg('aCmdRetreatInfo');
 };
 
 SGMain.prototype.ambush = function() {
@@ -1255,6 +1297,49 @@ SGMain.prototype.telerob = function() {
     }
 }
 
+SGMain.prototype.PASSORBITER_RX = /[?&]playerid=(\d+)/;
+SGMain.prototype.passOrbiter = function() {
+    switch(this.page) {
+    case 'main':
+        // pass  from nav screen
+        var ships = this.getShips();
+        if(!ships)
+            return;
+
+        var targets = this.scanForTargets(this.storage.targeting, ships);
+        if(targets.included.length > 0) {
+            var ship_pri = (this.page == 'main') ?
+                this.getShipModelPriorities() : null;
+            var best = this.chooseTarget(targets.included, ship_pri);
+            this.postRequest( "/overview_ship.php", "player=" + best.id + "&transferorb=Send Orbiter",
+                              callback.bind(this) );
+            // Next pass we'll nav instead. Can't nav now because that'd
+            // break the rule of one server request per user action.
+            this.passOrbiter = this.nav;
+        }
+        else
+            this.nav();
+        break;
+
+    case 'ship2ship_combat':
+        var m = this.PASSORBITER_RX.exec( this.doc.location.href );
+        if( m )
+            this.postRequest( "/overview_ship.php", "player=" + m[1] + "&transferorb=Send Orbiter",
+                              callback.bind(this) );
+        // XXX should we disable pass here? Nav? Reload the combat page?
+        break;
+
+    default:
+        this.nav();
+    }
+
+    function callback( status, responseText ) {
+        if (status != 200)
+            this.showNotification("ORBITER ERROR", 1000);
+        else
+            this.showNotification("Orbiter passed?!", 1000);
+    }
+}
 SGMain.prototype.BUY_MISSILE_PRIORITIES = {
     113: 5, // NN550
     27:  4, // NN500
@@ -1380,3 +1465,300 @@ SGMain.prototype.activateBoost = function(boost) {
             this.showNotification('Activated ' + boost + ' boost', 1000);
     }
 }
+
+SGMain.prototype.setWaypoint = function() {
+    if( this.userloc ) {
+        var o = this.storage.wayp;
+        if (o.len > 0 ) {
+            //i don't like how it's done. 
+            if(o.tid[o.currentIndex] == this.userloc) {
+                //if it's wormhole, set it as wormhole jump
+                if(this.doc.getElementById("aCmdWarp") && !(o.tid[o.currentIndex]=="wh") ) {
+                    o.tid[o.len] = "wh";
+                    o.currentIndex = o.len;
+                    o.len ++;
+                    this.storage.set( { wayp : o } );
+                    this.showNotification( 'Waypoint #' + o.currentIndex + ' set: Wormhole', 1000 );
+                    return;
+                } else if (["/building.php","/building_trade.php","/starbase.php","/starbase_trade.php","/planet.php","/planet_trade.php"].includes(this.doc.location.pathname)) {
+                    o.tid[o.len] = "trade";
+                    o.currentIndex = o.len;
+                    o.len++;
+                    this.storage.set( { wayp : o } );
+                    this.showNotification( 'Waypoint #' + o.currentIndex + ' set: Trade', 1000 );
+                    return;
+                }
+                //if it's an xhole/yhole, set as xhole jump
+                this.showNotification('Waypoint already set!', 750)
+                return;
+            } else if(o.tid[o.currentIndex-1] == this.userloc && typeof(o.tid[o.currentIndex]) == "string") {
+                this.showNotification('Waypoint already set!', 750)
+                return;
+            }
+        }
+        o.tid[o.len] = this.userloc;
+        o.currentIndex = o.len;
+        o.len ++;
+        this.storage.set( { wayp : o } );
+        this.showNotification( `Waypoint #${o.currentIndex} set: ${this.storage.wayp.tid[this.storage.wayp.currentIndex]}`, 1000 );
+    }
+    else
+        this.showNotification( 'Can not set waypoint!', 500 );
+}
+
+
+SGMain.prototype.travel = function() {
+    var storage = this.storage,
+        doc = this.doc,
+        elt, form, destination, input;
+
+
+    // no frantic keypressing.  but this means that, once we're in
+    // this function, we *have* to reload, so watch this.
+    this.disengage = this.nop;
+
+    elt = doc.evaluate( '//input[@name="retreat" and @type="submit"]',
+                        doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE,
+                        null ).singleNodeValue;
+
+
+    //calculating next waypoint
+    //if the pilot is where it should be
+    // if the tid is a string, we do special stuff, trade/wormhole jump as appropriate
+    if (storage.wayp.tid[storage.wayp.currentIndex]=="wh") {
+        //advance index
+        if ( storage.wayp.len > 1) {
+            //if the pilot has reached the end of the path, turn around
+            if ( (storage.wayp.currentIndex + storage.wayp.direction == storage.wayp.len) || (storage.wayp.currentIndex + storage.wayp.direction < 0) ) {
+                storage.wayp.direction *= -1;
+            }
+            //set destination to the next tile on the path
+            storage.wayp.currentIndex += storage.wayp.direction;
+        }
+        this.storage.set( { wayp : storage.wayp } );
+     } else if (storage.wayp.tid[storage.wayp.currentIndex] == "trade") {
+        //if we're already in trade screen and there's no more trading to be done, we advance
+
+        //if we're able to click trade, enter building
+
+    }
+    if (this.userloc == storage.wayp.tid[storage.wayp.currentIndex]) {
+        //if the path consists of more than one tile lol
+        if ( storage.wayp.len > 1) {
+            //if the pilot has reached the end of the path, turn around
+            if ( (storage.wayp.currentIndex + storage.wayp.direction == storage.wayp.len) || (storage.wayp.currentIndex + storage.wayp.direction < 0) ) {
+                storage.wayp.direction *= -1;
+            }
+            //set destination to the next tile on the path
+            storage.wayp.currentIndex += storage.wayp.direction;
+            this.storage.set( { wayp : storage.wayp } );
+        } 
+        else if (!elt) {
+            //otherwise, we're at the one and only tile...
+            this.showNotification( 'Arrived at waypoint.', 750 );
+            this.nav()
+            return;
+        }
+    }
+    //if there is a retreat button, we click it.
+    if( elt && elt.click &&
+        !( elt.disabled || elt.classList.contains('disabled') ) ) {
+        //reversing waypoint direction.
+
+        elt.click(); // this reloads the page
+        return;
+    }
+
+    // no retreat button...
+
+    if( storage.wayp.len == 0 ) {
+        this.showNotification( 'No waypoints set!', 750 );
+        this.nav(); // this reloads the page
+        return;
+    }
+
+    //doing string stuff.
+    // first, if it's a wormhole and we're on one, jump
+    if (storage.wayp.tid[storage.wayp.currentIndex]=="wh") {
+        if(doc.getElementById("aCmdWarp")) {
+            doc.getElementById("aCmdWarp").click()
+            return;
+        }
+    } else if (storage.wayp.tid[storage.wayp.currentIndex]=="trade") {
+        var autobuybutton = doc.getElementById("quickButtonSellAndBuy");
+        //console.log(autobuybutton)
+        if (!(autobuybutton)) {
+            if (doc.location.pathname=="/main.php") {
+                //try to enter trade
+                var ele;
+                var trades = ["aCmdBuildingTrade" , "aCmdPlanetTrade", "aCmdStarbaseTrade"];
+                for (e in trades) {
+                    ele = doc.getElementById(trades[e])
+                    if (ele){
+                        ele.click()
+                        break;
+                    }
+                }
+                //failing that, we advance.
+                if (!ele) {
+                    if ( storage.wayp.len > 1) {
+                        //if the pilot has reached the end of the path, turn around
+                        if ( (storage.wayp.currentIndex + storage.wayp.direction == storage.wayp.len) || (storage.wayp.currentIndex + storage.wayp.direction < 0) ) {
+                            storage.wayp.direction *= -1;
+                        }
+                        //set destination to the next tile on the path
+                        storage.wayp.currentIndex += storage.wayp.direction;
+                        this.storage.set( { wayp : storage.wayp } );
+                    }
+                    return;
+                }
+            } else {
+                this.showNotification("not on nav", 1000)
+                this.nav();
+            }
+        }
+        else if (autobuybutton.getAttribute("onclick").localeCompare("resetForm(); quickSell({}); quickBuy({}); submitTradeForm(); return false;") != 0 ) {
+            autobuybutton.click();
+            //console.log("trading")
+        } else {
+            //console.log("done trading");
+            //done trading, we can advance
+            if ( storage.wayp.len > 1) {
+                //if the pilot has reached the end of the path, turn around
+                if ( (storage.wayp.currentIndex + storage.wayp.direction == storage.wayp.len) || (storage.wayp.currentIndex + storage.wayp.direction < 0) ) {
+                    storage.wayp.direction *= -1;
+                }
+                //set destination to the next tile on the path
+                storage.wayp.currentIndex += storage.wayp.direction;
+                this.storage.set( { wayp : storage.wayp } );
+            }
+            this.nav();
+        }
+        return;
+    }
+    form = doc.getElementById( 'navForm' );
+    if ( form ) {
+        destination = form.elements.destination;
+        if( destination ) {
+            destination.value = storage.wayp.tid[storage.wayp.currentIndex];
+        }
+        form.submit(); // this reloads the page
+    }
+    else {
+        if(doc.location.pathname == "/main.php"){
+            // No form, add one.
+            form = doc.createElement( 'form' );
+            form.name = 'navForm';
+            form.method = 'post';
+            form.action = '/main.php';
+            form.style.display = 'none';
+            input = doc.createElement( 'input' );
+            input.type = 'hidden';
+            input.name = 'destination';
+            input.value = getDestination(storage.wayp.tid[storage.wayp.currentIndex]);//wtf is getdestination? only works on main.php?
+            form.appendChild( input );
+            input = doc.createElement( 'input' );
+            input.type = 'hidden';
+            input.name = 'ts';
+            input.value = Date.now();
+            doc.body.appendChild( form );
+            //console.log("making form");
+            form.submit(); // this reloads the page
+        } else {
+            this.nav();
+        }
+}
+    //this.showNotification( "Moving to waypoint: " + storage.wayp.currentIndex , 500 );
+};
+
+SGMain.prototype.clearWaypoints = function() {
+    this.showNotification( 'Waypoints cleared: ' + this.storage.wayp.len, 500);
+    this.storage.set( { wayp : { len : 0, tid : {}, currentIndex : -1, direction : 1 } } );
+    //console.log(wayp.len)
+    //console.log(wayp.currentIndex)
+    //console.log(wayp.direction)
+}
+
+
+SGMain.prototype.getVersion = function() {
+    return chrome.runtime.getManifest().version_name;
+};
+
+// The following are here because the Firefox implementations have to
+// deal with oddities introduced by "Mr Xyzzy's Pardus Helper".
+// There's no such thing on Chrome, so we can simplify here.
+
+SGMain.prototype.BUILDING_PLAYER_DETAIL_RX = /^building\.php\?detail_type=player&detail_id=(\d+)/;
+SGMain.prototype.getShipsBuilding = function() {
+    var doc = this.doc,
+    xpr = doc.evaluate("//table[@class='messagestyle']/tbody/tr/th",
+                       doc, null, XPathResult.UNORDERED_NODE_ITERATOR_TYPE,
+                       null);
+    var th;
+    while((th = xpr.iterateNext())) {
+        var heading = th.textContent;
+        if(heading == 'Other Ships')
+            return this.parseOtherShipsTable(th.parentNode.parentNode,
+                                             this.BUILDING_PLAYER_DETAIL_RX);
+    }
+
+    // Still here?
+    return [];
+};
+
+// XXX - untested!!
+SGMain.prototype.SHIP2SHIP_RX = /^ship2ship_combat\.php\?playerid=(\d+)/;
+SGMain.prototype.getShipsCombat = function() {
+    var doc = this.doc,
+    xpr = doc.evaluate("//table[@class='messagestyle']/tbody/tr/th",
+                       doc, null, XPathResult.UNORDERED_NODE_ITERATOR_TYPE,
+                       null);
+    var th;
+    while((th = xpr.iterateNext())) {
+        var heading = th.textContent;
+        if(heading == 'Other Ships')
+            return this.parseOtherShipsTable(th.parentNode.parentNode,
+                                             this.SHIP2SHIP_RX);
+    }
+
+    // Still here?
+    return [];
+};
+
+// This gets the faction and ship type from a ship entry. It's a
+// separate method to reuse it - we do it the same in all pages.
+SGMain.prototype.SHIPBGIMAGE_RX = /^url\("[^"]+\/ships\/([^/.]+)(?:_paint\d+|xmas)?\.png"\)$/;
+SGMain.prototype.SHIPIMSRC_RX = /ships\/([^/.]+)(?:_paint\d+|xmas)?\.png$/;
+SGMain.prototype.FACTIONSIGN_RX = /factions\/sign_(fed|emp|uni)/;
+SGMain.prototype.getShipEntryExtras = function(entry) {
+    // find the ship type
+    var itd = entry.td.previousElementSibling;
+    if(itd) {
+        var m = this.SHIPBGIMAGE_RX.exec(itd.style.backgroundImage);
+        if(m)
+            entry.shipModel = m[1];
+
+        // see if we find a faction
+        var xpr = this.doc.evaluate("img", itd, null,
+                                    XPathResult.UNORDERED_NODE_ITERATOR_TYPE,
+                                    null);
+        var img;
+        while((img = xpr.iterateNext())) {
+            var src = img.src;
+            if((m = this.FACTIONSIGN_RX.exec(src)))
+                entry.faction = m[1];
+        }
+    }
+
+    if(!entry.faction)
+        entry.faction = 'neu';
+};
+
+SGMain.prototype.getResourceText = async function (resource) {
+    let url = chrome.runtime.getURL(resource);
+    let response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`getResourceText response status: ${response.status}`);
+    }
+    return response.text();
+};

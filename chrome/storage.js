@@ -26,7 +26,8 @@ SGStorage.prototype.PARAM_DEFINITION = {
                       exclude: { ids: {}, names: {} },
                       prioritiseTraders: false,
                       retreatTile: null } },
-    armour: { u: false, d: { low: null, max: null, level: 5 } }
+    armour: { u: false, d: { low: null, max: null, level: 5 } },
+    wayp: { u: false, d: { length : 0, tid : {}, currentIndex : -1, direction : -1 } }
 };
 
 // Request retrieval of named values from persistent storage.  Once retrieved,
@@ -48,7 +49,7 @@ SGStorage.prototype.get = function( names, callback ) {
         storageNames[ spec.u ? name : prefix + name ] = name;
     }
 
-    this.rawGet( Object.keys(storageNames), onValues.bind(this) );
+    chrome.storage.local.get( Object.keys(storageNames), onValues.bind(this) );
 
     function onValues( values ) {
         var sname, value;
@@ -80,7 +81,7 @@ SGStorage.prototype.set = function( settings, callback ) {
         o[ storageName ] = value;
     }
 
-    this.rawSet( o, callback );
+    chrome.storage.local.set( o, callback );
 };
 
 // Update configuration.  We don't do this automatically because we don't want
@@ -102,7 +103,7 @@ SGStorage.prototype.migrate = function( callback ) {
     // "private" version available only to friends, we now have plenty instances
     // of this script in the wild using both styles.  We'll upgrade all to V41.
 
-    this.rawGet(
+    chrome.storage.local.get(
         [ 'keymap', 'artemis-armour', 'orion-armour', 'pegasus-armour' ],
         onValues.bind( this ) );
 
@@ -118,7 +119,7 @@ SGStorage.prototype.migrate = function( callback ) {
 
         entries.version = 41;
         //console.log( 'Old configuration migrated', entries );
-        this.rawSet( entries, callback );
+        chrome.storage.local.set( entries, callback );
     }
 
     function fixArmour( armour, safe ) {

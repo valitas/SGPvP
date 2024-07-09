@@ -1,1 +1,0 @@
-../chrome/sgpvp.js

@@ -1,37 +1,75 @@
 {
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "{1ebc2426-b985-4323-94c5-55756c11c4c9}",
+            "strict_min_version": "109.0"
+        }
+    },
     "content_scripts": [
-        { "all_frames": false,
-          "js": [
-              "sgpvp.js", "storage.js", "main.js", "ui.js", "chrome.js",
-              "game.js"
-          ],
-          "matches": [ "*://*.pardus.at/game.php" ],
-          "run_at": "document_start" },
-        { "all_frames": true,
-          "js": [ "all.js" ],
-          "matches": [ "*://*.pardus.at/*" ],
-          "run_at": "document_start" }
+        {
+            "all_frames": true,
+            "js": [
+                "nonnav.js"
+            ],
+            "matches": [
+                "*://*.pardus.at/menu.php",
+                "*://*.pardus.at/msgframe.php"
+            ],
+            "run_at": "document_end"
+        },
+        {
+            "all_frames": true,
+            "js": [
+                "storage.js",
+                "main.js",
+                "ui.js",
+                "sgpvp.js"
+            ],
+            "css": [
+                "ui.css"
+            ],
+            "matches": [
+                "*://*.pardus.at/*"
+            ],
+            "exclude_matches": [
+                "*://*.pardus.at/game.php",
+                "*://*.pardus.at/menu.php",
+                "*://*.pardus.at/msgframe.php"
+            ],
+            "run_at": "document_end"
+        }
     ],
-    "content_security_policy": "script-src 'self'; object-src 'self'",
+    "content_security_policy": {
+        "extension_pages": "default-src 'self'"
+    },
     "description": "Keyboard actions for PvP in the online game Pardus",
     "icons": {
         "16": "16.png",
         "48": "48.png",
         "128": "128.png"
     },
-    "manifest_version": 2,
-    "minimum_chrome_version": "20",
+    "manifest_version": 3,
     "name": "Scorpion Guard's Better PvP Pardus Extension",
-    "permissions": [ "storage" ],
+    "permissions": [
+        "storage"
+    ],
     "short_name": "SGPvP",
     "web_accessible_resources": [
-        "ui.html", "ui.css", "default-keymap.json"
-    ],
-    "version": "43.2",
-    "applications": {
-        "gecko": {
-            "id": "{1ebc2426-b985-4323-94c5-55756c11c4c9}",
-            "strict_min_version": "48.0"
+        {
+            "resources": [
+                "ui.html",
+                "ui.css",
+                "default-keymap.json",
+                "postvars.js",
+                "help.html",
+                "help.css",
+                "changelog.html",
+                "customkeys.html"
+            ],
+            "matches": [
+                "*://*.pardus.at/*"
+            ]
         }
-    }
+    ],
+    "version": "44"
 }

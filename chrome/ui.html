@@ -1,9 +1,10 @@
 <div id="sg-ui">
  <div id="sg-header">
-  <h3>Scorpion Guard's Better PvP Script V<span id="sg-version">31</span></h3>
+  <h3>Scorpion Guard's Better PvP Script V<span id="sg-version">?</span></h3>
   <div id="sg-switch">
    <span id="sg-s2targeting" class="active">Targeting</span> |
-   <span id="sg-s2keys">Key bindings</span>
+   <span id="sg-s2keys">Key bindings</span> |
+   <span id="sg-s2waypoints">Waypoints</span>
   </div>
  </div>
 
@@ -20,7 +21,7 @@
 
   <div>
    <div>
-    Overrides (names or IDs, one per line, includes are prioritised)
+    Overrides (names or IDs, separated by commas and/or new lines, includes are prioritised)
    </div>
 
    <div id="sg-overrides-row">
@@ -57,10 +58,9 @@
      <option value="6">6</option>
      <option value="7">7</option>
     </select>
-    <a id="sg-help" target="_blank" href="http://dssrzs.org/sgpvp/help.html">Help</a>
+    <a id="sg-help" target="_blank" href="">Help</a>
    </span>
   </div>
-
  </div>
 
  <div id="sg-keybindings" style="display:none">
@@ -139,6 +139,7 @@
      <option value="winRaid">Repair or raid</option>
      <option value="telerob">Telerob</option>
      <option value="target">Target</option>
+     <option value="passOrbiter">Pass Orbiter</option>
     <optgroup label="Building combat">
      <option value="damageBuilding">Damage building</option>
      <option value="raidBuilding">Raid building</option>
@@ -168,13 +169,22 @@
      <option value="buyMissile">Buy missile</option>
      <option value="cloak">Cloak</option>
      <option value="uncloak">Uncloak</option>
+     <option value="toggleCloak">Toggle Cloak</option>
      <option value="dock">Dock</option>
      <option value="undock">Undock</option>
      <option value="dockUndock">Dock or undock</option>
      <option value="flyClose">Fly close</option>
      <option value="exitFlyClose">Exit fly close</option>
+     <option value="toggleFlyClose">Toggle fly close</option>
      <option value="fillTank">Fill tank</option>
+	 <option value="collect">Collect once</option>
      <option value="jumpWH">Jump wormhole</option>
+	 <option value="stdCommand">Activate standard command</option>
+    </optgroup>
+    <optgroup label="Waypoints">
+      <option value="setWaypoint">Set Waypoint</option>
+      <option value="travel">Go to next Waypoint</option>
+      <option value="clearWaypoints">Clear Waypoints</option>
     </optgroup>
    </select>
    <input id="sg-setkey-done" type="button" value="Done" />
@@ -193,7 +203,20 @@
   </div>
   <div id="sg-setkey-key"></div>
  </div>
-
+ <div id="sg-waypoints" style="display: none">
+  <div>
+   <div><label for="sg-wpl">Waypoints:</label></div>
+   <div><textarea rows="6" id="sg-wpl"></textarea></div>
+  </div>
+   <div>
+   <span id="sg-clear-waypoints">Clear waypoints</span> |
+   <span id="sg-impexp-waypoints">Import/export waypoints</span>
+  </div>
+    <span>
+      <br>
+    <a id="sg-update" target="_blank" href="https://github.com/Tsunder/SGPvP/releases">Check for extension updates</a>
+    </span>
+ </div>
  <div id="sg-footer">
   <input id="sg-close" value="Close" type="button" />
  </div>
