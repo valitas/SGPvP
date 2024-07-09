@@ -43,7 +43,7 @@
         "128": "128.png"
     },
     "manifest_version": 3,
-    "minimum_chrome_version": "99",
+    "minimum_chrome_version": "88",
     "name": "Scorpion Guard's Better PvP Pardus Extension",
     "permissions": [
         "storage"
