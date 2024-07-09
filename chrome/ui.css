@@ -50,19 +50,19 @@
 
 /* Common panel styles */
 
-#sg-targeting, #sg-keybindings, #sg-setkey {
+#sg-targeting, #sg-keybindings, #sg-setkey, #sg-waypoints {
     padding: 0 8px;
     width: 584px;
     line-height: 14px;
     position: relative;
 }
 
-#sg-targeting > div, #sg-keybindings > div, #sg-setkey > div {
+#sg-targeting > div, #sg-keybindings > div, #sg-setkey > div, #sg-waypoints > div {
     margin: 12px 0;
     position: relative;
 }
 
-#sg-targeting label, #sg-keybindings label, #sg-setkey label {
+#sg-targeting label, #sg-keybindings label, #sg-setkey label, #sg-waypoints label {
     cursor: pointer;
 }
 
@@ -109,7 +109,7 @@
 
 /* The keybindings panel */
 
-#sg-keybindings > div {
+div.center {
     text-align: center;
 }
 
@@ -233,7 +233,7 @@
 /* the waypoints panel*/
 #sg-wpl {
     width: 578px;
-    height: 72px;
+    height: 180px;
 }
 
 #sg-clear-waypoints, #sg-impexp-waypoints {

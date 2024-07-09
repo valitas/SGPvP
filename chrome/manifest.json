@@ -2,7 +2,9 @@
     "content_scripts": [
         {
             "all_frames": true,
-            "js": [ "nonnav.js" ],
+            "js": [
+                "nonnav.js"
+            ],
             "matches": [
                 "*://*.pardus.at/menu.php",
                 "*://*.pardus.at/msgframe.php"
@@ -20,7 +22,9 @@
             "css": [
                 "ui.css"
             ],
-            "matches": [ "*://*.pardus.at/*" ],
+            "matches": [
+                "*://*.pardus.at/*"
+            ],
             "exclude_matches": [
                 "*://*.pardus.at/game.php",
                 "*://*.pardus.at/menu.php",
@@ -62,6 +66,5 @@
             ]
         }
     ],
-    "version": "44",
-    "version_name": "44-rc2"
+    "version": "44"
 }
