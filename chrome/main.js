@@ -113,14 +113,6 @@ SGMain.prototype.SHIPS = [
     'wasp', 'ficon', 'rustclaw', 'sabre'
 ];
 
-// This is a handler for DOM messages coming from the game page.
-// Arrival of a message means the page contents were updated. The
-// message contains the value of the userloc variable, too.
-//
-// Doing things this way may seem a bit awkward to Firefox userscript
-// writers, but it is the proper (only?) way to do it in Chrome.
-// Plus, this spares us from using unsafeWindow at all, which is a
-// Good Thing.
 SGMain.prototype.setupPage = function(event) {
     //console.log(`handling message with sgpvp opcode ${event.data.sgpvp}`);
     if(event.data.sgpvp === 'pardus-vars') {
@@ -1681,7 +1673,7 @@ SGMain.prototype.clearWaypoints = function() {
 
 
 SGMain.prototype.getVersion = function() {
-    return chrome.runtime.getManifest().version_name;
+    return chrome.runtime.getManifest().version;
 };
 
 // The following are here because the Firefox implementations have to
