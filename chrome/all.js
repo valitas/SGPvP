@@ -1,1 +1,0 @@
-SGPvP.singleton.registerCurrentFrame(document);

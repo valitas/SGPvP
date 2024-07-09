@@ -63,13 +63,13 @@ function SGMain(doc) {
                 finishConfig.call(this);
             } else {
                 this.getResourceText('default-keymap.json')
-                    .then((keymap) => this.storeKeymap(keymap));
+                    .then((json) => storeKeymap.call(this, json));
             }
         }
     }
 
-    function storeKeymap( keymap ) {
-        this.storage.set( { keymap: JSON.parse(keymap) },
+    function storeKeymap( json ) {
+        this.storage.set( { keymap: JSON.parse(json) },
                           finishConfig.bind( this ) );
     }
 
@@ -122,10 +122,14 @@ SGMain.prototype.SHIPS = [
 // Plus, this spares us from using unsafeWindow at all, which is a
 // Good Thing.
 SGMain.prototype.setupPage = function(event) {
+    //console.log(`handling message with sgpvp opcode ${event.data.sgpvp}`);
     if(event.data.sgpvp === 'pardus-vars') {
         this.userloc = parseInt(event.data.loc);
         this.ajax = event.data.ajax;
         this.setupPageSpecific();
+    } else if(event.data.sgpvp === 'keydown') {
+        //console.log(`forwarding keycode ${event.data.keyCode}`);
+        this.keyPressHandler(event.data.keyCode);
     }
 };
 

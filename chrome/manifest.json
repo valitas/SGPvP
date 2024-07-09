@@ -1,27 +1,30 @@
 {
     "content_scripts": [
         {
-            "all_frames": false,
-            "js": [
-                "storage.js",
-                "main.js",
-                "ui.js"
-            ],
+            "all_frames": true,
+            "js": [ "nonnav.js" ],
             "matches": [
-                "*://*.pardus.at/game.php"
+                "*://*.pardus.at/menu.php",
+                "*://*.pardus.at/msgframe.php"
             ],
             "run_at": "document_end"
         },
         {
             "all_frames": true,
             "js": [
-                "sgpvp.js", "all.js"
+                "storage.js",
+                "main.js",
+                "ui.js",
+                "sgpvp.js"
             ],
             "css": [
                 "ui.css"
             ],
-            "matches": [
-                "*://*.pardus.at/*"
+            "matches": [ "*://*.pardus.at/*" ],
+            "exclude_matches": [
+                "*://*.pardus.at/game.php",
+                "*://*.pardus.at/menu.php",
+                "*://*.pardus.at/msgframe.php"
             ],
             "run_at": "document_end"
         }
@@ -60,5 +63,5 @@
         }
     ],
     "version": "44",
-    "version_name": "44-rc1"
+    "version_name": "44-rc2"
 }
