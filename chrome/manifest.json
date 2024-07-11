@@ -43,14 +43,14 @@
     "content_security_policy": {
         "extension_pages": "default-src 'self'"
     },
-    "description": "Keyboard actions for PvP in the online game Pardus",
+    "description": "Keyboard shortcuts for the browser game Pardus",
     "icons": {
         "16": "16.png",
         "48": "48.png",
         "128": "128.png"
     },
     "manifest_version": 3,
-    "name": "Scorpion Guard's Better PvP Pardus Extension",
+    "name": "Scorpion Guard's Better PvP for Pardus",
     "permissions": [
         "storage"
     ],
