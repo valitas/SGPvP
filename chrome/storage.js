@@ -27,7 +27,7 @@ SGStorage.prototype.PARAM_DEFINITION = {
                       prioritiseTraders: false,
                       retreatTile: null } },
     armour: { u: false, d: { low: null, max: null, level: 5 } },
-    wayp: { u: false, d: { length : 0, tid : {}, currentIndex : -1, direction : -1 } }
+    wayp: { u: false, d: { currentIndex : -1, direction : -1, len : 0, tid : {} } }
 };
 
 // Request retrieval of named values from persistent storage.  Once retrieved,
@@ -57,7 +57,7 @@ SGStorage.prototype.get = function( names, callback ) {
             name = storageNames[ sname ];
             spec = specs[ name ];
             value = values[ sname ];
-            if( typeof(value) == 'undefined' )
+            if( typeof(value) === 'undefined' )
                 value = spec.d;
             this[ name ] = value;
         }
@@ -82,71 +82,49 @@ SGStorage.prototype.set = function( settings, callback ) {
     }
 
     chrome.storage.local.set( o, callback );
-};
+}
 
-// Update configuration.  We don't do this automatically because we don't want
-// to trigger an unnecessary fetch.  Instead, we retrieve the config version
-// along with our normal parameters, and if we detect we need to fix it, we call
-// this from SGMain and reload.
-SGStorage.prototype.migrate = function( callback ) {
+// Update configuration.  Only call this if this.version is not 45 or better,
+// and don't use this SGStorage afterward, load it again.
 
-    // The configuration prior to V40 stored only one armour level, called
-    // "points".  V40 stored two, safe and max, with max being the old points.
-    // If the user had defined any "win" actions, we get the safe level from one
-    // of these.  Otherwise, we set safe equal to max.
-    //
-    // And then, in V41 we're changing things again from V40's "safe" and "max"
-    // armour levels.  We have "low" and "max" now, with different semantics,
-    // but it's safe to use "safe" as "low".
-    //
-    // We deal with both cases because, with our boneheaded policy of keeping a
-    // "private" version available only to friends, we now have plenty instances
-    // of this script in the wild using both styles.  We'll upgrade all to V41.
-
-    chrome.storage.local.get(
-        [ 'keymap', 'artemis-armour', 'orion-armour', 'pegasus-armour' ],
-        onValues.bind( this ) );
-
-    function onValues( entries ) {
-        var safe;
-
-        if ( entries.keymap )
-            safe = this.fixKeymap( entries.keymap ).safe;
-
-        fixArmour( entries['artemis-armour'], safe );
-        fixArmour( entries['orion-armour'], safe );
-        fixArmour( entries['pegasus-armour'], safe );
-
-        entries.version = 41;
-        //console.log( 'Old configuration migrated', entries );
-        chrome.storage.local.set( entries, callback );
+SGStorage.prototype.migrate = function (callback) {
+    if (this.version >= 45) {
+        throw new Error('unexpected migration');
     }
-
-    function fixArmour( armour, safe ) {
-        if ( armour ) {
-            if ( armour.points > 0 )
-                armour.max = armour.low = armour.points;
-            else {
-                if ( armour.max > 0 ) {
-                    if ( armour.safe > 0 && armour.safe < armour.max )
-                        armour.low = armour.safe;
-                    else if ( safe > 0 && safe < armour.max )
-                        armour.low = safe;
-                    else
-                        armour.low = armour.max;
-                }
-                else {
-                    armour.max = null;
-                    armour.low = null;
-                }
-            }
-
-            // Make sure these obsolete settings are wiped
-            delete armour.points;
-            delete armour.safe;
-        }
+    
+    if (this.version >= 41) {
+        SGStorage.fixV41().then(callback);
+    }
+    else {
+        SGStorage.resetToV45().then(callback);
     }
 }
+
+SGStorage.resetToV45 = async function () {
+    console.log('configuration is too old, resettting');
+    await chrome.storage.local.clear();
+    await chrome.storage.local.set({ version: 45 });
+}
+
+SGStorage.fixV41 = async function () {
+    // This SGStorage instance loaded the configuration for the current
+    // universe. However, we need to fix all universes so read again.
+    //
+    // (Really should just migrate each universe as it's used, but I'm trying to
+    // disturb old code as little as i can to get this running first.)
+    const current = await chrome.storage.local.get(['artemis-wayp', 'orion-wayp', 'pegasus-wayp']);
+    const fixes = { version: 45 };
+    const saneWayp = { currentIndex: -1, direction: -1, len: 0, tid: {} };
+
+    for (const [key, wayp] of Object.entries(current)) {
+        if (Object.hasOwn(wayp, 'length')) {
+            // waypoint cfg is borked for this universe, reset
+            fixes[key] = saneWayp;
+        }
+    }
+
+    await chrome.storage.local.set(fixes);
+};
 
 // Go over the supplied keymap and fix old entries with bad formatting.
 // This is done when migrating a configuration, and also when importing one,
