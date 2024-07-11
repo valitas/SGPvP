@@ -12,6 +12,7 @@
                 "nonnav.js"
             ],
             "matches": [
+                "*://*.pardus.at/game.php",
                 "*://*.pardus.at/menu.php",
                 "*://*.pardus.at/msgframe.php"
             ],
