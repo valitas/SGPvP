@@ -1,4 +1,4 @@
-# The Scorpion Guard's Better PvP Pardus Extension
+# Scorpion Guard's Better PvP for Pardus
 
 [![Chrome Web Store Version](https://img.shields.io/chrome-web-store/v/flbeciljbdgkljhfmmgnglcjilacfgfe)](https://chromewebstore.google.com/detail/flbeciljbdgkljhfmmgnglcjilacfgfe)
 [![SGPvP Mozilla Add-on Version](https://img.shields.io/amo/v/pardus-sgpvp)
@@ -21,12 +21,13 @@ Follow the instructions of the web store for your browser:
 Once installed, reload your Pardus tab, press the key _i_ (for _info_), and find
 and click the link to the online help.
 
-## News
+## Recent changes
 
-On July 2024, after seven years of dormancy, SGPvP version 44 has been
-released. This is a redesign to conform to Chrome's "manifest V3" requirement,
-in time to survive deprecation of V2. Here's to seven more years of uneventful
-service!
+ * July 11, 2024: Version 45 released. This fixes some remaining issues with
+   keyboard focus on Windows, and fixes the Set Waypoint action.
+ * July 9, 2024: Version 44 released after seven years of dormancy. This is a
+   redesign to conform to Chrome's "manifest V3" requirement, in time to survive
+   deprecation of V2. Here's to seven more years of uneventful service!
 
 ## A note about SGPvP TE
 
